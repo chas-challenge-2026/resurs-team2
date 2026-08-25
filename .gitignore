@@ -1,0 +1,19 @@
+# Build artifacts
+/target/
+*.class
+*.jar
+*.war
+*.iml
+.settings/
+.classpath
+.project
+
+# IDE Files
+.idea/
+.vscode/
+
+# Node
+node_modules/
+dist/
+*.local
+
