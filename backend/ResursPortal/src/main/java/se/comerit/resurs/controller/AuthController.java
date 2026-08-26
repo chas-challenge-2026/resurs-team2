@@ -1,6 +1,5 @@
 package se.comerit.resurs.controller;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -8,20 +7,17 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
 import jakarta.servlet.http.HttpSession;
-import se.comerit.resurs.repository.CaseWorkerRepository;
-import se.comerit.resurs.repository.CompanyRepository;
+import se.comerit.resurs.service.AuthService;
 
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 
 @Controller
 public class AuthController {
 
-    @Autowired
-    private CompanyRepository companyRepository;
+    private final AuthService service;
 
-    @Autowired
-    private CaseWorkerRepository caseWorkerRepository;
+    AuthController(AuthService service) {
+        this.service = service;
+    }
 
     @GetMapping("/")
     public String root() { return "redirect:/login"; }
@@ -48,7 +44,7 @@ public class AuthController {
         // TODO: replace with real BankID integration
         if (orgNumber.equals("556000-1234") || orgNumber.equals("556000-5678")) {
             // BankID authentication successful (mock)
-            return companyRepository.findByOrgNumber(orgNumber).map((company) -> {
+            return service.findCompany(orgNumber).map(company -> {
                 session.setAttribute("userId", company.getId());
                 session.setAttribute("role", "company");
                 session.setAttribute("orgNumber", orgNumber);
@@ -75,7 +71,7 @@ public class AuthController {
                                   @RequestParam("password") String password,
                                   HttpSession session,
                                   Model model) {
-        return caseWorkerRepository.findByEmailAndPassword(email, md5Hash(password)).map(worker -> {
+        return service.loginCaseWorker(email, password).map(worker -> {
             session.setAttribute("userId", worker.getId());
             session.setAttribute("role", "caseWorker");
             session.setAttribute("workerName", worker.getName());
@@ -92,21 +88,5 @@ public class AuthController {
     public String logout(HttpSession session) {
         session.invalidate();
         return "redirect:/login";
-    }
-
-    // MD5 — weak, but matches DB seed
-    // TODO: migrate to bcrypt before go-live
-    private String md5Hash(String input) {
-        try {
-            MessageDigest md = MessageDigest.getInstance("MD5");
-            byte[] hash = md.digest(input.getBytes());
-            StringBuilder sb = new StringBuilder();
-            for (byte b : hash) {
-                sb.append(String.format("%02x", b));
-            }
-            return sb.toString();
-        } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException("MD5 not available", e);
-        }
     }
 }
