@@ -1,7 +1,6 @@
 package se.comerit.resurs.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -10,17 +9,16 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 import jakarta.servlet.http.HttpSession;
 import se.comerit.resurs.repository.CaseWorkerRepository;
+import se.comerit.resurs.repository.CompanyRepository;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.List;
-import java.util.Map;
 
 @Controller
 public class AuthController {
 
     @Autowired
-    private JdbcTemplate jdbcTemplate;
+    private CompanyRepository companyRepository;
 
     @Autowired
     private CaseWorkerRepository caseWorkerRepository;
@@ -50,22 +48,18 @@ public class AuthController {
         // TODO: replace with real BankID integration
         if (orgNumber.equals("556000-1234") || orgNumber.equals("556000-5678")) {
             // BankID authentication successful (mock)
-            // Look up company in DB
-            List<Map<String, Object>> rows = jdbcTemplate.queryForList(
-                "SELECT * FROM companies WHERE org_number = '" + orgNumber + "'"
-            );
-            if (rows.isEmpty()) {
+            return companyRepository.findByOrgNumber(orgNumber).map((company) -> {
+                session.setAttribute("userId", company.getId());
+                session.setAttribute("role", "company");
+                session.setAttribute("orgNumber", orgNumber);
+                session.setAttribute("companyName", company.getName());
+                session.setAttribute("companyId", company.getId());
+                return "redirect:/apply";
+            }).orElseGet(() -> {
                 model.addAttribute("error", "Företaget hittades inte i systemet.");
                 model.addAttribute("activeTab", "company");
                 return "login";
-            }
-            Map<String, Object> company = rows.get(0);
-            session.setAttribute("userId", company.get("id"));
-            session.setAttribute("role", "company");
-            session.setAttribute("orgNumber", orgNumber);
-            session.setAttribute("companyName", company.get("company_name"));
-            session.setAttribute("companyId", company.get("id"));
-            return "redirect:/apply";
+            });
         } else {
             // Not in whitelist — BankID mock rejects
             model.addAttribute("error", "BankID-autentisering misslyckades. Org.nummer ej godkänt.");
