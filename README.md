@@ -21,7 +21,7 @@ cd infra && docker compose up
 ## Mappstruktur
 
 ```
-backend/ResursPortal/   ← Spring Boot 2.7 Maven-projekt
+backend/ResursPortal/   ← Spring Boot 3.5 Maven-projekt
   src/main/java/se/comerit/resurs/
     ResursPortalApplication.java
     controller/
