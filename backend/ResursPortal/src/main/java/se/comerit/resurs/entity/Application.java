@@ -8,6 +8,8 @@ import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -37,9 +39,9 @@ public class Application {
     @NotBlank
     private String purpose;
     @Column(length = 30)
-    @NotBlank
-    @Size(max = 30)
-    private String status = "PENDING_DOCS";
+    @Enumerated(EnumType.STRING)
+    @Nonnull
+    private ApplicationStatus status = ApplicationStatus.PENDING_DOCS;
     @Column(length = 20)
     @Nullable
     @Size(max = 20)
@@ -114,11 +116,11 @@ public class Application {
     }
 
     @Nonnull
-    public String getStatus() {
+    public ApplicationStatus getStatus() {
         return status;
     }
 
-    public void setStatus(@Nonnull String status) {
+    public void setStatus(@Nonnull ApplicationStatus status) {
         this.status = status;
     }
 

@@ -11,6 +11,7 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.test.context.ActiveProfiles;
 
 import se.comerit.resurs.entity.Application;
+import se.comerit.resurs.entity.ApplicationStatus;
 import se.comerit.resurs.entity.Company;
 
 @DataJpaTest
@@ -40,15 +41,15 @@ class ApplicationRepositoryTest {
 
     @Test
     void shouldFindApplicationsByStatus() {
-        List<Application> result = applicationRepository.findByStatus("UNDER_REVIEW");
+        List<Application> result = applicationRepository.findByStatus(ApplicationStatus.UNDER_REVIEW);
 
         assertThat(result).hasSize(1);
-        assertThat(result.get(0).getStatus()).isEqualTo("UNDER_REVIEW");
+        assertThat(result.get(0).getStatus()).isEqualTo(ApplicationStatus.UNDER_REVIEW);
     }
 
     @Test
     void shouldReturnEmptyForUnknownStatus() {
-        List<Application> result = applicationRepository.findByStatus("NONEXISTENT");
+        List<Application> result = applicationRepository.findByStatus(ApplicationStatus.APPROVED);
 
         assertThat(result).isEmpty();
     }
@@ -64,18 +65,18 @@ class ApplicationRepositoryTest {
         assertThat(saved.getId()).isNotNull();
         assertThat(saved.getCreatedAt()).isNotNull();
         assertThat(saved.getUpdatedAt()).isNotNull();
-        assertThat(saved.getStatus()).isEqualTo("PENDING_DOCS");
+        assertThat(saved.getStatus()).isEqualTo(ApplicationStatus.PENDING_DOCS);
         assertThat(saved.getAuditLog()).isEqualTo("[]");
     }
 
     @Test
     void shouldSetDefaultStatusOnNewApplication() {
         Company company = companyRepository.findByOrgNumber("556000-1234").orElseThrow();
-
+        
         Application app = new Application(company, new BigDecimal("100000.00"), "Default status test");
 
         Application saved = applicationRepository.save(app);
 
-        assertThat(saved.getStatus()).isEqualTo("PENDING_DOCS");
+        assertThat(saved.getStatus()).isEqualTo(ApplicationStatus.PENDING_DOCS);
     }
 }
