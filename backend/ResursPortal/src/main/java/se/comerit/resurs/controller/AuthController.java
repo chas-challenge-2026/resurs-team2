@@ -9,6 +9,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
 import jakarta.servlet.http.HttpSession;
+import se.comerit.resurs.repository.CaseWorkerRepository;
+
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.List;
@@ -19,6 +21,9 @@ public class AuthController {
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
+
+    @Autowired
+    private CaseWorkerRepository caseWorkerRepository;
 
     @GetMapping("/")
     public String root() { return "redirect:/login"; }
@@ -76,22 +81,17 @@ public class AuthController {
                                   @RequestParam("password") String password,
                                   HttpSession session,
                                   Model model) {
-        String md5 = md5Hash(password);
-        // SQL injection surface: email is directly concatenated
-        String sql = "SELECT * FROM case_workers WHERE email = '" + email + "' AND password_md5 = '" + md5 + "'";
-        List<Map<String, Object>> rows = jdbcTemplate.queryForList(sql);
-        if (!rows.isEmpty()) {
-            Map<String, Object> worker = rows.get(0);
-            session.setAttribute("userId", worker.get("id"));
+        return caseWorkerRepository.findByEmailAndPassword(email, md5Hash(password)).map(worker -> {
+            session.setAttribute("userId", worker.getId());
             session.setAttribute("role", "caseWorker");
-            session.setAttribute("workerName", worker.get("name"));
-            session.setAttribute("workerEmail", worker.get("email"));
+            session.setAttribute("workerName", worker.getName());
+            session.setAttribute("workerEmail", worker.getEmail());
             return "redirect:/backoffice";
-        } else {
+        }).orElseGet(() -> {
             model.addAttribute("error", "Felaktigt användarnamn eller lösenord.");
             model.addAttribute("activeTab", "caseWorker");
             return "login";
-        }
+        });
     }
 
     @GetMapping("/logout")

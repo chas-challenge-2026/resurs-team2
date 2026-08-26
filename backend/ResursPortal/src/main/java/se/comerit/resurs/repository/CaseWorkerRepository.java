@@ -8,4 +8,5 @@ import se.comerit.resurs.entity.CaseWorker;
 
 public interface CaseWorkerRepository extends JpaRepository<CaseWorker, Long> {
     Optional<CaseWorker> findByEmail(String email);
+    Optional<CaseWorker> findByEmailAndPassword(String email, String password);
 }
