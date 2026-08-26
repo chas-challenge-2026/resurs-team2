@@ -20,8 +20,14 @@ public class Company {
     @Column(name = "authorized_signatory", length = 100)
     private String authorizedSignatory;
 
-    public Company() {
-        // Empty constructor for JPA
+    public Company(String orgNumber, String name, String authorizedSignatory) {
+        this.orgNumber = orgNumber;
+        this.name = name;
+        this.authorizedSignatory = authorizedSignatory;
+    }
+
+    protected Company() {
+        // Constructor needed by JPA
     }
 
     public Long getId() {

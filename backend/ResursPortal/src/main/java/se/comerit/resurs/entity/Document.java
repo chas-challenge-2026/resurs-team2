@@ -32,8 +32,14 @@ public class Document {
         uploadedAt = LocalDateTime.now(ZoneId.of("UTC"));
     }
 
-    public Document() {
-        // Empty constructor for JPA
+    public Document(Application application, String filename, String docType) {
+        this.application = application;
+        this.filename = filename;
+        this.docType = docType;
+    }
+
+    protected Document() {
+        // Constructor needed by JPA
     }
 
     public Long getId() {

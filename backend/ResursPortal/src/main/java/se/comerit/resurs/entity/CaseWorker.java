@@ -20,8 +20,14 @@ public class CaseWorker {
     @Column(name = "password_md5", length = 32)
     private String password;
 
-    public CaseWorker() {
-        // Empty constructor for JPA
+    public CaseWorker(String name, String email, String password) {
+        this.name = name;
+        this.email = email;
+        this.password = password;
+    }
+
+    protected CaseWorker() {
+        // Constructor needed by JPA
     }
 
     public Long getId() {

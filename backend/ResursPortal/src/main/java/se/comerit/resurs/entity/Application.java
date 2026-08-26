@@ -52,8 +52,14 @@ public class Application {
         updatedAt = LocalDateTime.now(ZoneId.of("UTC"));
     }
 
-    public Application() {
-        // Empty constructor for JPA
+    public Application(Company company, BigDecimal requestedAmount, String purpose) {
+        this.company = company;
+        this.requestedAmount = requestedAmount;
+        this.purpose = purpose;
+    }
+
+    protected Application() {
+        // Constructor needed by JPA
     }
 
     public Long getId() {
