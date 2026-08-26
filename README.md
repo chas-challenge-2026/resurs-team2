@@ -4,8 +4,26 @@ B2B-kreditansökningsportal för Resurs Bank. Företag ansöker om kredit, ladda
 
 ## Snabbstart
 
+### Lokalt med H2 (ingen Docker)
+
+```bash
+cd backend/ResursPortal
+mvn spring-boot:run -Plocal
+```
+
+Appen startar med en in-memory H2-databas. Data nollställs vid omstart.
+
+### Med Docker (PostgreSQL)
+
 ```bash
 cd infra && docker compose up
+```
+
+### Testa
+
+```bash
+cd backend/ResursPortal
+mvn test
 ```
 
 Öppna [http://localhost:8083](http://localhost:8083)
