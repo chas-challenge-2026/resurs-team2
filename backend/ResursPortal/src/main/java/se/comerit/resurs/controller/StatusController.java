@@ -1,53 +1,54 @@
 package se.comerit.resurs.controller;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 
 import jakarta.servlet.http.HttpSession;
+import se.comerit.resurs.entity.Application;
+import se.comerit.resurs.entity.ApplicationStatus;
+import se.comerit.resurs.entity.Document;
+import se.comerit.resurs.repository.ApplicationRepository;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * StatusController – Visar ansökningsstatus med hårdkodade ETAer.
  *
  * Anti-patterns:
- *  - Hårdkodade ETAer ("2 dagar", "3 dagar") oavsett faktiskt tillstånd
- *  - JdbcTemplate direkt i kontrollern
- *  - Session check copy-pasteat
- *  - Statussteg beräknas inte dynamiskt — alltid samma ordning
+ * - Hårdkodade ETAer ("2 dagar", "3 dagar") oavsett faktiskt tillstånd
+ * - JdbcTemplate direkt i kontrollern
+ * - Session check copy-pasteat
+ * - Statussteg beräknas inte dynamiskt — alltid samma ordning
  */
 @Controller
 public class StatusController {
+    private ApplicationRepository applicationRepository;
 
-    @Autowired
-    private JdbcTemplate jdbcTemplate;
+    public StatusController(ApplicationRepository applicationRepository) {
+        this.applicationRepository = applicationRepository;
+    }
 
     @GetMapping("/status/{applicationId}")
     public String showStatus(@PathVariable("applicationId") Long applicationId,
-                             HttpSession session,
-                             Model model) {
+            HttpSession session,
+            Model model) {
         // Session check copy-pasted in every method — should be an interceptor
-        if (session.getAttribute("userId") == null) return "redirect:/login";
+        if (session.getAttribute("userId") == null)
+            return "redirect:/login";
 
-        List<Map<String, Object>> apps = jdbcTemplate.queryForList(
-            "SELECT a.*, c.company_name, c.org_number " +
-            "FROM applications a JOIN companies c ON a.company_id = c.id " +
-            "WHERE a.id = ?",
-            applicationId
-        );
-
-        if (apps.isEmpty()) {
+        Optional<Application> optApp = applicationRepository.findByIdWithDocuments(applicationId);
+        if (optApp.isEmpty()) {
             return "redirect:/applications";
         }
 
-        Map<String, Object> app = apps.get(0);
-        String currentStatus = (String) app.get("status");
+        Application app = optApp.get();
+        ApplicationStatus currentStatus = app.getStatus();
 
         // Hårdkodade ETA-steg — oavsett vilket steg ansökan faktiskt är på
         // TODO: beräkna dynamiskt baserat på skapelsedatum och SLA
@@ -65,7 +66,7 @@ public class StatusController {
         // Hårdkodat ETA — alltid "2 dagar" oavsett faktiskt läge
         step2.put("eta", "2 dagar");
         step2.put("description", "Årsredovisning och F-skatteintyg granskas.");
-        if ("PENDING_DOCS".equals(currentStatus)) {
+        if (currentStatus == ApplicationStatus.PENDING_DOCS) {
             step2.put("status", "CURRENT");
         } else {
             step2.put("status", "DONE");
@@ -77,13 +78,19 @@ public class StatusController {
         // Hårdkodat ETA — alltid "3 dagar" oavsett faktiskt läge
         step3.put("eta", "3 dagar");
         step3.put("description", "Finansiella nyckeltal analyseras och scoring körs.");
-        if ("UNDER_REVIEW".equals(currentStatus)) {
-            step3.put("status", "CURRENT");
-        } else if ("PENDING_DOCS".equals(currentStatus)) {
-            step3.put("status", "PENDING");
-        } else {
-            step3.put("status", "DONE");
+
+        switch (currentStatus) {
+            case UNDER_REVIEW:
+                step3.put("status", "CURRENT");
+                break;
+            case PENDING_DOCS:
+                step3.put("status", "PENDING");
+                break;
+            default:
+                step3.put("status", "DONE");
+                break;
         }
+
         steps.add(step3);
 
         Map<String, String> step4 = new HashMap<>();
@@ -91,7 +98,7 @@ public class StatusController {
         // Hårdkodat ETA — alltid "1 dag" oavsett faktiskt läge
         step4.put("eta", "1 dag");
         step4.put("description", "Kreditbeslut fattas av handläggare eller automatiskt.");
-        if ("APPROVED".equals(currentStatus) || "REJECTED".equals(currentStatus)) {
+        if (ApplicationStatus.APPROVED == currentStatus || ApplicationStatus.REJECTED == currentStatus) {
             step4.put("status", "DONE");
         } else {
             step4.put("status", "PENDING");
@@ -103,14 +110,11 @@ public class StatusController {
         model.addAttribute("currentStatus", currentStatus);
 
         // Fetch documents
-        List<Map<String, Object>> docs = jdbcTemplate.queryForList(
-            "SELECT * FROM documents WHERE application_id = ? ORDER BY uploaded_at DESC",
-            applicationId
-        );
+        List<Document> docs = app.getDocuments();
         model.addAttribute("documents", docs);
 
         // Pass audit log raw — template renders it with manual string parsing
-        model.addAttribute("auditLogRaw", app.get("audit_log"));
+        model.addAttribute("auditLogRaw", app.getAuditLog());
 
         return "status";
     }
@@ -119,9 +123,12 @@ public class StatusController {
     // TODO: beräkna baserat på faktisk kö och SLA-data
     private int calculateTotalEtaDays(String currentStatus) {
         switch (currentStatus) {
-            case "PENDING_DOCS": return 6; // 2+3+1 — hardcoded
-            case "UNDER_REVIEW": return 4; // 3+1 — hardcoded
-            default: return 1; // "1 dag" — hardcoded
+            case "PENDING_DOCS":
+                return 6; // 2+3+1 — hardcoded
+            case "UNDER_REVIEW":
+                return 4; // 3+1 — hardcoded
+            default:
+                return 1; // "1 dag" — hardcoded
         }
     }
 }
