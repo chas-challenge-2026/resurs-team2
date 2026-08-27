@@ -3,12 +3,14 @@ package se.comerit.resurs.security;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.SecureRandom;
+import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Base64;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -26,21 +28,29 @@ public class SessionTokenStore {
     private final Duration usedTokenRetention; // derived = absolute + idle
 
     private final SecureRandom secureRandom = new SecureRandom();
+    private final Clock clock;
 
+    @Autowired
     public SessionTokenStore(
             @Value("${session-token.sliding-expiration-enabled:true}") boolean sliding,
             @Value("${session-token.idle-expiration-ms:900000}") long idleMs,
             @Value("${session-token.absolute-expiration-ms:3600000}") long absMs) {
+        this(sliding, idleMs, absMs, Clock.systemUTC());
+    }
+
+    /** Constructor with an explicit clock, primarily for tests. */
+    SessionTokenStore(boolean sliding, long idleMs, long absMs, Clock clock) {
         this.slidingExpirationEnabled = sliding;
         this.idleExpiration = Duration.ofMillis(idleMs);
         this.absoluteExpiration = Duration.ofMillis(absMs);
         this.usedTokenRetention = this.absoluteExpiration.plus(this.idleExpiration);
+        this.clock = clock;
     }
 
     public AuthTokens issue(UserPrincipal principal, String fingerprint) {
         String access = randomToken();
         String refresh = randomToken();
-        Instant now = Instant.now();
+        Instant now = clock.instant();
         Instant expiresAt = computeExpiry(now, now);
         SessionToken st = new SessionToken(hash(access), hash(refresh), fingerprint,
                 principal, now, expiresAt);
@@ -65,7 +75,7 @@ public class SessionTokenStore {
         SessionToken st = sessionsByAccess.get(hash(token));
         if (st == null || st.revoked)
             return Optional.empty();
-        if (st.expiresAt.isBefore(Instant.now())) {
+        if (st.expiresAt.isBefore(clock.instant())) {
             remove(st);
             return Optional.empty();
         }
@@ -94,7 +104,7 @@ public class SessionTokenStore {
         if (st == null || st.revoked) {
             return Optional.empty();
         }
-        if (st.expiresAt.isBefore(Instant.now())) {
+        if (st.expiresAt.isBefore(clock.instant())) {
             remove(st);
             return Optional.empty();
         }
@@ -153,7 +163,7 @@ public class SessionTokenStore {
      */
     @Scheduled(fixedRateString = "${session-token.sweep-interval-ms:300000}")
     public void sweepExpired() {
-        Instant now = Instant.now();
+        Instant now = clock.instant();
         sessionsByAccess.entrySet().removeIf(e -> e.getValue().expiresAt.isBefore(now));
         sessionsByRefresh.entrySet().removeIf(e -> e.getValue().expiresAt.isBefore(now));
         // Spent refresh hashes are retained past session expiry for forensic
@@ -163,8 +173,8 @@ public class SessionTokenStore {
     }
 
     private void slideOnActivity(SessionToken st) {
-        Instant next = computeExpiry(st.loginTime, Instant.now());
-        if (next.isBefore(Instant.now())) {
+        Instant next = computeExpiry(st.loginTime, clock.instant());
+        if (next.isBefore(clock.instant())) {
             revokeAllForUser(st.principal);
         } else {
             st.expiresAt = next;

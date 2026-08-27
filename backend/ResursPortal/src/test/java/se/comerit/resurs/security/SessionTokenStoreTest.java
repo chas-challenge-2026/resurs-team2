@@ -3,6 +3,8 @@ package se.comerit.resurs.security;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.time.Duration;
+
 import org.junit.jupiter.api.Test;
 
 class SessionTokenStoreTest {
@@ -15,8 +17,10 @@ class SessionTokenStoreTest {
     private final CaseWorkerPrincipal worker =
             new CaseWorkerPrincipal(2L, "Karin Handläggare", "karin@resurs.se");
 
+    private final MutableClock clock = new MutableClock();
+
     private SessionTokenStore store(boolean sliding, long idleMs, long absMs) {
-        return new SessionTokenStore(sliding, idleMs, absMs);
+        return new SessionTokenStore(sliding, idleMs, absMs, clock);
     }
 
     // ---------- issue ----------
@@ -78,54 +82,55 @@ class SessionTokenStoreTest {
     }
 
     @Test
-    void validateAccessRejectsExpiredToken() throws Exception {
+    void validateAccessRejectsExpiredToken() {
         SessionTokenStore store = store(true, 40, 500);
 
         AuthTokens tokens = store.issue(company, FP);
-        Thread.sleep(70); // safely past 40ms idle
+        clock.advance(Duration.ofMillis(70)); // safely past 40ms idle
 
         assertThat(store.validateAccess(tokens.accessToken(), FP)).isEmpty();
     }
 
     @Test
-    void validateAccessIsRejectedAfterIdleWindowElapses() throws Exception {
+    void validateAccessIsRejectedAfterIdleWindowElapses() {
         SessionTokenStore store = store(true, 60, 60_000);
 
         AuthTokens tokens = store.issue(company, FP);
         assertThat(store.validateAccess(tokens.accessToken(), FP)).isPresent();
-        Thread.sleep(100); // safely past 60ms
+
+        clock.advance(Duration.ofMillis(100)); // safely past 60ms
         assertThat(store.validateAccess(tokens.accessToken(), FP)).isEmpty();
     }
 
     @Test
-    void slidingOnAccessExtendsWindow() throws Exception {
+    void slidingOnAccessExtendsWindow() {
         // idle 400ms, absolute large so only idle matters.
         SessionTokenStore store = store(true, 400, 60_000);
 
         AuthTokens tokens = store.issue(company, FP);
 
         // Each validation within the current window slides it forward by idle.
-        Thread.sleep(100); // t~100 within 400 -> slide
+        clock.advance(Duration.ofMillis(100)); // t=100 within 400 -> slide
         assertThat(store.validateAccess(tokens.accessToken(), FP)).isPresent();
 
-        Thread.sleep(100); // t~200 within slid window -> slide again
+        clock.advance(Duration.ofMillis(100)); // t=200 within slid window -> slide
         assertThat(store.validateAccess(tokens.accessToken(), FP)).isPresent();
 
-        Thread.sleep(100); // t~300 within slid window -> slide again
+        clock.advance(Duration.ofMillis(100)); // t=300 within slid window -> slide
         assertThat(store.validateAccess(tokens.accessToken(), FP)).isPresent();
 
         // Wait past the (re-slid) window: it must now be rejected.
-        Thread.sleep(500);
+        clock.advance(Duration.ofMillis(500)); // t=800 > slid expiry (~700)
         assertThat(store.validateAccess(tokens.accessToken(), FP)).isEmpty();
     }
 
     @Test
-    void absoluteCapBypassesSliding() throws Exception {
+    void absoluteCapBypassesSliding() {
         // Idle is long but absolute cap is short: cap must win.
         SessionTokenStore store = store(true, 10_000, 200);
 
         AuthTokens tokens = store.issue(company, FP);
-        Thread.sleep(300); // past 200ms absolute, well under 10s idle
+        clock.advance(Duration.ofMillis(300)); // past 200ms absolute, well under 10s idle
 
         assertThat(store.validateAccess(tokens.accessToken(), FP)).isEmpty();
     }
@@ -142,13 +147,13 @@ class SessionTokenStoreTest {
     }
 
     @Test
-    void expiredTokenIsRemovedOnLookup() throws Exception {
+    void expiredTokenIsRemovedOnLookup() {
         SessionTokenStore store = store(true, 40, 500);
 
         AuthTokens tokens = store.issue(company, FP);
         assertThat(store.sessionsByAccess).hasSize(1);
 
-        Thread.sleep(70);
+        clock.advance(Duration.ofMillis(70));
         store.validateAccess(tokens.accessToken(), FP);
 
         assertThat(store.sessionsByAccess).isEmpty();
@@ -256,7 +261,7 @@ class SessionTokenStoreTest {
     // ---------- rotate ----------
 
     @Test
-    void rotateIssuesFreshPairAndRetiresOldPair() throws Exception {
+    void rotateIssuesFreshPairAndRetiresOldPair() {
         SessionTokenStore store = store(true, 10_000, 60_000);
 
         AuthTokens original = store.issue(company, FP);
@@ -293,11 +298,11 @@ class SessionTokenStoreTest {
     }
 
     @Test
-    void rotateAfterAbsoluteCapIsRejected() throws Exception {
+    void rotateAfterAbsoluteCapIsRejected() {
         SessionTokenStore store = store(true, 10_000, 200);
 
         AuthTokens original = store.issue(company, FP);
-        Thread.sleep(300); // past 200ms absolute cap
+        clock.advance(Duration.ofMillis(300)); // past 200ms absolute cap
 
         assertThat(store.rotate(original.refreshToken(), FP)).isEmpty();
     }
@@ -332,13 +337,13 @@ class SessionTokenStoreTest {
     // ---------- sweep ----------
 
     @Test
-    void sweepRemovesExpiredSessions() throws Exception {
+    void sweepRemovesExpiredSessions() {
         SessionTokenStore store = store(true, 40, 500);
 
         AuthTokens tokens = store.issue(company, FP);
         assertThat(store.sessionsByAccess).hasSize(1);
 
-        Thread.sleep(70);
+        clock.advance(Duration.ofMillis(70));
         store.sweepExpired();
 
         assertThat(store.sessionsByAccess).isEmpty();
@@ -360,17 +365,17 @@ class SessionTokenStoreTest {
     // ---------- sliding disabled ----------
 
     @Test
-    void slidingDisabledKeepsFixedWindow() throws Exception {
+    void slidingDisabledKeepsFixedWindow() {
         SessionTokenStore store = store(false, 120, 60_000);
 
         AuthTokens tokens = store.issue(company, FP);
 
         // Sliding disabled: validation halfway through the idle window does NOT re-arm it.
-        Thread.sleep(60);
+        clock.advance(Duration.ofMillis(60));
         assertThat(store.validateAccess(tokens.accessToken(), FP)).isPresent();
 
         // But the fixed 120ms window has now elapsed (60+80=140 > 120).
-        Thread.sleep(80);
+        clock.advance(Duration.ofMillis(80));
         assertThat(store.validateAccess(tokens.accessToken(), FP)).isEmpty();
     }
 

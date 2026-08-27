@@ -19,7 +19,7 @@ import org.springframework.test.context.ActiveProfiles;
  * interval is overridden so the test is fast and deterministic.
  */
 @SpringBootTest(properties = {
-        "session-token.sweep-interval-ms=200",
+        "session-token.sweep-interval-ms=100",
         "spring.sql.init.mode=never"
 })
 @ActiveProfiles("test")
@@ -32,9 +32,9 @@ class SessionTokenSweepIntegrationTest {
         @Bean
         @Primary
         SessionTokenStore shortLivedStore() {
-            // idle 150ms, absolute 400ms; sweep interval resolves from the
-            // @Scheduled placeholder to the overridden 200ms.
-            return new SessionTokenStore(true, 150, 400);
+            // idle 150ms, absolute 250ms; sweep interval resolves from the
+            // @Scheduled placeholder to the overridden 100ms.
+            return new SessionTokenStore(true, 150, 250);
         }
     }
 
@@ -51,8 +51,9 @@ class SessionTokenSweepIntegrationTest {
         assertThat(store.sessionsByAccess).containsKey(accessHash);
         assertThat(store.sessionsByRefresh).containsKey(refreshHash);
 
-        // Wait well past the absolute cap (400ms) plus a couple of sweep intervals.
-        Thread.sleep(1500);
+        // The session expires at the 250ms absolute cap; the 100ms scheduled sweep
+        // must clear it shortly after. 700ms covers scheduler warm-up and jitter.
+        Thread.sleep(700);
 
         assertThat(store.sessionsByAccess).doesNotContainKey(accessHash);
         assertThat(store.sessionsByRefresh).doesNotContainKey(refreshHash);
