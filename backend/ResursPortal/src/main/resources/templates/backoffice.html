@@ -55,14 +55,14 @@
             <tbody>
                 <tr th:each="app : ${reviewApplications}">
                     <td th:text="${app.id}">0</td>
-                    <td th:text="${app.company_name}">Företag AB</td>
-                    <td th:text="${app.org_number}">556000-0000</td>
-                    <td th:text="${#numbers.formatDecimal(app.requested_amount, 0, 'COMMA', 0, 'POINT')} + ' kr'">0 kr</td>
+                    <td th:text="${app.company.name}">Företag AB</td>
+                    <td th:text="${app.company.orgNumber}">556000-0000</td>
+                    <td th:text="${#numbers.formatDecimal(app.requestedAmount, 0, 'COMMA', 0, 'POINT')} + ' kr'">0 kr</td>
                     <td th:text="${app.purpose}">Syfte</td>
                     <td>
-                        <small th:text="${app.scoring_result}">-</small>
+                        <small th:text="${app.scoringResult}">-</small>
                     </td>
-                    <td th:text="${app.created_at}">datum</td>
+                    <td th:text="${app.createdAt}">datum</td>
                     <td>
                         <!-- Approve/Reject inline, no email notification sent -->
                         <!-- TODO: skicka e-post till företaget vid beslut -->
@@ -107,15 +107,15 @@
             <tbody>
                 <tr th:each="app : ${decidedApplications}">
                     <td th:text="${app.id}">0</td>
-                    <td th:text="${app.company_name}">-</td>
-                    <td th:text="${#numbers.formatDecimal(app.requested_amount, 0, 'COMMA', 0, 'POINT')} + ' kr'">0 kr</td>
+                    <td th:text="${app.company.name}">-</td>
+                    <td th:text="${#numbers.formatDecimal(app.requestedAmount, 0, 'COMMA', 0, 'POINT')} + ' kr'">0 kr</td>
                     <td>
                         <span class="label"
-                              th:classappend="${app.status == 'APPROVED'} ? 'label-success' : 'label-danger'"
+                              th:classappend="${app.status.name() == 'APPROVED'} ? 'label-success' : 'label-danger'"
                               th:text="${app.status}">STATUS</span>
                     </td>
                     <td th:text="${app.decision}">-</td>
-                    <td th:text="${app.updated_at}">-</td>
+                    <td th:text="${app.updatedAt}">-</td>
                 </tr>
             </tbody>
         </table>
