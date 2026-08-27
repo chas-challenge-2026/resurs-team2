@@ -75,9 +75,9 @@ Se `docs/known-bugs.md` för fullständig lista. Highlights:
 
 1. BankID mock som hårdkodad if-sats
 2. 800+ raders scoring-metod inline i controller
-3. SQL injection i handläggare-login
+3. ~~SQL injection i handläggare-login~~
 4. Audit log som JSON-blob (ingen separat tabell)
-5. JdbcTemplate direkt i varje controller
+5. ~~JdbcTemplate direkt i varje controller~~
 6. PDF sparas men parsas aldrig
 7. PII i klartext
 8. MD5-lösenord
