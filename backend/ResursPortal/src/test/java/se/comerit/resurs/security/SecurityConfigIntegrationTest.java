@@ -1,8 +1,10 @@
 package se.comerit.resurs.security;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -101,6 +103,18 @@ class SecurityConfigIntegrationTest {
                 .andExpect(status().isOk())
                 .andReturn();
         assertThat(result.getRequest().getSession(false)).isNull();
+    }
+
+    // ---------- caching policy on the API chain ----------
+
+    @Test
+    void apiResponsesAreNotCached() throws Exception {
+        // Regression for MED-3: bearer tokens and any echoed credentials must never
+        // be persisted by browsers/intermediaries — Spring Security's default cache
+        // control header must include no-store, even on error responses.
+        mockMvc.perform(get("/api/v1/test/ping"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(header().string("Cache-Control", containsString("no-store")));
     }
 
     // ---------- rotation / revocation through the real store ----------

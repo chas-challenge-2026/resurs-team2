@@ -205,6 +205,54 @@ class SessionTokenStoreTest {
         assertThat(store.validateAccess(workerTokens.accessToken(), FP)).isPresent();
     }
 
+    @Test
+    void revokeAllForUserDoesNotCrossRevokeSameIdDifferentRole() {
+        // Regression: a company and a case worker can share the same numeric row id
+        // (separate tables). Revoking one must NEVER kill the other's session.
+        SessionTokenStore store = store(true, 500, 60_000);
+
+        CompanyPrincipal companyId1 = new CompanyPrincipal(1L, "Acme AB", "556000-9999");
+        CaseWorkerPrincipal workerId1 = new CaseWorkerPrincipal(1L, "OWL Worker", "owl@resurs.se");
+
+        AuthTokens companyTokens = store.issue(companyId1, FP);
+        AuthTokens workerTokens = store.issue(workerId1, FP);
+
+        store.revokeAllForUser(companyId1);
+
+        assertThat(store.validateAccess(companyTokens.accessToken(), FP)).isEmpty();
+        assertThat(store.validateAccess(workerTokens.accessToken(), FP)).isPresent();
+    }
+
+    @Test
+    void fingerprintMismatchDoesNotRevokeOtherRoleWithSameIdOrSimilarFingerprint() {
+        // The theft tripwire for one user must not take down a same-id different-role
+        // session, and only an exact fingerprint mismatch should revoke.
+        SessionTokenStore store = store(true, 500, 60_000);
+
+        CompanyPrincipal companyId1 = new CompanyPrincipal(1L, "Acme AB", "556000-9999");
+        CaseWorkerPrincipal workerId1 = new CaseWorkerPrincipal(1L, "OWL Worker", "owl@resurs.se");
+
+        AuthTokens companyTokens = store.issue(companyId1, FP);
+        AuthTokens workerTokens = store.issue(workerId1, FP);
+
+        // Present the company access token with a *slightly* different fingerprint.
+        assertThat(store.validateAccess(companyTokens.accessToken(), FP + ".")).isEmpty();
+        // The worker's session (same id, different role) is untouched.
+        assertThat(store.validateAccess(workerTokens.accessToken(), FP)).isPresent();
+    }
+
+    @Test
+    void constantTimeFingerprintMatchesOnlyOnExactBytes() {
+        SessionTokenStore store = store(true, 10_000, 60_000);
+
+        AuthTokens tokens = store.issue(company, FP);
+
+        // Exact fingerprint -> authenticated.
+        assertThat(store.validateAccess(tokens.accessToken(), FP)).isPresent();
+        // A near-identical fingerprint (single trailing char) is NOT a match.
+        assertThat(store.validateAccess(tokens.accessToken(), FP + ".")).isEmpty();
+    }
+
     // ---------- rotate ----------
 
     @Test

@@ -1,5 +1,6 @@
 package se.comerit.resurs.security;
 
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.SecureRandom;
 import java.time.Duration;
@@ -68,7 +69,7 @@ public class SessionTokenStore {
             remove(st);
             return Optional.empty();
         }
-        if (!st.fingerprint.equals(fingerprint)) {
+        if (!matchesFingerprint(st.fingerprint, fingerprint)) {
             revokeAllForUser(st.principal);
             return Optional.empty();
         }
@@ -97,7 +98,7 @@ public class SessionTokenStore {
             remove(st);
             return Optional.empty();
         }
-        if (!st.fingerprint.equals(fingerprint)) {
+        if (!matchesFingerprint(st.fingerprint, fingerprint)) {
             // Different device/agent presenting the refresh token — treat as theft.
             revokeAllForUser(st.principal);
             return Optional.empty();
@@ -125,13 +126,26 @@ public class SessionTokenStore {
      * @param principal User whose tokens to revoke
      */
     public void revokeAllForUser(UserPrincipal principal) {
-        Long id = principal.id();
-        sessionsByAccess.entrySet().removeIf(e -> e.getValue().principal.id().equals(id));
-        sessionsByRefresh.entrySet().removeIf(e -> e.getValue().principal.id().equals(id));
+        // Match on role AND id: a company and a case worker may share the same
+        // numeric row id (separate tables), and must not revoke each other.
+        sessionsByAccess.entrySet().removeIf(e -> sameUser(e.getValue().principal, principal));
+        sessionsByRefresh.entrySet().removeIf(e -> sameUser(e.getValue().principal, principal));
         // also mark used, so old refresh cannot come back
         sessionsByRefresh.values().stream()
-                .filter(s -> s.principal.id().equals(id))
+                .filter(s -> sameUser(s.principal, principal))
                 .forEach(s -> usedTokens.put(s.refreshTokenHash, s));
+    }
+
+    private static boolean sameUser(UserPrincipal a, UserPrincipal b) {
+        return a.role() == b.role() && a.id().equals(b.id());
+    }
+
+    // Constant-time string comparison (MessageDigest.isEqual) so timing cannot
+    // reveal how much of the fingerprint matched.
+    private static boolean matchesFingerprint(String stored, String presented) {
+        return MessageDigest.isEqual(
+                stored.getBytes(StandardCharsets.UTF_8),
+                presented.getBytes(StandardCharsets.UTF_8));
     }
 
     /**
@@ -142,7 +156,9 @@ public class SessionTokenStore {
         Instant now = Instant.now();
         sessionsByAccess.entrySet().removeIf(e -> e.getValue().expiresAt.isBefore(now));
         sessionsByRefresh.entrySet().removeIf(e -> e.getValue().expiresAt.isBefore(now));
-        // Used tokens are kept longer to check for stolen tokens or replay attacks
+        // Spent refresh hashes are retained past session expiry for forensic
+        // theft/replay evidence; they are not consulted for authorization (rotation
+        // already removes them from the active maps, making replays fail).
         usedTokens.entrySet().removeIf(e -> e.getValue().expiresAt.plus(usedTokenRetention).isBefore(now));
     }
 
@@ -185,7 +201,7 @@ public class SessionTokenStore {
         try {
             MessageDigest md = MessageDigest.getInstance("SHA-256");
             return Base64.getUrlEncoder().withoutPadding()
-                    .encodeToString(md.digest(token.getBytes()));
+                    .encodeToString(md.digest(token.getBytes(StandardCharsets.UTF_8)));
         } catch (Exception e) {
             throw new IllegalStateException("SHA-256 unavailable", e);
         }
