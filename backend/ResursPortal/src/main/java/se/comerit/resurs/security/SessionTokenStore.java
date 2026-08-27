@@ -16,6 +16,12 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 @Component
+/**
+ * Server-side, in-memory store of opaque session tokens. Random tokens are
+ * stored only as SHA-256 hashes in concurrent maps; it issues, validates
+ * (with sliding/absolute expiry), rotates, revokes and periodically sweeps
+ * sessions. In-memory by design — sessions are lost on restart.
+ */
 public class SessionTokenStore {
     // package-private for tests (se.comerit.resurs.security); not part of the API
     final ConcurrentHashMap<String, SessionToken> sessionsByAccess = new ConcurrentHashMap<>();

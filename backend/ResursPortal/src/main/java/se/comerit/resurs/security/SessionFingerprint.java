@@ -5,6 +5,12 @@ import org.springframework.stereotype.Component;
 
 import jakarta.servlet.http.HttpServletRequest;
 
+/**
+ * Derives a client fingerprint (user-agent + IP) used to bind a session to the
+ * device/network it was issued on. A mismatch is treated as a suspected theft
+ * and revokes the session. Optionally trusts {@code X-Forwarded-For} — keep
+ * disabled unless the app sits behind a trusted reverse proxy.
+ */
 @Component
 public class SessionFingerprint {
     private final boolean useForwardedHeader;

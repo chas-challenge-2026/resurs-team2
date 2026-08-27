@@ -15,6 +15,14 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
+/**
+ * Fronts the R-protected {@code /api/**} chain: reads the {@code Bearer}
+ * access token, validates it (token + fingerprint) via
+ * {@link SessionTokenStore}, and — on success — populates the Spring Security
+ * context with a {@code ROLE_}-prefixed authority derived from the resolved
+ * principal. Invalid tokens are simply left unauthenticated so the chain's
+ * authorization rules produce the correct 401/403.
+ */
 @Component
 public class SessionTokenAuthenticationFilter extends OncePerRequestFilter {
 

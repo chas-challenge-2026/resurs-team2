@@ -2,6 +2,12 @@ package se.comerit.resurs.security;
 
 import java.time.Instant;
 
+/**
+ * Internal in-memory session record. Only SHA-256 hashes of the random tokens
+ * are stored (never the raw tokens), along with the client fingerprint the
+ * session is bound to, the owning principal, and lifetime metadata. Managed
+ * exclusively by {@link SessionTokenStore}.
+ */
 public class SessionToken {
     final String accessTokenHash;
     final String refreshTokenHash;
