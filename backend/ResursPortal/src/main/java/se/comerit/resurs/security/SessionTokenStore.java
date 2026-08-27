@@ -78,6 +78,37 @@ public class SessionTokenStore {
     }
 
     /**
+     * Rotate a session using its refresh token: the presented refresh token is
+     * single-use, so it is invalidated (and retained for theft/replay detection)
+     * while a fresh access+refresh pair is issued for the same principal.
+     *
+     * @param refreshToken the current refresh token
+     * @param fingerprint  client fingerprint from the rotation request
+     * @return fresh tokens, or empty if the refresh token is unknown, expired,
+     *         already used, or the fingerprint does not match (in which case the
+     *         whole session is revoked as a suspected theft)
+     */
+    public Optional<AuthTokens> rotate(String refreshToken, String fingerprint) {
+        SessionToken st = sessionsByRefresh.get(hash(refreshToken));
+        if (st == null || st.revoked) {
+            return Optional.empty();
+        }
+        if (st.expiresAt.isBefore(Instant.now())) {
+            remove(st);
+            return Optional.empty();
+        }
+        if (!st.fingerprint.equals(fingerprint)) {
+            // Different device/agent presenting the refresh token — treat as theft.
+            revokeAllForUser(st.principal);
+            return Optional.empty();
+        }
+        // Single-use: mark this refresh as spent so a replay is detected as empty.
+        usedTokens.put(st.refreshTokenHash, st);
+        remove(st);
+        return Optional.of(issue(st.principal, fingerprint));
+    }
+
+    /**
      * Revoke an access token preventing further use.
      * 
      * @param accessToken The token to revoke.

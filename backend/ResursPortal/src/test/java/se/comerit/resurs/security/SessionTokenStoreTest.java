@@ -205,6 +205,82 @@ class SessionTokenStoreTest {
         assertThat(store.validateAccess(workerTokens.accessToken(), FP)).isPresent();
     }
 
+    // ---------- rotate ----------
+
+    @Test
+    void rotateIssuesFreshPairAndRetiresOldPair() throws Exception {
+        SessionTokenStore store = store(true, 10_000, 60_000);
+
+        AuthTokens original = store.issue(company, FP);
+        AuthTokens rotated = store.rotate(original.refreshToken(), FP).orElseThrow();
+
+        // New tokens differ from the old pair.
+        assertThat(rotated.accessToken()).isNotEqualTo(original.accessToken());
+        assertThat(rotated.refreshToken()).isNotEqualTo(original.refreshToken());
+        assertThat(rotated.role()).isEqualTo(PrincipalRole.COMPANY);
+        assertThat(rotated.name()).isEqualTo(company.name());
+
+        // Old access token is dead after rotation.
+        assertThat(store.validateAccess(original.accessToken(), FP)).isEmpty();
+
+        // New access token works.
+        assertThat(store.validateAccess(rotated.accessToken(), FP)).isPresent();
+    }
+
+    @Test
+    void rotateIsSingleUse() {
+        SessionTokenStore store = store(true, 10_000, 60_000);
+
+        AuthTokens original = store.issue(company, FP);
+        assertThat(store.rotate(original.refreshToken(), FP)).isPresent();
+        // Second use of the same refresh token is rejected (replay/theft detection).
+        assertThat(store.rotate(original.refreshToken(), FP)).isEmpty();
+    }
+
+    @Test
+    void rotateUnknownOrBlankRefreshIsRejected() {
+        SessionTokenStore store = store(true, 10_000, 60_000);
+
+        assertThat(store.rotate("never-issued", FP)).isEmpty();
+    }
+
+    @Test
+    void rotateAfterAbsoluteCapIsRejected() throws Exception {
+        SessionTokenStore store = store(true, 10_000, 200);
+
+        AuthTokens original = store.issue(company, FP);
+        Thread.sleep(300); // past 200ms absolute cap
+
+        assertThat(store.rotate(original.refreshToken(), FP)).isEmpty();
+    }
+
+    @Test
+    void rotateWithWrongFingerprintRevokesWholeSession() {
+        SessionTokenStore store = store(true, 10_000, 60_000);
+
+        AuthTokens original = store.issue(company, FP);
+
+        // Refresh attempted from a different device/agent -> theft -> reject.
+        assertThat(store.rotate(original.refreshToken(), OTHER_FP)).isEmpty();
+
+        // The entire session is gone: the originally issued access token is dead too,
+        // and the refresh can no longer be used from the correct fingerprint.
+        assertThat(store.validateAccess(original.accessToken(), FP)).isEmpty();
+        assertThat(store.rotate(original.refreshToken(), FP)).isEmpty();
+    }
+
+    @Test
+    void rotateRestoresSlidingSessionForSamePrincipal() {
+        SessionTokenStore store = store(true, 10_000, 60_000);
+
+        AuthTokens a = store.issue(company, FP);
+        AuthTokens rotated = store.rotate(a.refreshToken(), FP).orElseThrow();
+
+        // A second rotation from the (fresh) refresh token keeps the session alive.
+        AuthTokens again = store.rotate(rotated.refreshToken(), FP).orElseThrow();
+        assertThat(store.validateAccess(again.accessToken(), FP)).isPresent();
+    }
+
     // ---------- sweep ----------
 
     @Test
