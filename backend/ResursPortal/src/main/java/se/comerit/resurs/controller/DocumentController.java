@@ -33,7 +33,6 @@ import java.util.List;
  * TODO: implement PDF parsing in v2 (see native/README.md)
  *
  * Anti-patterns:
- * - JdbcTemplate direkt i kontrollern
  * - Filer sparas i /tmp/uploads — rensas vid omstart
  * - Ingen validering av filtyp (accepterar vad som helst)
  * - Audit log uppdateras via JSON string manipulation

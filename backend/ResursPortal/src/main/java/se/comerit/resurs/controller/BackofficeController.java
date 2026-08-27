@@ -20,7 +20,6 @@ import java.util.List;
  * BackofficeController – Handläggargränssnitt för manuell granskning.
  *
  * Anti-patterns:
- * - JdbcTemplate direkt i kontrollern
  * - Audit log uppdateras via JSON string manipulation
  * - Ingen e-postnotifiering vid beslut
  * - Session check copy-pasteat

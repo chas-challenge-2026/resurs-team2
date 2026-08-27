@@ -22,7 +22,6 @@ import java.util.Optional;
  *
  * Anti-patterns:
  * - Hårdkodade ETAer ("2 dagar", "3 dagar") oavsett faktiskt tillstånd
- * - JdbcTemplate direkt i kontrollern
  * - Session check copy-pasteat
  * - Statussteg beräknas inte dynamiskt — alltid samma ordning
  */
