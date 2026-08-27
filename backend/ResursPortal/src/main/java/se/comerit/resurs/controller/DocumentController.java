@@ -1,14 +1,10 @@
 package se.comerit.resurs.controller;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.support.GeneratedKeyHolder;
-import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -18,14 +14,17 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
 
 import jakarta.servlet.http.HttpSession;
+import se.comerit.resurs.entity.Application;
+import se.comerit.resurs.entity.ApplicationStatus;
+import se.comerit.resurs.entity.Document;
+import se.comerit.resurs.repository.ApplicationRepository;
+import se.comerit.resurs.repository.DocumentRepository;
+
 import java.io.File;
 import java.io.IOException;
-import java.sql.PreparedStatement;
-import java.sql.Statement;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
-import java.util.Map;
 
 /**
  * DocumentController – Hanterar dokumentuppladdning.
@@ -34,57 +33,55 @@ import java.util.Map;
  * TODO: implement PDF parsing in v2 (see native/README.md)
  *
  * Anti-patterns:
- *  - JdbcTemplate direkt i kontrollern
- *  - Filer sparas i /tmp/uploads — rensas vid omstart
- *  - Ingen validering av filtyp (accepterar vad som helst)
- *  - Audit log uppdateras via JSON string manipulation
- *  - Session check copy-pasteat
+ * - JdbcTemplate direkt i kontrollern
+ * - Filer sparas i /tmp/uploads — rensas vid omstart
+ * - Ingen validering av filtyp (accepterar vad som helst)
+ * - Audit log uppdateras via JSON string manipulation
+ * - Session check copy-pasteat
  */
 @Controller
 public class DocumentController {
 
-    @Autowired
-    private JdbcTemplate jdbcTemplate;
+    private ApplicationRepository applicationRepository;
+    private DocumentRepository documentRepository;
 
     // Uploads dir — /tmp rensas vid omstart, ingen persistent lagring
     // TODO: använd ett persistent filsystem eller S3 i v2
     private static final String UPLOAD_DIR = "/tmp/uploads/";
 
+    public DocumentController(ApplicationRepository applicationRepository, DocumentRepository documentRepository) {
+        this.applicationRepository = applicationRepository;
+        this.documentRepository = documentRepository;
+    }
+
     @GetMapping("/documents/{applicationId}")
     public String showDocumentsPage(@PathVariable("applicationId") Long applicationId,
-                                    HttpSession session,
-                                    Model model) {
+            HttpSession session,
+            Model model) {
         // Session check copy-pasted in every method — should be an interceptor
-        if (session.getAttribute("userId") == null) return "redirect:/login";
+        if (session.getAttribute("userId") == null)
+            return "redirect:/login";
 
-        List<Map<String, Object>> apps = jdbcTemplate.queryForList(
-            "SELECT a.*, c.company_name FROM applications a JOIN companies c ON a.company_id = c.id WHERE a.id = ?",
-            applicationId
-        );
+        return applicationRepository.findById(applicationId).map(application -> {
+            List<Document> documents = documentRepository.findByApplicationIdOrderByUploadedAtDesc(applicationId);
 
-        if (apps.isEmpty()) {
-            return "redirect:/applications";
-        }
+            model.addAttribute("application", application);
+            model.addAttribute("documents", documents);
+            model.addAttribute("applicationId", applicationId);
+            return "documents";
 
-        List<Map<String, Object>> docs = jdbcTemplate.queryForList(
-            "SELECT * FROM documents WHERE application_id = ? ORDER BY uploaded_at DESC",
-            applicationId
-        );
-
-        model.addAttribute("application", apps.get(0));
-        model.addAttribute("documents", docs);
-        model.addAttribute("applicationId", applicationId);
-        return "documents";
+        }).orElseGet(() -> "redirect:/applications");
     }
 
     @PostMapping("/document/upload")
     public String uploadDocument(@RequestParam("applicationId") Long applicationId,
-                                 @RequestParam("docType") String docType,
-                                 @RequestParam("file") MultipartFile file,
-                                 HttpSession session,
-                                 Model model) {
+            @RequestParam("docType") String docType,
+            @RequestParam("file") MultipartFile file,
+            HttpSession session,
+            Model model) {
         // Session check copy-pasted in every method — should be an interceptor
-        if (session.getAttribute("userId") == null) return "redirect:/login";
+        if (session.getAttribute("userId") == null)
+            return "redirect:/login";
 
         if (file.isEmpty()) {
             model.addAttribute("error", "Ingen fil vald.");
@@ -110,32 +107,22 @@ public class DocumentController {
             return "redirect:/documents/" + applicationId;
         }
 
+        Application application = applicationRepository.findById(applicationId).orElseThrow();
+
         // Store filename in DB — file path is /tmp which is not persistent
         // TODO: implement PDF parsing in v2 (see native/README.md)
         // The file is saved but its contents are never read or validated
-        KeyHolder keyHolder = new GeneratedKeyHolder();
-        jdbcTemplate.update(con -> {
-            PreparedStatement ps = con.prepareStatement(
-                "INSERT INTO documents (application_id, filename, doc_type) VALUES (?, ?, ?)",
-                Statement.RETURN_GENERATED_KEYS
-            );
-            ps.setLong(1, applicationId);
-            ps.setString(2, storedFilename);
-            ps.setString(3, docType);
-            return ps;
-        }, keyHolder);
+        Document newDocument = new Document(application, storedFilename, docType);
+        documentRepository.save(newDocument);
 
-        // Update audit log JSON blob — same string manipulation pattern as ApplicationController
+        // Update audit log JSON blob — same string manipulation pattern as
+        // ApplicationController
         // TODO: skapa separat audit_log-tabell med index
         String newEntry = "{\"ts\":\"" + LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)
-            + "\",\"action\":\"DOCUMENT_UPLOADED\",\"filename\":\"" + originalFilename
-            + "\",\"docType\":\"" + docType + "\"}";
+                + "\",\"action\":\"DOCUMENT_UPLOADED\",\"filename\":\"" + originalFilename
+                + "\",\"docType\":\"" + docType + "\"}";
 
-        String currentLog = jdbcTemplate.queryForObject(
-            "SELECT audit_log FROM applications WHERE id = ?",
-            String.class,
-            applicationId
-        );
+        String currentLog = application.getAuditLog();
 
         String updatedLog;
         if (currentLog == null || currentLog.equals("[]")) {
@@ -144,20 +131,16 @@ public class DocumentController {
             updatedLog = currentLog.substring(0, currentLog.lastIndexOf("]")) + "," + newEntry + "]";
         }
 
-        jdbcTemplate.update(
-            "UPDATE applications SET audit_log = ?, updated_at = NOW() WHERE id = ?",
-            updatedLog,
-            applicationId
-        );
+        application.setAuditLog(updatedLog);
+        applicationRepository.save(application);
 
-        // Update application status from PENDING_DOCS to UNDER_REVIEW if årsredovisning uploaded
+        // Update application status from PENDING_DOCS to UNDER_REVIEW if årsredovisning
+        // uploaded
         // No business rules validation — just check docType string
-        if ("arsredovisning".equals(docType) || "årsredovisning".equals(docType)) {
-            jdbcTemplate.update(
-                "UPDATE applications SET status = 'UNDER_REVIEW', updated_at = NOW() " +
-                "WHERE id = ? AND status = 'PENDING_DOCS'",
-                applicationId
-            );
+        if (("arsredovisning".equals(docType) || "årsredovisning".equals(docType))
+                && application.getStatus() == ApplicationStatus.PENDING_DOCS) {
+            application.setStatus(ApplicationStatus.UNDER_REVIEW);
+            applicationRepository.save(application);
         }
 
         return "redirect:/documents/" + applicationId;
@@ -165,33 +148,31 @@ public class DocumentController {
 
     @GetMapping("/document/{id}")
     public ResponseEntity<Resource> downloadDocument(@PathVariable("id") Long documentId,
-                                                     HttpSession session) {
+            HttpSession session) {
         // Session check copy-pasted in every method — should be an interceptor
         if (session.getAttribute("userId") == null) {
             return ResponseEntity.status(302).header("Location", "/login").build();
         }
 
-        List<Map<String, Object>> docs = jdbcTemplate.queryForList(
-            "SELECT * FROM documents WHERE id = ?", documentId
-        );
+        ResponseEntity<Resource> response = (ResponseEntity<Resource>) documentRepository.findById(documentId)
+                .map(document -> {
+                    String filename = document.getFilename();
+                    File file = new File(UPLOAD_DIR + filename);
 
-        if (docs.isEmpty()) {
-            return ResponseEntity.notFound().build();
-        }
+                    if (!file.exists()) {
+                        // File was in /tmp and got cleared on server restart
+                        return ResponseEntity.notFound().build();
+                    }
 
-        Map<String, Object> doc = docs.get(0);
-        String filename = (String) doc.get("filename");
-        File file = new File(UPLOAD_DIR + filename);
+                    Resource resource = new FileSystemResource(file);
 
-        if (!file.exists()) {
-            // File was in /tmp and got cleared on server restart
-            return ResponseEntity.notFound().build();
-        }
+                    return ResponseEntity.ok()
+                            .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                            .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                            .body(resource);
 
-        Resource resource = new FileSystemResource(file);
-        return ResponseEntity.ok()
-            .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
-            .contentType(MediaType.APPLICATION_OCTET_STREAM)
-            .body(resource);
+                }).orElseGet(() -> ResponseEntity.notFound().build());
+
+        return response;
     }
 }

@@ -124,7 +124,7 @@ public class BackofficeController {
         if (!"caseWorker".equals(session.getAttribute("role")))
             return "redirect:/login";
 
-        return applicationRepository.findById(id).map(application -> {
+        return applicationRepository.findByIdWithDocuments(id).map(application -> {
             model.addAttribute("application", application);
             model.addAttribute("auditLogRaw", application.getAuditLog());
             model.addAttribute("workerName", session.getAttribute("workerName"));
