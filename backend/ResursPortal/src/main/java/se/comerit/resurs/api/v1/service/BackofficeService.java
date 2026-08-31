@@ -1,6 +1,7 @@
 package se.comerit.resurs.api.v1.service;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import jakarta.annotation.Nonnull;
 import jakarta.validation.constraints.NotBlank;
@@ -18,6 +19,7 @@ public class BackofficeService {
         this.repository = repository;
     }
 
+    @Transactional(readOnly = true)
     public @Nonnull ApplicationDetailsResponse viewApplicationDetails(@Nonnull Long id, @NotBlank String caseWorker) {
         return repository.findByIdWithDocuments(id)
                 .map(app -> ApplicationMapper.toDetailsResponse(app, caseWorker))
