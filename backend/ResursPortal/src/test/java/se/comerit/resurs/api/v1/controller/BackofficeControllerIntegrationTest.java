@@ -85,6 +85,123 @@ class BackofficeControllerIntegrationTest {
     }
 
     @Nested
+    class decide {
+
+        @Test
+        void unauthenticatedIs401() throws Exception {
+            mockMvc.perform(post("/api/v1/backoffice/decide")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"applicationId\":100,\"decision\":\"APPROVED\",\"comment\":\"OK\"}"))
+                    .andExpect(status().isUnauthorized())
+                    .andExpect(content().contentTypeCompatibleWith("application/json"))
+                    .andExpect(jsonPath("$.status").value(401))
+                    .andExpect(jsonPath("$.title").value("Unauthorized"));
+        }
+
+        @Test
+        @WithCompany
+        void wrongRoleCompanyIs403() throws Exception {
+            mockMvc.perform(post("/api/v1/backoffice/decide")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"applicationId\":100,\"decision\":\"APPROVED\",\"comment\":\"OK\"}"))
+                    .andExpect(status().isForbidden())
+                    .andExpect(jsonPath("$.status").value(403))
+                    .andExpect(jsonPath("$.title").value("Access Denied"));
+        }
+
+        @Test
+        @WithCaseWorker(name = "Karin Handläggare")
+        @Sql(statements = {
+                "DELETE FROM documents",
+                "DELETE FROM applications",
+                "DELETE FROM companies",
+                "INSERT INTO companies (id, org_number, company_name, authorized_signatory) VALUES (500, '556000-9101', 'Beslut Bolag AB', 'Test Person')",
+                "INSERT INTO applications (id, company_id, requested_amount, purpose, status, decision, decision_reason, scoring_result, audit_log) VALUES (500, 500, 150000.00, 'Företagslån', 'UNDER_REVIEW', NULL, NULL, NULL, '[]')"
+        })
+        void approveApplication() throws Exception {
+            mockMvc.perform(post("/api/v1/backoffice/decide")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"applicationId\":500,\"decision\":\"APPROVED\",\"comment\":\"Godkänd\"}"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.id").value(500))
+                    .andExpect(jsonPath("$.companyName").value("Beslut Bolag AB"))
+                    .andExpect(jsonPath("$.status").value("APPROVED"))
+                    .andExpect(jsonPath("$.decision").value("APPROVED"))
+                    .andExpect(jsonPath("$.decisionReason").value("Godkänd"));
+        }
+
+        @Test
+        @WithCaseWorker(name = "Karin Handläggare")
+        @Sql(statements = {
+                "DELETE FROM documents",
+                "DELETE FROM applications",
+                "DELETE FROM companies",
+                "INSERT INTO companies (id, org_number, company_name, authorized_signatory) VALUES (501, '556000-9102', 'Avslag Bolag AB', 'Test Person')",
+                "INSERT INTO applications (id, company_id, requested_amount, purpose, status, decision, decision_reason, scoring_result, audit_log) VALUES (501, 501, 150000.00, 'Företagslån', 'UNDER_REVIEW', NULL, NULL, NULL, '[]')"
+        })
+        void rejectApplication() throws Exception {
+            mockMvc.perform(post("/api/v1/backoffice/decide")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"applicationId\":501,\"decision\":\"REJECTED\",\"comment\":\"Avslagen\"}"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.id").value(501))
+                    .andExpect(jsonPath("$.status").value("REJECTED"))
+                    .andExpect(jsonPath("$.decision").value("REJECTED"))
+                    .andExpect(jsonPath("$.decisionReason").value("Avslagen"));
+        }
+
+        @Test
+        @WithCaseWorker(name = "Karin Handläggare")
+        @Sql(statements = {
+                "DELETE FROM documents",
+                "DELETE FROM applications",
+                "DELETE FROM companies",
+                "INSERT INTO companies (id, org_number, company_name, authorized_signatory) VALUES (502, '556000-9103', 'Tyst Bolag AB', 'Test Person')",
+                "INSERT INTO applications (id, company_id, requested_amount, purpose, status, decision, decision_reason, scoring_result, audit_log) VALUES (502, 502, 150000.00, 'Företagslån', 'UNDER_REVIEW', NULL, NULL, NULL, '[]')"
+        })
+        void approveWithoutComment() throws Exception {
+            mockMvc.perform(post("/api/v1/backoffice/decide")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"applicationId\":502,\"decision\":\"APPROVED\"}"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.id").value(502))
+                    .andExpect(jsonPath("$.status").value("APPROVED"))
+                    .andExpect(jsonPath("$.decision").value("APPROVED"))
+                    .andExpect(jsonPath("$.decisionReason").value(nullValue()));
+        }
+
+        @Test
+        @WithCaseWorker
+        void missingApplicationIdIs400() throws Exception {
+            mockMvc.perform(post("/api/v1/backoffice/decide")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"decision\":\"APPROVED\"}"))
+                    .andExpect(status().isBadRequest());
+        }
+
+        @Test
+        @WithCaseWorker
+        void missingDecisionIs400() throws Exception {
+            mockMvc.perform(post("/api/v1/backoffice/decide")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"applicationId\":100}"))
+                    .andExpect(status().isBadRequest());
+        }
+
+        @Test
+        @WithCaseWorker
+        void nonExistentApplicationIs404() throws Exception {
+            mockMvc.perform(post("/api/v1/backoffice/decide")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"applicationId\":99999,\"decision\":\"APPROVED\",\"comment\":\"OK\"}"))
+                    .andExpect(status().isNotFound())
+                    .andExpect(jsonPath("$.status").value(404))
+                    .andExpect(jsonPath("$.title").value("Application Not Found"))
+                    .andExpect(jsonPath("$.detail", containsString("99999")));
+        }
+    }
+
+    @Nested
     class applicationDetails {
 
         @Test
