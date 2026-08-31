@@ -40,7 +40,7 @@ public class BackofficeController {
     public ResponseEntity<ApplicationDetailsResponse> viewApplicationDetails(@PathVariable Long id,
             @AuthenticationPrincipal UserPrincipal principal) {
         String caseWorker = principal.asCaseWorker().name();
-        return service.viewApplicationDetails(id, caseWorker);
+        return ResponseEntity.ok(service.viewApplicationDetails(id, caseWorker));
     }
 
 }

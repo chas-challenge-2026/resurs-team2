@@ -1,6 +1,5 @@
 package se.comerit.resurs.api.v1.service;
 
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import jakarta.annotation.Nonnull;
@@ -19,10 +18,9 @@ public class BackofficeService {
         this.repository = repository;
     }
 
-    public @Nonnull ResponseEntity<ApplicationDetailsResponse> viewApplicationDetails(@Nonnull  Long id, @NotBlank String caseWorker) {
+    public @Nonnull ApplicationDetailsResponse viewApplicationDetails(@Nonnull Long id, @NotBlank String caseWorker) {
         return repository.findByIdWithDocuments(id)
                 .map(app -> ApplicationMapper.toDetailsResponse(app, caseWorker))
-                .map(ResponseEntity::ok)
                 .orElseThrow(() -> new ApplicationNotFoundException(id));
     }
 
