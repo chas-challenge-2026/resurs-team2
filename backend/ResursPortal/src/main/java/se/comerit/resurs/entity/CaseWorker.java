@@ -27,7 +27,7 @@ public class CaseWorker {
     @Email
     @Size(max = 100)
     private String email;
-    @Column(name = "password", length = 60)
+    @Column(length = 60)
     @NotBlank
     @Size(max = 60)
     private String password;
