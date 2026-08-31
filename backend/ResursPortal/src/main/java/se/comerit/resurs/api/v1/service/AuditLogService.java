@@ -7,6 +7,9 @@ import java.util.Map;
 
 import org.springframework.stereotype.Service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import jakarta.annotation.Nonnull;
 import se.comerit.resurs.entity.Application;
 
@@ -19,6 +22,12 @@ import se.comerit.resurs.entity.Application;
 public class AuditLogService {
 
     private static final DateTimeFormatter TS_FORMAT = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
+
+    private final ObjectMapper objectMapper;
+
+    public AuditLogService(ObjectMapper objectMapper) {
+        this.objectMapper = objectMapper;
+    }
 
     /**
      * Appends a single audit entry to the given application's log and returns the
@@ -68,21 +77,11 @@ public class AuditLogService {
     }
 
     @Nonnull
-    private static String toJson(Map<String, String> fields) {
-        StringBuilder json = new StringBuilder("{");
-        boolean first = true;
-        for (Map.Entry<String, String> field : fields.entrySet()) {
-            if (!first) {
-                json.append(",");
-            }
-            first = false;
-            json.append("\"").append(escape(field.getKey())).append("\":\"")
-                    .append(escape(field.getValue())).append("\"");
+    private String toJson(Map<String, String> fields) {
+        try {
+            return objectMapper.writeValueAsString(fields);
+        } catch (JsonProcessingException e) {
+            throw new IllegalStateException("Failed to serialize audit entry", e);
         }
-        return json.append("}").toString();
-    }
-
-    private static String escape(String value) {
-        return value.replace("\\", "\\\\").replace("\"", "'");
     }
 }
