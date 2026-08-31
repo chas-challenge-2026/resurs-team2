@@ -3,29 +3,32 @@ package se.comerit.resurs.api.v1.dto;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
+import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import se.comerit.resurs.entity.ApplicationStatus;
 
 public record ApplicationResponse(
-    @NotNull 
+    @Nonnull
     Long id,
-    @NotBlank 
+    @Nonnull
     String companyName,
-    @NotBlank 
+    @Nonnull
     String orgNumber,
-    @NotNull 
+    @Nonnull
     BigDecimal requestedAmount,
-    @NotBlank 
+    @Nonnull
     String purpose,
-    @NotNull 
+    @Nonnull
     ApplicationStatus status,
+    @Nullable 
     String decision,
+    @Nullable 
     String decisionReason,
+    @Nullable 
     String scoringResult,
-    @NotNull 
+    @Nonnull
     LocalDateTime createdAt,
-    @NotNull 
+    @Nonnull
     LocalDateTime updatedAt
 ) {
     

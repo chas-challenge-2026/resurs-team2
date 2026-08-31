@@ -2,17 +2,16 @@ package se.comerit.resurs.api.v1.dto;
 
 import java.util.List;
 
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
+import jakarta.annotation.Nonnull;
 
 public record ApplicationDetailsResponse(
-    @NotNull
+    @Nonnull
     ApplicationResponse application,
-    @NotBlank
+    @Nonnull
     String auditLogRaw,
-    @NotBlank 
+    @Nonnull
     String workerName,
-    @NotNull 
+    @Nonnull
     List<DocumentResponse> documents
 ) {
     
