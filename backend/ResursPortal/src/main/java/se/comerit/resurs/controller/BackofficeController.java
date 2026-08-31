@@ -13,6 +13,8 @@ import se.comerit.resurs.entity.Decision;
 import se.comerit.resurs.entity.Document;
 import se.comerit.resurs.repository.ApplicationRepository;
 
+import org.springframework.data.domain.PageRequest;
+
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -49,8 +51,9 @@ public class BackofficeController {
         List<Application> reviewApplications = applicationRepository
                 .findByStatusOrderByCreatedAtAsc(ApplicationStatus.UNDER_REVIEW);
         // Also get approved/rejected for history — same query pattern, no reuse
-        List<Application> devidedApplications = applicationRepository.findTop20ByStatusInOrderByUpdatedAtDesc(
-                List.of(ApplicationStatus.APPROVED, ApplicationStatus.REJECTED));
+        List<Application> devidedApplications = applicationRepository.findByStatusInOrderByUpdatedAtDesc(
+                List.of(ApplicationStatus.APPROVED, ApplicationStatus.REJECTED),
+                PageRequest.of(0, 20));
 
         model.addAttribute("reviewApplications", reviewApplications);
         model.addAttribute("decidedApplications", devidedApplications);

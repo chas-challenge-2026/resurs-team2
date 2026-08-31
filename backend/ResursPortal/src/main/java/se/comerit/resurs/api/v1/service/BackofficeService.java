@@ -4,6 +4,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -67,8 +68,9 @@ public class BackofficeService {
     public @Nonnull ApplicationOverview applicationOverview(String caseWorker) {
         List<Application> reviewApplications = repository
                 .findByStatusOrderByCreatedAtAsc(ApplicationStatus.UNDER_REVIEW);
-        List<Application> decidedApplications = repository.findTop20ByStatusInOrderByUpdatedAtDesc(
-                List.of(ApplicationStatus.APPROVED, ApplicationStatus.REJECTED));
+        List<Application> decidedApplications = repository.findByStatusInOrderByUpdatedAtDesc(
+                List.of(ApplicationStatus.APPROVED, ApplicationStatus.REJECTED),
+                PageRequest.of(0, 20));
 
         return ApplicationMapper.toApplicationOverview(reviewApplications, decidedApplications, caseWorker);
     }
