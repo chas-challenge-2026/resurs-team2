@@ -25,7 +25,7 @@ class CaseWorkerRepositoryTest {
 
         assertThat(result).isPresent();
         assertThat(result.get().getName()).isEqualTo("Karin Handläggare");
-        assertThat(result.get().getPassword()).isEqualTo("482c811da5d5b4bc6d497ffa98491e38");
+        assertThat(result.get().getPassword()).isEqualTo("$2a$10$rUonBwDLz9IA0Ivwnor38.tjZevxSeIHzQx5b4u0RwHhHJ/sbao32");
     }
 
     @Test
