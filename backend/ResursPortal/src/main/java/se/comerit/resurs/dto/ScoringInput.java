@@ -1,8 +1,8 @@
-package se.comerit.resurs.service;
+package se.comerit.resurs.dto;
 
 import java.math.BigDecimal;
 
-public class ScoringInputService {
+public class ScoringInput {
     private double egetKapital;
     private double totaltKapital;
     private double omsattningstillgangar;
