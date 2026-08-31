@@ -1,0 +1,172 @@
+/* Status.css */
+
+/* Layout för sidan och kolumnuppdelning */
+.status-page {
+  max-width: 1170px;
+  margin: 0 auto;
+  padding: var(--spacing-md);
+}
+
+.status-header {
+  font-size: var(--font-size-lg);
+  font-weight: bold;
+  margin-bottom: var(--spacing-md);
+}
+
+.status-layout {
+  display: flex;
+  gap: var(--spacing-lg);
+}
+
+.left-column {
+  flex: 8; /* Ca 66% bredd */
+}
+
+.right-column {
+  flex: 4; /* Ca 33% bredd */
+}
+
+/* Paneler */
+.panel {
+  background-color: #ffffff;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  margin-bottom: var(--spacing-md);
+}
+
+.panel-heading {
+  padding: 10px 15px;
+  background-color: var(--color-background);
+  border-bottom: 1px solid var(--color-border);
+  font-weight: bold;
+}
+
+.panel-body {
+  padding: var(--spacing-md);
+}
+
+/* Tidslinje */
+.timeline {
+  position: relative;
+  padding-left: 30px;
+  margin: var(--spacing-md) 0;
+}
+
+.timeline::before {
+  content: '';
+  position: absolute;
+  left: 10px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--color-border);
+}
+
+.timeline-item {
+  position: relative;
+  margin-bottom: 25px;
+}
+
+.timeline-item .dot {
+  position: absolute;
+  left: -25px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  top: 4px;
+}
+
+.dot-DONE { 
+  background: var(--color-success); 
+}
+
+.dot-CURRENT { 
+  background: var(--color-warning); 
+  border: 2px solid var(--color-warning); 
+}
+
+.dot-PENDING { 
+  background: var(--color-border); 
+}
+
+.timeline-item .content {
+  background: #ffffff;
+  border-radius: 4px;
+  padding: 12px 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Status-badges */
+.badge {
+  display: inline-block;
+  padding: 3px 7px;
+  font-size: 12px;
+  font-weight: bold;
+  color: #ffffff;
+  border-radius: 10px;
+  background-color: var(--color-muted);
+}
+
+.badge-IN_PROGRESS, 
+.badge-UNDER_REVIEW { background-color: var(--color-warning); }
+.badge-APPROVED { background-color: var(--color-success); }
+.badge-REJECTED { background-color: var(--color-danger); }
+.badge-PENDING_DOCS { background-color: var(--color-muted); }
+
+/* Etiketter i tidslinjen */
+.label {
+  display: inline-block;
+  padding: 2px 6px;
+  font-size: 11px;
+  font-weight: bold;
+  color: #ffffff;
+  border-radius: 3px;
+}
+
+.label-success { background-color: var(--color-success); }
+.label-warning { background-color: var(--color-warning); }
+.label-default { background-color: var(--color-muted); }
+
+/* Dokumentlista */
+.document-list {
+  list-style: none;
+  padding-left: 0;
+  margin: 0;
+}
+
+.document-list li {
+  margin-bottom: 5px;
+}
+
+.pull-right {
+  float: right;
+}
+
+/* Knappar */
+.btn-primary {
+  background-color: var(--color-primary);
+  border-color: var(--color-primary);
+  color: #ffffff;
+}
+
+.btn-primary:hover {
+  background-color: #002244;
+  border-color: #002244;
+}
+
+.btn-default {
+  background-color: #ffffff;
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+}
+
+.btn-default:hover {
+  background-color: #e6e6e6;
+}
+
+/* Knapprad i botten */
+.actions {
+  margin-top: var(--spacing-md);
+  display: flex;
+  gap: 10px;
+}

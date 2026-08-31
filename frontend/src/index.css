@@ -9,3 +9,10 @@
   --color-muted: #6c757d;
   --color-border: #dee2e6;
 }                             
+
+body {
+  background-color: var(--color-background);
+  color: var(--color-text);
+  font-family: sans-serif;
+  margin: 0;
+}
