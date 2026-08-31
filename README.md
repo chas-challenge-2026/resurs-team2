@@ -43,7 +43,7 @@ backend/ResursPortal/   ← Spring Boot 3.5 Maven-projekt
   src/main/java/se/comerit/resurs/
     ResursPortalApplication.java
     controller/
-      AuthController.java        ← BankID mock + MD5-login
+      AuthController.java        ← BankID mock + BCrypt-login
       ApplicationController.java ← 800+ rader scoring-logik inline
       DocumentController.java    ← filuppladdning (PDF parsas ej)
       StatusController.java      ← status + hårdkodade ETAer
@@ -80,9 +80,8 @@ Se `docs/known-bugs.md` för fullständig lista. Highlights:
 5. ~~JdbcTemplate direkt i varje controller~~
 6. PDF sparas men parsas aldrig
 7. PII i klartext
-8. MD5-lösenord
-9. Ingen transaktion vid ansökningsskapande
-10. Session-check copy-pastad i varje metod
+8. Ingen transaktion vid ansökningsskapande
+9. Session-check copy-pastad i varje metod
 
 ## Vad ska ni bygga
 

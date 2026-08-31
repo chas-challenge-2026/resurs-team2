@@ -27,9 +27,9 @@ public class CaseWorker {
     @Email
     @Size(max = 100)
     private String email;
-    @Column(name = "password_md5", length = 32)
+    @Column(name = "password", length = 60)
     @NotBlank
-    @Size(max = 32)
+    @Size(max = 60)
     private String password;
 
     public CaseWorker(@Nonnull String name, @Nonnull String email, @Nonnull String password) {

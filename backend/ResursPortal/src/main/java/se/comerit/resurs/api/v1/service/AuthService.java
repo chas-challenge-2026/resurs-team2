@@ -1,9 +1,5 @@
 package se.comerit.resurs.api.v1.service;
 
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -68,38 +64,6 @@ public class AuthService {
     }
 
     private boolean verifyCaseWorker(CaseWorker cw, String password) {
-        String stored = cw.getPassword();
-        if (isBcrypt(stored)) {
-            return passwordEncoder.matches(password, stored);
-        }
-        // TODO Remove legacy
-        // Legacy MD5 row — constant-time compare, then upgrade.
-        boolean ok = MessageDigest.isEqual(
-                stored.getBytes(StandardCharsets.UTF_8),
-                md5(password).getBytes(StandardCharsets.UTF_8));
-        if (ok) {
-            cw.setPassword(passwordEncoder.encode(password));
-            caseWorkerRepository.save(cw);
-        }
-        return ok;
-    }
-
-    private boolean isBcrypt(String stored) {
-        return stored.startsWith("$2a$") || stored.startsWith("$2b$");
-    }
-
-    // TODO: migrate to bcrypt before go-live
-    private String md5(String input) {
-        try {
-            MessageDigest md = MessageDigest.getInstance("MD5");
-            byte[] hash = md.digest(input.getBytes());
-            StringBuilder sb = new StringBuilder();
-            for (byte b : hash) {
-                sb.append(String.format("%02x", b));
-            }
-            return sb.toString();
-        } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException("MD5 not available", e);
-        }
+        return passwordEncoder.matches(password, cw.getPassword());
     }
 }

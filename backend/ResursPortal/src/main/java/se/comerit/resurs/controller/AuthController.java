@@ -64,8 +64,7 @@ public class AuthController {
         }
     }
 
-    // Case worker login with MD5 password — SQL built with string concat (injection surface)
-    // TODO: parameterize this query and use bcrypt
+    // Case worker login with BCrypt password
     @PostMapping("/login/caseWorker")
     public String loginCaseWorker(@RequestParam("email") String email,
                                   @RequestParam("password") String password,

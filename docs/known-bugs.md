@@ -4,8 +4,9 @@
 
 ### 1. SQL Injection – CaseWorker-login
 **Fil:** `AuthController.java`
-**Kod:** `"SELECT * FROM case_workers WHERE email = '" + email + "' AND password_md5 = '" + md5 + "'"`
+**Kod:** `"SELECT * FROM case_workers WHERE email = '" + email + "' AND password = '" + md5 + "'"`
 **Risk:** Fullständig databaskontroll via e-postfältet (t.ex. `' OR '1'='1`)
+**Status:** Åtgärdat i refaktoringen — login använder nu parameteriserad `findByEmail` (JPA) + in-memory BCrypt-verifiering.
 
 ### 2. PII i klartext
 **Fil:** `ApplicationController.java`, databas
@@ -15,6 +16,7 @@
 ### 3. MD5-lösenord
 **Fil:** `AuthController.java`, `infra/seed.sql`
 **Problem:** MD5 är kryptografiskt bruten, inget salt, rainbow table-sårbar
+**Status:** Åtgärdat — MD5 helt borttaget; lösenord lagras och verifieras med `BCryptPasswordEncoder`. Schema-kolumn `password_md5` → `password`, och seed-data uppdaterades till förkompilerade BCrypt-hashar.
 
 ### 4. BankID-mock som hårdkodad if-sats
 **Fil:** `AuthController.java`
