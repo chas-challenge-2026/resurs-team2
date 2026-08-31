@@ -3,6 +3,7 @@
 add_library(resurs_crypto SHARED
     resurs_crypto.cpp
     aes_gcm_cipher.cpp
+    key_manager.cpp
 )
 
 target_include_directories(resurs_crypto
