@@ -8,7 +8,7 @@ B2B-kreditansökningsportal för Resurs Bank. Företag ansöker om kredit, ladda
 
 ```bash
 cd backend/ResursPortal
-mvn spring-boot:run -Plocal
+./mvnw spring-boot:run -Plocal
 ```
 
 Appen startar med en in-memory H2-databas. Data nollställs vid omstart.
