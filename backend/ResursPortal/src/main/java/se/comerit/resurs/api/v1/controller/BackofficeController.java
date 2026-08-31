@@ -14,7 +14,7 @@ import se.comerit.resurs.security.UserPrincipal;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 
-@RestController("foo")
+@RestController
 @RequestMapping("api/v1/backoffice")
 public class BackofficeController {
 

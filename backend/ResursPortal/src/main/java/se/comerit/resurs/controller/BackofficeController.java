@@ -25,7 +25,7 @@ import java.util.List;
  * - Session check copy-pasteat
  * - Ingen pagination — hämtar ALLA ansökningar i REVIEW
  */
-@Controller
+@Controller("legacyBackofficeController")
 public class BackofficeController {
 
     private final ApplicationRepository applicationRepository;
