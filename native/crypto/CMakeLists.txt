@@ -24,3 +24,13 @@ set_target_properties(resurs_crypto PROPERTIES
     CXX_VISIBILITY_PRESET hidden
     VISIBILITY_INLINES_HIDDEN ON
 )
+
+# --- Local sandbox test (compiles module sources directly, not via the .so,
+#     because internal C++ symbols are hidden in the shared library) ---
+add_executable(sandbox_test
+    sandbox_test.cpp
+    key_manager.cpp
+    aes_gcm_cipher.cpp
+)
+target_link_libraries(sandbox_test PRIVATE OpenSSL::Crypto)
+add_test(NAME sandbox_test COMMAND sandbox_test)
