@@ -25,6 +25,15 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(problemDetail);
     }
 
+    @ExceptionHandler(ApplicationNotFoundException.class)
+    public ResponseEntity<ProblemDetail> handleApplicationNotFound(ApplicationNotFoundException e) {
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(
+                HttpStatus.NOT_FOUND, e.getMessage());
+        problemDetail.setTitle("Application Not Found");
+        problemDetail.setType(PROBLEM_TYPE_DEFAULT);
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(problemDetail);
+    }
+
     @ExceptionHandler(ConstraintViolationException.class)
     public ResponseEntity<ProblemDetail> handleConstraintViolation(ConstraintViolationException e) {
         ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(
