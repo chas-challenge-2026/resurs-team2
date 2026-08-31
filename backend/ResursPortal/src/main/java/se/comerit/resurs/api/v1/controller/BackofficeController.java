@@ -7,8 +7,11 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import jakarta.validation.Valid;
 import se.comerit.resurs.api.v1.dto.ApplicationDetailsResponse;
 import se.comerit.resurs.api.v1.dto.ApplicationOverview;
+import se.comerit.resurs.api.v1.dto.ApplicationResponse;
+import se.comerit.resurs.api.v1.dto.DecisionRequest;
 import se.comerit.resurs.api.v1.service.BackofficeService;
 import se.comerit.resurs.security.UserPrincipal;
 
@@ -34,10 +37,10 @@ public class BackofficeController {
     }
 
     @PostMapping("decide")
-    public String decide(@RequestBody String entity) {
-        // TODO: process POST request
-
-        return entity;
+    public ResponseEntity<ApplicationResponse> decide(@RequestBody @Valid DecisionRequest request,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        String caseWorker = principal.asCaseWorker().name();
+        return ResponseEntity.ok(service.decide(request, caseWorker));
     }
 
     @GetMapping("application/{id}")
