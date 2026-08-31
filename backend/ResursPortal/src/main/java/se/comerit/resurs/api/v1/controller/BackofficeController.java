@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import se.comerit.resurs.api.v1.dto.ApplicationDetailsResponse;
+import se.comerit.resurs.api.v1.dto.ApplicationOverview;
 import se.comerit.resurs.api.v1.service.BackofficeService;
 import se.comerit.resurs.security.UserPrincipal;
 
@@ -25,8 +26,11 @@ public class BackofficeController {
     }
 
     @GetMapping
-    public String overview() {
-        return "";
+    public ResponseEntity<ApplicationOverview> overview(
+        @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        String caseWorker = principal.asCaseWorker().name();
+        return ResponseEntity.ok(service.applicationOverview(caseWorker));
     }
 
     @PostMapping("decide")

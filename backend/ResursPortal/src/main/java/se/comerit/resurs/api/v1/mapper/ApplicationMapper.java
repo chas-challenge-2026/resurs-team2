@@ -1,6 +1,9 @@
 package se.comerit.resurs.api.v1.mapper;
 
+import java.util.List;
+
 import se.comerit.resurs.api.v1.dto.ApplicationDetailsResponse;
+import se.comerit.resurs.api.v1.dto.ApplicationOverview;
 import se.comerit.resurs.api.v1.dto.ApplicationResponse;
 import se.comerit.resurs.api.v1.dto.DocumentResponse;
 import se.comerit.resurs.entity.Application;
@@ -42,4 +45,11 @@ public final class ApplicationMapper {
                 document.getUploadedAt());
     }
 
+    public static ApplicationOverview toApplicationOverview(List<Application> reviewApplications,
+            List<Application> decidedApplications, String workerName) {
+        return new ApplicationOverview(
+                reviewApplications.stream().map(ApplicationMapper::toResponse).toList(),
+                decidedApplications.stream().map(ApplicationMapper::toResponse).toList(),
+                workerName, reviewApplications.size());
+    }
 }
