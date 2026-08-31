@@ -30,7 +30,7 @@ public final class ApplicationMapper {
                 app.getRequestedAmount(),
                 app.getPurpose(),
                 app.getStatus(),
-                app.getDecision(),
+                app.getDecision() != null ? app.getDecision().name() : null,
                 app.getDecisionReason(),
                 app.getScoringResult(),
                 app.getCreatedAt(),

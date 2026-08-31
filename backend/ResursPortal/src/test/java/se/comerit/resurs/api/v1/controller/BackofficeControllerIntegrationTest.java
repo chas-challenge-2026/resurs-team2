@@ -199,6 +199,25 @@ class BackofficeControllerIntegrationTest {
                     .andExpect(jsonPath("$.title").value("Application Not Found"))
                     .andExpect(jsonPath("$.detail", containsString("99999")));
         }
+
+        @Test
+        @WithCaseWorker
+        @Sql(statements = {
+                "DELETE FROM documents",
+                "DELETE FROM applications",
+                "DELETE FROM companies",
+                "INSERT INTO companies (id, org_number, company_name, authorized_signatory) VALUES (503, '556000-9104', 'Redan Beslutat AB', 'Test Person')",
+                "INSERT INTO applications (id, company_id, requested_amount, purpose, status, decision, decision_reason, scoring_result, audit_log) VALUES (503, 503, 150000.00, 'Företagslån', 'APPROVED', 'APPROVED', 'Godkänd', NULL, '[]')"
+        })
+        void alreadyDecidedIs409() throws Exception {
+            mockMvc.perform(post("/api/v1/backoffice/decide")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"applicationId\":503,\"decision\":\"REJECTED\",\"comment\":\"Försök igen\"}"))
+                    .andExpect(status().isConflict())
+                    .andExpect(jsonPath("$.status").value(409))
+                    .andExpect(jsonPath("$.title").value("Application Already Decided"))
+                    .andExpect(jsonPath("$.detail", containsString("503")));
+        }
     }
 
     @Nested

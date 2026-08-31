@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import jakarta.servlet.http.HttpSession;
 import se.comerit.resurs.entity.Application;
 import se.comerit.resurs.entity.ApplicationStatus;
+import se.comerit.resurs.entity.Decision;
 import se.comerit.resurs.entity.Document;
 import se.comerit.resurs.repository.ApplicationRepository;
 
@@ -80,7 +81,7 @@ public class BackofficeController {
 
         applicationRepository.findById(applicationId).ifPresent(application -> {
             application.setStatus(newStatus);
-            application.setDecision(decision);
+            application.setDecision(Decision.valueOf(decision));
             applicationRepository.save(application);
         });
 

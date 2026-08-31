@@ -47,9 +47,9 @@ public class Application {
     @Nonnull
     private ApplicationStatus status = ApplicationStatus.PENDING_DOCS;
     @Column(length = 20)
+    @Enumerated(EnumType.STRING)
     @Nullable
-    @Size(max = 20)
-    private String decision;
+    private Decision decision;
     @Column(name = "decision_reason", columnDefinition = "TEXT")
     @Nullable
     private String decisionReason;
@@ -132,11 +132,11 @@ public class Application {
     }
 
     @Nullable
-    public String getDecision() {
+    public Decision getDecision() {
         return decision;
     }
 
-    public void setDecision(@Nullable String decision) {
+    public void setDecision(@Nullable Decision decision) {
         this.decision = decision;
     }
 

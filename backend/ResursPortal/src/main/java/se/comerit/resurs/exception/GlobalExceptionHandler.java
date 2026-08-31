@@ -34,6 +34,15 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(problemDetail);
     }
 
+    @ExceptionHandler(ApplicationAlreadyDecidedException.class)
+    public ResponseEntity<ProblemDetail> handleApplicationAlreadyDecided(ApplicationAlreadyDecidedException e) {
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(
+                HttpStatus.CONFLICT, e.getMessage());
+        problemDetail.setTitle("Application Already Decided");
+        problemDetail.setType(PROBLEM_TYPE_DEFAULT);
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(problemDetail);
+    }
+
     @ExceptionHandler(ConstraintViolationException.class)
     public ResponseEntity<ProblemDetail> handleConstraintViolation(ConstraintViolationException e) {
         ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(

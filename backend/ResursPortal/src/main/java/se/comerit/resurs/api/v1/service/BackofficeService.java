@@ -16,6 +16,7 @@ import se.comerit.resurs.api.v1.dto.DecisionRequest;
 import se.comerit.resurs.api.v1.mapper.ApplicationMapper;
 import se.comerit.resurs.entity.Application;
 import se.comerit.resurs.entity.ApplicationStatus;
+import se.comerit.resurs.exception.ApplicationAlreadyDecidedException;
 import se.comerit.resurs.exception.ApplicationNotFoundException;
 import se.comerit.resurs.repository.ApplicationRepository;
 
@@ -35,13 +36,18 @@ public class BackofficeService {
         Application application = repository.findById(request.applicationId())
                 .orElseThrow(() -> new ApplicationNotFoundException(request.applicationId()));
 
+        if (application.getStatus() == ApplicationStatus.APPROVED
+                || application.getStatus() == ApplicationStatus.REJECTED) {
+            throw new ApplicationAlreadyDecidedException(request.applicationId());
+        }
+
         ApplicationStatus status = switch (request.decision()) {
             case APPROVED -> ApplicationStatus.APPROVED;
             case REJECTED -> ApplicationStatus.REJECTED;
         };
         application.setStatus(status);
         // TODO: What is this point of this?
-        application.setDecision(request.decision().name());
+        application.setDecision(request.decision());
         application.setDecisionReason(request.comment());
 
         Map<String, String> auditDetails = new LinkedHashMap<>();
