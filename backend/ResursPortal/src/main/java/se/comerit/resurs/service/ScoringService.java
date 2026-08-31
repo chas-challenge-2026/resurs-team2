@@ -3,6 +3,7 @@ package se.comerit.resurs.service;
 
 
 import org.springframework.stereotype.Service;
+import se.comerit.resurs.dto.ScoringInput;
 
 import java.math.BigDecimal;
 import java.util.HashMap;
@@ -11,7 +12,7 @@ import java.util.Map;
 @Service
 public class ScoringService {
 
-    public ScoringResult score(ScoringInputService input) {
+    public ScoringResult score(ScoringInput input) {
         ScoringResult result = new ScoringResult();
 
         StringBuilder scoringLog = new StringBuilder();
