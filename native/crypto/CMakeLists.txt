@@ -2,6 +2,7 @@
 # The crypto shared library - loaded from Java via JNA (dlopen).
 add_library(resurs_crypto SHARED
     resurs_crypto.cpp
+    aes_gcm_cipher.cpp
 )
 
 target_include_directories(resurs_crypto
@@ -22,5 +23,3 @@ set_target_properties(resurs_crypto PROPERTIES
     CXX_VISIBILITY_PRESET hidden
     VISIBILITY_INLINES_HIDDEN ON
 )
-
-
