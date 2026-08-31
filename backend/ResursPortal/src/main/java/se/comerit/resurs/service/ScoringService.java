@@ -1,7 +1,6 @@
 package se.comerit.resurs.service;
 
 
-
 import org.springframework.stereotype.Service;
 import se.comerit.resurs.dto.ScoringInput;
 
@@ -199,7 +198,6 @@ public class ScoringService {
             // Already counted in likviditetsgrad, but re-checked here — duplicate logic
             decisionReason.append("Not: Kortfristiga skulder överstiger omsättningstillgångar. ");
         }
-
 
 
         // ===========================================================
