@@ -14,10 +14,8 @@ import se.comerit.resurs.security.UserPrincipal;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 
-
-
 @RestController("foo")
-@RequestMapping("api/a1/backoffice")
+@RequestMapping("api/v1/backoffice")
 public class BackofficeController {
 
     private final BackofficeService service;
@@ -33,16 +31,16 @@ public class BackofficeController {
 
     @PostMapping("decide")
     public String decide(@RequestBody String entity) {
-        //TODO: process POST request
-        
+        // TODO: process POST request
+
         return entity;
     }
-    
+
     @GetMapping("application/{id}")
     public ResponseEntity<ApplicationDetailsResponse> viewApplicationDetails(@PathVariable Long id,
             @AuthenticationPrincipal UserPrincipal principal) {
         String caseWorker = principal.asCaseWorker().name();
         return service.viewApplicationDetails(id, caseWorker);
     }
-    
+
 }
