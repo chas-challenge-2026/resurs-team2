@@ -64,18 +64,18 @@ public class ApplicationController {
             @RequestParam("orgNumber") String orgNumber,
             @RequestParam("companyName") String companyName,
             @RequestParam("authorizedSignatory") String authorizedSignatory,
-            @RequestParam("egetKapital") String egetKapitalStr,
-            @RequestParam("totaltKapital") String totaltKapitalStr,
-            @RequestParam("omsattningstillgangar") String omsattningstillgangarStr,
-            @RequestParam("kortfristigaSkulder") String kortfristigaSkulderStr,
-            @RequestParam("totalaSkulder") String totalaSkulderStr,
-            @RequestParam("rorelseresultat") String rorelseresultatStr,
-            @RequestParam("nettoomsattning") String nettoomsattningStr,
-            @RequestParam("requestedAmount") String requestedAmountStr,
+            @RequestParam("egetKapital") double egetKapital,
+            @RequestParam("totaltKapital") double totaltKapital,
+            @RequestParam("omsattningstillgangar") double omsattningstillgangar,
+            @RequestParam("kortfristigaSkulder") double kortfristigaSkulder,
+            @RequestParam("totalaSkulder") double totalaSkulder,
+            @RequestParam("rorelseresultat") double rorelseresultat,
+            @RequestParam("nettoomsattning") double nettoomsattning,
+            @RequestParam("requestedAmount") BigDecimal requestedAmount,
             @RequestParam("purpose") String purpose,
-            @RequestParam(value = "operativtKassaflode", defaultValue = "") String operativtKassaflodeStr,
-            @RequestParam(value = "investeringsKassaflode", defaultValue = "") String investeringsKassaflodeStr,
-            @RequestParam(value = "ranteKostnader", defaultValue = "") String ranteKostnaderStr,
+            @RequestParam(value = "operativtKassaflode", defaultValue = "") double operativtKassaflode,
+            @RequestParam(value = "investeringsKassaflode", defaultValue = "") double investeringsKassaflode,
+            @RequestParam(value = "ranteKostnader", defaultValue = "") double ranteKostnader,
             @RequestParam(value = "bransch", defaultValue = "") String bransch,
             HttpSession session,
             Model model) {
@@ -84,66 +84,11 @@ public class ApplicationController {
         if (session.getAttribute("userId") == null) return "redirect:/login";
         if (!"company".equals(session.getAttribute("role"))) return "redirect:/login";
 
-        // TODO: encrypt PII before go-live
-        // PII stored in plaintext: companyName, orgNumber, authorizedSignatory
-        // No validation or sanitization of inputs
 
-        // ---- Parse financial inputs (no proper error handling) ----
-        double egetKapital = 0;
-        double totaltKapital = 0;
-        double omsattningstillgangar = 0;
-        double kortfristigaSkulder = 0;
-        double totalaSkulder = 0;
-        double rorelseresultat = 0;
-        double nettoomsattning = 0;
-        BigDecimal requestedAmount = BigDecimal.ZERO;
 
-        try {
-            egetKapital = Double.parseDouble(egetKapitalStr.replace(",", ".").trim());
-            totaltKapital = Double.parseDouble(totaltKapitalStr.replace(",", ".").trim());
-            omsattningstillgangar = Double.parseDouble(omsattningstillgangarStr.replace(",", ".").trim());
-            kortfristigaSkulder = Double.parseDouble(kortfristigaSkulderStr.replace(",", ".").trim());
-            totalaSkulder = Double.parseDouble(totalaSkulderStr.replace(",", ".").trim());
-            rorelseresultat = Double.parseDouble(rorelseresultatStr.replace(",", ".").trim());
-            nettoomsattning = Double.parseDouble(nettoomsattningStr.replace(",", ".").trim());
-            requestedAmount = new BigDecimal(requestedAmountStr.replace(",", ".").trim());
-        } catch (NumberFormatException e) {
-            model.addAttribute("error", "Ogiltiga numeriska värden. Kontrollera dina inmatningar.");
-            model.addAttribute("companyName", companyName);
-            model.addAttribute("orgNumber", orgNumber);
-            return "apply";
-        }
 
-        // Parse new optional params — om tomt, sätt 0 — kan ge felaktiga resultat nedströms
-        double operativtKassaflode = 0.0;
-        try {
-            if (!operativtKassaflodeStr.isEmpty()) {
-                operativtKassaflode = Double.parseDouble(operativtKassaflodeStr.replace(",", ".").trim());
-            }
-        } catch (NumberFormatException e) {
-            // om tomt, sätt 0 — kan ge felaktiga resultat nedströms
-            operativtKassaflode = 0.0;
-        }
 
-        double investeringsKassaflode = 0.0;
-        try {
-            if (!investeringsKassaflodeStr.isEmpty()) {
-                investeringsKassaflode = Double.parseDouble(investeringsKassaflodeStr.replace(",", ".").trim());
-            }
-        } catch (NumberFormatException e) {
-            // om tomt, sätt 0 — kan ge felaktiga resultat nedströms
-            investeringsKassaflode = 0.0;
-        }
 
-        double ranteKostnader = 0.0;
-        try {
-            if (!ranteKostnaderStr.isEmpty()) {
-                ranteKostnader = Double.parseDouble(ranteKostnaderStr.replace(",", ".").trim());
-            }
-        } catch (NumberFormatException e) {
-            // om tomt, sätt 0 — kan ge felaktiga resultat nedströms
-            ranteKostnader = 0.0;
-        }
 
         // ===========================================================
         // INSERT 1: Upsert company (no ON CONFLICT — just check first)
@@ -192,25 +137,26 @@ public class ApplicationController {
         int kreditPoang = 100;
 
         // --- Soliditet (eget_kapital / totalt_kapital) ---
-        // Magic number 0.25 used here, but 0.20 used below — inconsistency intentional
-        double soliditet = 0.0;
-        if (totaltKapital != 0) {
-            soliditet = egetKapital / totaltKapital;
-        }
+
+        final double soliditet = totaltKapital != 0 ? egetKapital / totaltKapital : 0.0;
+
         scoringLog.append("soliditet=").append(String.format("%.2f", soliditet));
 
-        if (soliditet < 0.20) {
-            // Hard reject threshold — magic number
+        final double soliditetRejectThreshold = 0.20; // hard reject threshold
+        final double soliditetFlagThreshold = 0.25; // flag threshold
+
+        if (soliditet < soliditetRejectThreshold) {
+
             hardReject = true;
             decisionReason.append("AVSLAG: Soliditet för låg (").append(String.format("%.2f", soliditet))
-                          .append(" < 0.20 gräns). ");
+                    .append(" < " + soliditetRejectThreshold + " gräns). ");
             scoringLog.append(" [REJECT]");
             kreditPoang -= 40;
-        } else if (soliditet < 0.25) {
-            // Flag threshold — different magic number from above
+        } else if (soliditet < soliditetFlagThreshold) {
+            // Flag threshold
             flagCount++;
             decisionReason.append("VARNING: Soliditet låg (").append(String.format("%.2f", soliditet))
-                          .append(", rekommenderad miniminivå 0.25). ");
+                    .append(", rekommenderad miniminivå " + soliditetFlagThreshold + "). ");
             scoringLog.append(" [FLAGGED]");
             kreditPoang -= 20;
         } else {
@@ -222,19 +168,20 @@ public class ApplicationController {
         scoringLog.append(", ");
 
         // --- Likviditetsgrad (omsättningstillgångar / kortfristiga_skulder) ---
-        double likviditetsgrad = 0.0;
-        if (kortfristigaSkulder != 0) {
-            likviditetsgrad = omsattningstillgangar / kortfristigaSkulder;
-        }
+        double likviditetsgrad = kortfristigaSkulder != 0 ? omsattningstillgangar / kortfristigaSkulder : 0.0;
+
         scoringLog.append("likviditetsgrad=").append(String.format("%.2f", likviditetsgrad));
 
-        if (likviditetsgrad < 1.0) {
+        final double likviditetsRejectThreshold = 1.0; // hard reject threshold
+        final double likviditetsFlagThreshold = 2.0; // flag threshold
+
+        if (likviditetsgrad < likviditetsRejectThreshold) {
             flagCount++;
-            decisionReason.append("VARNING: Likviditetsgrad under 1.0 (").append(String.format("%.2f", likviditetsgrad))
-                          .append("). Kortfristiga skulder överstiger omsättningstillgångar. ");
+            decisionReason.append("VARNING: Likviditetsgrad under " + likviditetsRejectThreshold + " (").append(String.format("%.2f", likviditetsgrad))
+                    .append("). Kortfristiga skulder överstiger omsättningstillgångar. ");
             scoringLog.append(" [FLAGGED]");
             kreditPoang -= 15;
-        } else if (likviditetsgrad >= 2.0) {
+        } else if (likviditetsgrad >= likviditetsFlagThreshold) {
             decisionReason.append("Likviditetsgrad god (").append(String.format("%.2f", likviditetsgrad)).append("). ");
             scoringLog.append(" [GOOD]");
             kreditPoang += 10;
@@ -246,24 +193,26 @@ public class ApplicationController {
         scoringLog.append(", ");
 
         // --- Skuldsättningsgrad (totala_skulder / eget_kapital) ---
-        double skuldsattningsgrad = 0.0;
-        if (egetKapital != 0) {
-            skuldsattningsgrad = totalaSkulder / egetKapital;
-        }
+        double skuldsattningsgrad = egetKapital != 0 ? totalaSkulder / egetKapital : 0.0;
+
         scoringLog.append("skuldsättningsgrad=").append(String.format("%.2f", skuldsattningsgrad));
 
-        if (skuldsattningsgrad > 3.0) {
-            // Hard reject — magic number 3.0
+
+        final double debtsRejectionThreshold = 3.0;
+        final double debtsWarningThreshold = 2.0;
+
+        if (skuldsattningsgrad > debtsRejectionThreshold) {
+
             hardReject = true;
             decisionReason.append("AVSLAG: Skuldsättningsgrad för hög (").append(String.format("%.2f", skuldsattningsgrad))
-                          .append(" > 3.0). ");
+                    .append(" > " + debtsRejectionThreshold + "). ");
             scoringLog.append(" [REJECT]");
             kreditPoang -= 35;
-        } else if (skuldsattningsgrad > 2.0) {
-            // Flag — different magic number than reject threshold
+        } else if (skuldsattningsgrad > debtsWarningThreshold) {
+
             flagCount++;
             decisionReason.append("VARNING: Skuldsättningsgrad hög (").append(String.format("%.2f", skuldsattningsgrad))
-                          .append(", rekommenderas under 2.0). ");
+                    .append(", rekommenderas under " + debtsWarningThreshold + "). ");
             scoringLog.append(" [FLAGGED]");
             kreditPoang -= 15;
         } else {
@@ -275,58 +224,65 @@ public class ApplicationController {
         scoringLog.append(", ");
 
         // --- Rörelseresultatmarginal (rörelseresultat / nettoomsättning) ---
-        double rorelsemarginal = 0.0;
-        if (nettoomsattning != 0) {
-            rorelsemarginal = rorelseresultat / nettoomsattning;
-        }
+        double rorelsemarginal = nettoomsattning != 0 ? rorelseresultat / nettoomsattning : 0.0;
+
         scoringLog.append("rörelsemarginal=").append(String.format("%.2f", rorelsemarginal));
 
-        if (rorelsemarginal < 0.02) {
-            // Flag — magic number 0.02 (2%)
+        final double marginalWarningThreshold = 0.02; // 2%
+        final double marginalGoodThreshold = 0.10; // 10%
+
+        if (rorelsemarginal < marginalWarningThreshold) {
+
             flagCount++;
             decisionReason.append("VARNING: Rörelseresultatmarginal låg (")
-                          .append(String.format("%.2f", rorelsemarginal * 100)).append("%, rekommenderas över 2%). ");
+                    .append(String.format("%.2f", rorelsemarginal * 100)).append("%, rekommenderas över " + marginalWarningThreshold + "). ");
             scoringLog.append(" [FLAGGED]");
             kreditPoang -= 10;
-        } else if (rorelsemarginal >= 0.10) {
+        } else if (rorelsemarginal > marginalGoodThreshold) {
             decisionReason.append("Rörelseresultatmarginal god (")
-                          .append(String.format("%.2f", rorelsemarginal * 100)).append("%). ");
+                    .append(String.format("%.2f", rorelsemarginal * 100)).append("%, rekommenderas " + marginalGoodThreshold + "). ");
             scoringLog.append(" [GOOD]");
             kreditPoang += 8;
         } else {
             decisionReason.append("Rörelseresultatmarginal godkänd (")
-                          .append(String.format("%.2f", rorelsemarginal * 100)).append("%). ");
+                    .append(String.format("%.2f", rorelsemarginal * 100)).append("%). ");
             scoringLog.append(" [OK]");
         }
 
         // Extra soliditet-kontroll med ANNAN tröskel (0.30) — inkonsekvent med ovan
         // TODO: bestäm en tröskel och håll dig till den
-        if (soliditet < 0.30 && requestedAmount.compareTo(new BigDecimal("1000000")) > 0) {
+        if (soliditet < soliditetFlagThreshold && requestedAmount.compareTo(new BigDecimal("1000000")) > 0) {
             flagCount++;
-            decisionReason.append("VARNING: Stor kreditbelopp med soliditet under 0.30 – extra granskning rekommenderas. ");
+            decisionReason.append("VARNING: Stor kreditbelopp med soliditet under " + soliditetFlagThreshold + " – extra granskning rekommenderas. ");
             scoringLog.append(", storkredit_soliditet [FLAGGED]");
             kreditPoang -= 12;
         }
 
-        // Extra likviditets-check med 1.2-tröskel (ännu ett magic number)
-        if (likviditetsgrad < 1.2 && likviditetsgrad >= 1.0) {
+        // Extra likviditets-check med 1.2-tröskel
+        final double likviditetsCheck = 1.2;
+        final double likviditetsminimumThreshold = 1.0;
+        // flag threshold for likviditetsgrad
+
+        if (likviditetsgrad < likviditetsCheck && likviditetsgrad >= likviditetsminimumThreshold) {
             flagCount++;
             decisionReason.append("VARNING: Likviditetsgrad nära minimigräns (")
-                          .append(String.format("%.2f", likviditetsgrad)).append(" < 1.2). ");
+                    .append(String.format("%.2f", likviditetsgrad)).append(" < " + likviditetsCheck + "). ");
             scoringLog.append(", likviditet_marginal [FLAGGED]");
             kreditPoang -= 8;
         }
 
-        // Kreditbeloppskontroll — ännu ett magic number (5 000 000)
-        if (requestedAmount.compareTo(new BigDecimal("5000000")) > 0) {
+        // Kreditbeloppskontroll
+        final double kreditBeloppCheck = 5000000.0;
+        if (requestedAmount.compareTo(BigDecimal.valueOf(+kreditBeloppCheck)) > 0) {
             flagCount++;
-            decisionReason.append("VARNING: Kreditbelopp överstiger 5 000 000 kr — kräver manuell granskning. ");
+            decisionReason.append("VARNING: Kreditbelopp överstiger " + kreditBeloppCheck + " kr — kräver manuell granskning. ");
             scoringLog.append(", storkredit [FLAGGED]");
             kreditPoang -= 10;
         }
 
         // Negativt eget kapital — ej täckt av soliditet-formeln om totalt_kapital också är negativt
-        if (egetKapital < 0) {
+        final double egetKapitalThreshold = 0.0;
+        if (egetKapital < egetKapitalThreshold) {
             hardReject = true;
             decisionReason.append("AVSLAG: Negativt eget kapital. ");
             scoringLog.append(", negativt_eget_kapital [REJECT]");
@@ -334,7 +290,9 @@ public class ApplicationController {
         }
 
         // Nettoomsättning-kontroll — liten verksamhet flaggas
-        if (nettoomsattning < 500000) {
+        final double nettoCheckThreshold = 500000.0; // 500 000 kr
+
+        if (nettoomsattning < nettoCheckThreshold) {
             flagCount++;
             decisionReason.append("VARNING: Låg nettoomsättning (under 500 000 kr). ");
             scoringLog.append(", låg_omsättning [FLAGGED]");
@@ -342,7 +300,8 @@ public class ApplicationController {
         }
 
         // Rörelseresultat negativt — extra flagg utöver marginalen
-        if (rorelseresultat < 0) {
+        final double negativtResultat = 0.0;
+        if (rorelseresultat < negativtResultat) {
             flagCount++;
             decisionReason.append("VARNING: Negativt rörelseresultat. ");
             scoringLog.append(", negativt_rörelseresultat [FLAGGED]");
@@ -479,33 +438,26 @@ public class ApplicationController {
         // Tröskelvärde 0.05 används här men 0.08 används i check nedan — inkonsekvent
         // TODO: bestäm ett enda tröskelvärde för kassaflödeskvot
         // ===========================================================
-        double kassaflodeKvot = 0.0;
-        if (totalaSkulder != 0) {
-            kassaflodeKvot = operativtKassaflode / totalaSkulder;
-        }
+        double kassaflodeKvot = totalaSkulder != 0 ? operativtKassaflode / totalaSkulder : 0.0;
+
         scoringLog.append(", kassaflödeskvot=").append(String.format("%.3f", kassaflodeKvot));
+
+        double kassaflodeKvotLow = 0.05;
 
         if (kassaflodeKvot < 0) {
             // Negativt operativt kassaflöde — hård avvisning
             hardReject = true;
             decisionReason.append("AVSLAG: Negativt operativt kassaflöde (kassaflödeskvot=")
-                          .append(String.format("%.3f", kassaflodeKvot)).append("). ");
+                    .append(String.format("%.3f", kassaflodeKvot)).append("). ");
             scoringLog.append(" [REJECT]");
             kreditPoang -= 30;
-        } else if (kassaflodeKvot < 0.05) {
-            // magic number 0.05 — men 0.08 används i check nedanför
+        } else if (kassaflodeKvot < kassaflodeKvotLow) {
+            // Kassaflödeskvot under tröskel — flagga
             flagCount++;
-            decisionReason.append("VARNING: Kassaflödeskvot låg (").append(String.format("%.3f", kassaflodeKvot))
-                          .append(" < 0.05). ");
+            decisionReason.append("VARNING: Kassaflödeskvot låg (").append(String.format("%.3f", kassaflodeKvot)).append(" < + ").append(kassaflodeKvotLow).append(" ). ");
             scoringLog.append(" [FLAGGED]");
             kreditPoang -= 12;
-        } else if (kassaflodeKvot < 0.08) {
-            // inkonsekvent med 0.05 ovan — borde vara samma gräns
-            flagCount++;
-            decisionReason.append("VARNING: Kassaflödeskvot under rekommenderad nivå (")
-                          .append(String.format("%.3f", kassaflodeKvot)).append(" < 0.08, inkonsekvent med gräns 0.05 ovan). ");
-            scoringLog.append(" [FLAGGED]");
-            kreditPoang -= 6;
+
         } else {
             decisionReason.append("Kassaflödeskvot OK (").append(String.format("%.3f", kassaflodeKvot)).append("). ");
             scoringLog.append(" [OK]");
@@ -513,10 +465,12 @@ public class ApplicationController {
         }
 
         // Investeringskassaflöde — negativt är ofta normalt men flaggas ändå
-        if (investeringsKassaflode < -nettoomsattning * 0.3) { // magic number 0.3
+        final double negativeInvestering = 0.3;
+
+        if (investeringsKassaflode < -nettoomsattning * negativeInvestering) {
             flagCount++;
             decisionReason.append("VARNING: Högt negativt investeringskassaflöde (")
-                          .append(String.format("%.0f", investeringsKassaflode)).append(" kr). ");
+                    .append(String.format("%.0f", investeringsKassaflode)).append(" kr). ");
             scoringLog.append(", inv_kassaflode [FLAGGED]");
             kreditPoang -= 4;
         }
@@ -525,38 +479,34 @@ public class ApplicationController {
         // RÄNTETÄCKNINGSGRAD (rörelseresultat / räntekostnader)
         // Edge case: negativa räntekostnader hanteras med magic number 999
         // ===========================================================
-        double ranteTackningsgrad;
-        if (ranteKostnader < 0) {
-            ranteTackningsgrad = 999; // edge case — negativa räntekostnader, sätter till 999 vilket aldrig triggar
-        } else if (ranteKostnader == 0) {
-            ranteTackningsgrad = 999; // inga räntekostnader = inget problem, sätt till 999
-        } else {
-            ranteTackningsgrad = rorelseresultat / ranteKostnader;
-        }
-        scoringLog.append(", ränteTäckning=").append(String.format("%.2f", ranteTackningsgrad));
+        if (ranteKostnader > 0) {
+            double ranteTackningsgrad = rorelseresultat / ranteKostnader;
+            scoringLog.append(", ränteTäckning=").append(String.format("%.2f", ranteTackningsgrad));
 
-        if (ranteTackningsgrad < 1.5) {
-            // Hard reject — magic number 1.5
-            hardReject = true;
-            decisionReason.append("AVSLAG: Räntetäckningsgrad under 1.5 (")
-                          .append(String.format("%.2f", ranteTackningsgrad)).append("). Rörelseresultat täcker ej räntekostnader. ");
-            scoringLog.append(" [REJECT]");
-            kreditPoang -= 35;
-        } else if (ranteTackningsgrad < 2.5) {
-            // Flag — magic number 2.5, inkonsekvent med hardReject-gränsen 1.5
-            flagCount++;
-            decisionReason.append("VARNING: Räntetäckningsgrad låg (").append(String.format("%.2f", ranteTackningsgrad))
-                          .append(" < 2.5, rekommenderas minst 2.5). ");
-            scoringLog.append(" [FLAGGED]");
-            kreditPoang -= 15;
-        } else if (ranteTackningsgrad >= 999) {
-            // Ingen räntekostnad — poäng-neutral, loggas bara
+            double ranteTackningsgradRejectThreshold = 1.5;
+            double ranteTackningsgradFlagThreshold = 2.5;
+
+            if (ranteTackningsgrad < ranteTackningsgradRejectThreshold) {
+                // Hard reject
+                hardReject = true;
+                decisionReason.append("AVSLAG: Räntetäckningsgrad under + ").append(ranteTackningsgradRejectThreshold).append(" (")
+                        .append(String.format("%.2f", ranteTackningsgrad)).append("). Rörelseresultat täcker ej räntekostnader. ");
+                scoringLog.append(" [REJECT]");
+                kreditPoang -= 35;
+            } else if (ranteTackningsgrad < ranteTackningsgradFlagThreshold) {
+                // Flag
+                flagCount++;
+                decisionReason.append("VARNING: Räntetäckningsgrad låg (").append(String.format("%.2f", ranteTackningsgrad)).append(" < +, rekommenderas minst ").append(ranteTackningsgradFlagThreshold).append("). ");
+                scoringLog.append(" [FLAGGED]");
+                kreditPoang -= 15;
+            } else {
+                decisionReason.append("Räntetäckningsgrad OK (").append(String.format("%.2f", ranteTackningsgrad)).append("). ");
+                scoringLog.append(" [OK]");
+                kreditPoang += 8;
+            }
+        } else {
             decisionReason.append("Räntetäckningsgrad ej tillämplig (inga räntekostnader). ");
             scoringLog.append(" [N/A]");
-        } else {
-            decisionReason.append("Räntetäckningsgrad OK (").append(String.format("%.2f", ranteTackningsgrad)).append("). ");
-            scoringLog.append(" [OK]");
-            kreditPoang += 8;
         }
 
         // ===========================================================
@@ -565,18 +515,18 @@ public class ApplicationController {
         // ===========================================================
 
         // Kombination 1: låg soliditet OCH hög skuldsättning — "dubbel riskindikator"
-        if (soliditet < 0.25 && skuldsattningsgrad > 2.5) {
+        if (soliditet < soliditetFlagThreshold && skuldsattningsgrad > debtsWarningThreshold) {
             // dubbel riskindikator — magic numbers inkonsekvent med individuella checks ovan
             flagCount++;
             decisionReason.append("VARNING: Dubbel riskindikator — låg soliditet (")
-                          .append(String.format("%.2f", soliditet)).append(") kombinerat med hög skuldsättning (")
-                          .append(String.format("%.2f", skuldsattningsgrad)).append("). ");
+                    .append(String.format("%.2f", soliditet)).append(") kombinerat med hög skuldsättning (")
+                    .append(String.format("%.2f", skuldsattningsgrad)).append("). ");
             scoringLog.append(", kombinationsrisk_soliditet_skuld [FLAGGED]");
             kreditPoang -= 18;
         }
 
         // Kombination 2: dålig likviditet OCH negativt rörelseresultat — omedelbar avvisning
-        if (likviditetsgrad < 1.0 && rorelseresultat < 0) {
+        if (likviditetsgrad < likviditetsRejectThreshold && rorelseresultat < 0) {
             hardReject = true;
             decisionReason.append("AVSLAG: Kombinationsrisk — likviditetsgrad under 1.0 samt negativt rörelseresultat. ");
             scoringLog.append(", kombinationsrisk_likviditet_resultat [REJECT]");
@@ -587,14 +537,15 @@ public class ApplicationController {
         if (requestedAmount.doubleValue() > nettoomsattning) {
             flagCount++;
             decisionReason.append("VARNING: Kreditbelopp överstiger årsoms. (")
-                          .append(String.format("%.0f", requestedAmount.doubleValue()))
-                          .append(" kr > ").append(String.format("%.0f", nettoomsattning)).append(" kr). ");
+                    .append(String.format("%.0f", requestedAmount.doubleValue()))
+                    .append(" kr > ").append(String.format("%.0f", nettoomsattning)).append(" kr). ");
             scoringLog.append(", kredit_vs_omsattning [FLAGGED]");
             kreditPoang -= 8;
         }
 
         // Kombination 4: eget kapital i förhållande till kreditbelopp
-        if (requestedAmount.doubleValue() > 0 && egetKapital / requestedAmount.doubleValue() < 0.3) {
+        final double kreditEgetKapitalThreshold = 0.3;
+        if (requestedAmount.doubleValue() > 0 && egetKapital / requestedAmount.doubleValue() < kreditEgetKapitalThreshold) {
             // magic number 0.3 — eget kapital borde vara minst 30% av kreditbelopp
             flagCount++;
             decisionReason.append("VARNING: Eget kapital täcker mindre än 30% av kreditbeloppet. ");
@@ -604,8 +555,9 @@ public class ApplicationController {
 
         // Kombination 5: OBS — felaktig formel, borde vara (totalaSkulder / nettoomsattning) men det funkar i de flesta fall
         // OBS: detta är fel, borde vara totalaSkulder / nettoomsattning men det funkar i de flesta fall
-        double skuldTackningsFel = (totalaSkulder + kortfristigaSkulder) / (nettoomsattning + 1); // +1 för att undvika division med noll
-        if (skuldTackningsFel > 2.0) { // magic number 2.0 — inkonsekvent med skuldsättningsgrad-check ovan
+         final double skuldTackningsFel = (totalaSkulder + kortfristigaSkulder) / (nettoomsattning + 1); // +1 för att undvika division med noll
+
+        if (skuldTackningsFel > debtsWarningThreshold) { // magic number 2.0 — inkonsekvent med skuldsättningsgrad-check ovan
             flagCount++;
             decisionReason.append("VARNING: Skuldbörda hög relativt omsättning (kombinationscheck). ");
             scoringLog.append(", skuld_omsattning_kombination [FLAGGED]");
@@ -613,8 +565,9 @@ public class ApplicationController {
         }
 
         // Kombination 6: kassaflöde + skuldsättning
-        if (kassaflodeKvot < 0.05 && skuldsattningsgrad > 2.0) {
-            // inkonsekvent — 0.05 här men 0.08 användes ovan
+
+        if (kassaflodeKvot < kassaflodeKvotLow && skuldsattningsgrad > debtsWarningThreshold) {
+
             flagCount++;
             decisionReason.append("VARNING: Kombinationsrisk kassaflöde + skuldsättning. ");
             scoringLog.append(", kassaflode_skuld_kombination [FLAGGED]");
