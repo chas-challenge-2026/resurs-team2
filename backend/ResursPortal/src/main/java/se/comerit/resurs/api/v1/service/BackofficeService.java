@@ -6,8 +6,7 @@ import org.springframework.stereotype.Service;
 import jakarta.annotation.Nonnull;
 import jakarta.validation.constraints.NotBlank;
 import se.comerit.resurs.api.v1.dto.ApplicationDetailsResponse;
-import se.comerit.resurs.api.v1.dto.ApplicationResponse;
-import se.comerit.resurs.api.v1.dto.DocumentResponse;
+import se.comerit.resurs.api.v1.mapper.ApplicationMapper;
 import se.comerit.resurs.exception.ApplicationNotFoundException;
 import se.comerit.resurs.repository.ApplicationRepository;
 
@@ -21,27 +20,10 @@ public class BackofficeService {
     }
 
     public @Nonnull ResponseEntity<ApplicationDetailsResponse> viewApplicationDetails(@Nonnull  Long id, @NotBlank String caseWorker) {
-        return repository.findByIdWithDocuments(id).map(app -> new ApplicationDetailsResponse(
-                new ApplicationResponse(
-                        app.getId(),
-                        app.getCompany().getName(),
-                        app.getCompany().getOrgNumber(),
-                        app.getRequestedAmount(),
-                        app.getPurpose(),
-                        app.getStatus(),
-                        app.getDecision(),
-                        app.getDecisionReason(),
-                        app.getScoringResult(),
-                        app.getCreatedAt(),
-                        app.getUpdatedAt()),
-                app.getAuditLog(),
-                caseWorker,
-                app.getDocuments().stream().map(document -> new DocumentResponse(
-                        document.getId(),
-                        document.getFilename(),
-                        document.getDocType(),
-                        document.getUploadedAt())).toList()))
-                .map(ResponseEntity::ok).orElseThrow(() -> new ApplicationNotFoundException(id));
+        return repository.findByIdWithDocuments(id)
+                .map(app -> ApplicationMapper.toDetailsResponse(app, caseWorker))
+                .map(ResponseEntity::ok)
+                .orElseThrow(() -> new ApplicationNotFoundException(id));
     }
 
 }
