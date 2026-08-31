@@ -3,12 +3,12 @@ package se.comerit.resurs.api.v1.service;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.Optional;
 
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import se.comerit.resurs.entity.CaseWorker;
+import se.comerit.resurs.exception.InvalidCredentialsException;
 import se.comerit.resurs.repository.CaseWorkerRepository;
 import se.comerit.resurs.repository.CompanyRepository;
 import se.comerit.resurs.security.AuthTokens;
@@ -35,29 +35,32 @@ public class AuthService {
         this.passwordEncoder = passwordEncoder;
     }
 
-    public Optional<AuthTokens> loginCompany(String orgNumber, String fingerprint) {
+    public AuthTokens loginCompany(String orgNumber, String fingerprint) {
         if (!bankIdService.authenticate(orgNumber)) {
-            return Optional.empty();
+            throw InvalidCredentialsException.unauthorized("Invalid BankID authentication");
         }
 
-        return companyRepository.findByOrgNumber(orgNumber).map(company -> tokenStore
-                .issue(new CompanyPrincipal(company.getId(), company.getName(), company.getOrgNumber()), fingerprint));
+        return companyRepository.findByOrgNumber(orgNumber)
+                .map(company -> tokenStore.issue(new CompanyPrincipal(company.getId(), company.getName(), company.getOrgNumber()), fingerprint))
+                .orElseThrow(() -> InvalidCredentialsException.unauthorized("Invalid login"));
     }
 
-    public Optional<AuthTokens> loginCaseWorker(String email, String password, String fingerprint) {
+    public AuthTokens loginCaseWorker(String email, String password, String fingerprint) {
         return caseWorkerRepository.findByEmail(email)
                 .flatMap(cw -> {
                     if (verifyCaseWorker(cw, password)) {
                         AuthTokens token = tokenStore.issue(
                                 new CaseWorkerPrincipal(cw.getId(), cw.getName(), email), fingerprint);
-                        return Optional.of(token);
+                        return java.util.Optional.of(token);
                     }
-                    return Optional.empty();
-                });
+                    return java.util.Optional.empty();
+                })
+                .orElseThrow(() -> InvalidCredentialsException.unauthorized("Invalid email or password"));
     }
 
-    public Optional<AuthTokens> refresh(String refreshToken, String fingerprint) {
-        return tokenStore.rotate(refreshToken, fingerprint);
+    public AuthTokens refresh(String refreshToken, String fingerprint) {
+        return tokenStore.rotate(refreshToken, fingerprint)
+                .orElseThrow(() -> InvalidCredentialsException.unauthorized("Invalid or revoked token"));
     }
 
     public void logout(UserPrincipal principal) {

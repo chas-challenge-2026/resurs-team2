@@ -10,7 +10,7 @@ import jakarta.servlet.http.HttpSession;
 import se.comerit.resurs.service.AuthService;
 
 
-@Controller
+@Controller("legacyAuthController")
 public class AuthController {
 
     private final AuthService service;

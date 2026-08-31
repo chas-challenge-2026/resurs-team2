@@ -69,7 +69,7 @@ class SecurityConfigIntegrationTest {
                 .andExpect(status().isUnauthorized())
                 .andExpect(content().contentTypeCompatibleWith("application/json"))
                 .andExpect(jsonPath("$.status").value(401))
-                .andExpect(jsonPath("$.error").value("Unauthorized"));
+                .andExpect(jsonPath("$.title").value("Unauthorized"));
     }
 
     @Test
@@ -81,7 +81,7 @@ class SecurityConfigIntegrationTest {
                         .header("User-Agent", UA))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.status").value(403))
-                .andExpect(jsonPath("$.error").value("Forbidden"));
+                .andExpect(jsonPath("$.title").value("Access Denied"));
     }
 
     @Test

@@ -12,7 +12,7 @@ import se.comerit.resurs.entity.Company;
 import se.comerit.resurs.repository.CaseWorkerRepository;
 import se.comerit.resurs.repository.CompanyRepository;
 
-@Service
+@Service("legacyAuthService")
 public class AuthService {
     private final CompanyRepository companyRepository;
     private final CaseWorkerRepository caseWorkerRepository;

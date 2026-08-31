@@ -1,5 +1,10 @@
 package se.comerit.resurs.api.v1.dto;
 
-public record RefreshRequest(String refreshToken) {
+import jakarta.validation.constraints.NotBlank;
+
+public record RefreshRequest(
+        @NotBlank(message = "Refresh token is required")
+        String refreshToken
+) {
     
 }
