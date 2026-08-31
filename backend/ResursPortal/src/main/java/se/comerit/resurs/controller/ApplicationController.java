@@ -27,18 +27,18 @@ import java.util.Map;
 
 /**
  * ApplicationController – Hanterar kreditansökningar.
- * <p>
+ *
  * VARNING: Denna klass innehåller avsiktliga anti-patterns för pedagogiskt syfte.
  * Se docs/known-bugs.md för fullständig lista.
- * <p>
+ *
  * Anti-patterns inkluderar:
- * - JdbcTemplate direkt i kontrollern (ingen service/repository-lager)
- * - Inline scoring-logik (800+ rader i en metod)
- * - Audit log som JSON-blob i en kolumn
- * - Ingen transaktion vid ansökningsskapande
- * - PII i klartext
- * - Session-check copy-pasteat i varje metod
- * - Magic numbers spridda i scoring-logiken
+ *  - JdbcTemplate direkt i kontrollern (ingen service/repository-lager)
+ *  - Inline scoring-logik (800+ rader i en metod)
+ *  - Audit log som JSON-blob i en kolumn
+ *  - Ingen transaktion vid ansökningsskapande
+ *  - PII i klartext
+ *  - Session-check copy-pasteat i varje metod
+ *  - Magic numbers spridda i scoring-logiken
  */
 @Controller
 public class ApplicationController {
@@ -209,13 +209,13 @@ public class ApplicationController {
         } else {
             // Strip trailing ] and append
             updatedAuditLog = currentAuditLog.substring(0, currentAuditLog.lastIndexOf("]"))
-                    + "," + scoringAuditEntry + "]";
+                + "," + scoringAuditEntry + "]";
         }
 
         jdbcTemplate.update(
-                "UPDATE applications SET audit_log = ?, updated_at = NOW() WHERE id = ?",
-                updatedAuditLog,
-                applicationId
+            "UPDATE applications SET audit_log = ?, updated_at = NOW() WHERE id = ?",
+            updatedAuditLog,
+            applicationId
         );
         // End of INSERT 3 — still no transaction around all three operations
 
@@ -237,9 +237,9 @@ public class ApplicationController {
         List<Map<String, Object>> apps;
         if ("caseWorker".equals(role)) {
             apps = jdbcTemplate.queryForList(
-                    "SELECT a.*, c.org_number, c.company_name, c.authorized_signatory " +
-                            "FROM applications a JOIN companies c ON a.company_id = c.id " +
-                            "WHERE a.id = ?", id
+                "SELECT a.*, c.org_number, c.company_name, c.authorized_signatory " +
+                "FROM applications a JOIN companies c ON a.company_id = c.id " +
+                "WHERE a.id = ?", id
             );
         } else {
             // Company can only see their own applications
@@ -248,16 +248,16 @@ public class ApplicationController {
                 // Try to find companyId from orgNumber
                 String orgNumber = (String) session.getAttribute("orgNumber");
                 List<Map<String, Object>> cRows = jdbcTemplate.queryForList(
-                        "SELECT id FROM companies WHERE org_number = ?", orgNumber
+                    "SELECT id FROM companies WHERE org_number = ?", orgNumber
                 );
                 if (cRows.isEmpty()) return "redirect:/apply";
                 companyId = ((Number) cRows.get(0).get("id")).longValue();
                 session.setAttribute("companyId", companyId);
             }
             apps = jdbcTemplate.queryForList(
-                    "SELECT a.*, c.org_number, c.company_name, c.authorized_signatory " +
-                            "FROM applications a JOIN companies c ON a.company_id = c.id " +
-                            "WHERE a.id = ? AND a.company_id = ?", id, companyId
+                "SELECT a.*, c.org_number, c.company_name, c.authorized_signatory " +
+                "FROM applications a JOIN companies c ON a.company_id = c.id " +
+                "WHERE a.id = ? AND a.company_id = ?", id, companyId
             );
         }
 
@@ -276,7 +276,7 @@ public class ApplicationController {
 
         // Fetch documents for this application
         List<Map<String, Object>> docs = jdbcTemplate.queryForList(
-                "SELECT * FROM documents WHERE application_id = ?", id
+            "SELECT * FROM documents WHERE application_id = ?", id
         );
         model.addAttribute("documents", docs);
 
@@ -296,7 +296,7 @@ public class ApplicationController {
 
         // Get companyId via orgNumber — no caching, hits DB every time
         List<Map<String, Object>> companyRows = jdbcTemplate.queryForList(
-                "SELECT id FROM companies WHERE org_number = '" + orgNumber + "'"
+            "SELECT id FROM companies WHERE org_number = '" + orgNumber + "'"
         );
 
         if (companyRows.isEmpty()) {
@@ -307,9 +307,9 @@ public class ApplicationController {
         long companyId = ((Number) companyRows.get(0).get("id")).longValue();
 
         List<Map<String, Object>> apps = jdbcTemplate.queryForList(
-                "SELECT a.id, a.requested_amount, a.purpose, a.status, a.decision, a.created_at, a.updated_at " +
-                        "FROM applications a WHERE a.company_id = ? ORDER BY a.created_at DESC",
-                companyId
+            "SELECT a.id, a.requested_amount, a.purpose, a.status, a.decision, a.created_at, a.updated_at " +
+            "FROM applications a WHERE a.company_id = ? ORDER BY a.created_at DESC",
+            companyId
         );
 
         model.addAttribute("applications", apps);
@@ -329,7 +329,7 @@ public class ApplicationController {
         String orgNumber = (String) session.getAttribute("orgNumber");
 
         List<Map<String, Object>> companyRows = jdbcTemplate.queryForList(
-                "SELECT id FROM companies WHERE org_number = '" + orgNumber + "'"
+            "SELECT id FROM companies WHERE org_number = '" + orgNumber + "'"
         );
 
         if (companyRows.isEmpty()) {
@@ -342,9 +342,9 @@ public class ApplicationController {
 
         // Count applications by status
         List<Map<String, Object>> apps = jdbcTemplate.queryForList(
-                "SELECT a.id, a.requested_amount, a.purpose, a.status, a.decision, a.created_at " +
-                        "FROM applications a WHERE a.company_id = ? ORDER BY a.created_at DESC LIMIT 5",
-                companyId
+            "SELECT a.id, a.requested_amount, a.purpose, a.status, a.decision, a.created_at " +
+            "FROM applications a WHERE a.company_id = ? ORDER BY a.created_at DESC LIMIT 5",
+            companyId
         );
 
         model.addAttribute("applications", apps);
@@ -360,16 +360,11 @@ public class ApplicationController {
     private String statusToSwedish(String status) {
         if (status == null) return "Okänd";
         switch (status) {
-            case "PENDING_DOCS":
-                return "Väntar på dokument";
-            case "UNDER_REVIEW":
-                return "Under granskning";
-            case "APPROVED":
-                return "Godkänd";
-            case "REJECTED":
-                return "Avslagen";
-            default:
-                return status;
+            case "PENDING_DOCS": return "Väntar på dokument";
+            case "UNDER_REVIEW": return "Under granskning";
+            case "APPROVED": return "Godkänd";
+            case "REJECTED": return "Avslagen";
+            default: return status;
         }
     }
 
