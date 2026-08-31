@@ -9,7 +9,7 @@
 | Databasåtkomst | JdbcTemplate i controllers | JPA/Hibernate, repository-pattern |
 | Frontend | Thymeleaf + Bootstrap 3 + jQuery | React 18 wizard |
 | Auth | BankID mock (hardcoded) | BankID-mock lyft till egen service, utbytbar mot skarp integration senare |
-| Lösenord | MD5 | bcrypt via Spring Security |
+| Lösenord | MD5 | bcrypt via Spring Security (genomfört — MD5 borttaget) |
 | Audit log | JSON-blob i TEXT-kolumn | Separat audit_log-tabell med index, hashkedja för manipulationsdetektion |
 | Företagsvalidering | Mockad utan felhantering | Egen service med tydligt klientgränssnitt, mockat i MVP, utbytbart mot skarpa anrop |
 | PII | Klartext | Krypterat på hot path (AES-256 eller motsvarande, C/C++ via JNA, se native/README.md) |
@@ -56,7 +56,7 @@ CREATE TABLE audit_events (
 
 ### 3. Spring Security
 - Ersätt session-check copy-paste med `SecurityFilterChain`
-- Byt MD5 mot `BCryptPasswordEncoder`
+- Byt MD5 mot `BCryptPasswordEncoder` (genomfört — lösenord verifieras nu med BCrypt, MD5 borttaget)
 - Implementera role-baserad åtkomst (`@PreAuthorize`)
 
 ### 4. JNA-integration (native/)

@@ -27,3 +27,21 @@
   font-size: 2em;
   color: var(--color-primary);
 }
+
+.login-tab-link {
+  cursor: pointer;
+}
+
+.login-bankid-header {
+  text-align: center;
+  margin-bottom: 15px;
+}
+
+.login-bankid-text {
+  margin-top: 8px;
+}
+
+.login-test-info {
+  margin-top: 15px;
+  font-size: 12px;
+}

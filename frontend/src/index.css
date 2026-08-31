@@ -1,11 +1,2 @@
-:root {
-  --color-primary: #003366;      
-  --color-primary-light: #aac0dd;
-  --color-success: #5cb85c;
-  --color-danger: #d9534f;
-  --color-warning: #f0ad4e;
-  --color-background: #f5f5f5;
-  --color-text: #212529;
-  --color-muted: #6c757d;
-  --color-border: #dee2e6;
-}                             
+@import "./styles/tokens.css";
+@import "./styles/components.css";

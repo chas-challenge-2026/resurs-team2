@@ -100,6 +100,8 @@ public class ApplicationController {
 
 
 
+
+
         // ===========================================================
         // SCORING — delegerad till ScoringService
         // ===========================================================

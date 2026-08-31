@@ -1,7 +1,9 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import "./Login.css";
 
 export const Login: React.FC = () => {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<"company" | "caseWorker">(
     "company",
   );
@@ -9,18 +11,33 @@ export const Login: React.FC = () => {
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState<boolean>(false);
 
   const handleCompanyLogin = async (
     e: React.SyntheticEvent<HTMLFormElement>,
   ) => {
     e.preventDefault();
-    const response = await fetch("/login/company", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({ orgNumber }),
-    });
-    if (response.redirected) {
-      window.location.href = response.url;
+    setError(null);
+    setLoading(true);
+
+    try {
+      const response = await fetch("/api/v1/auth/login/company", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ orgNumber }),
+      });
+
+      if (!response.ok) {
+        setError("Inloggning misslyckades. Kontrollera organisationsnumret.");
+        return;
+      }
+
+      navigate("/status");
+    } catch {
+      setError("Något gick fel. Försök igen.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -28,13 +45,27 @@ export const Login: React.FC = () => {
     e: React.SyntheticEvent<HTMLFormElement>,
   ) => {
     e.preventDefault();
-    const response = await fetch("/login/caseWorker", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({ email, password }),
-    });
-    if (response.redirected) {
-      window.location.href = response.url;
+    setError(null);
+    setLoading(true);
+
+    try {
+      const response = await fetch("/api/v1/auth/login/caseWorker", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ email, password }),
+      });
+
+      if (!response.ok) {
+        setError("Felaktig e-post eller lösenord.");
+        return;
+      }
+
+      navigate("/backoffice");
+    } catch {
+      setError("Något gick fel. Försök igen.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -51,17 +82,17 @@ export const Login: React.FC = () => {
 
           <ul className="nav nav-tabs">
             <li className={activeTab === "company" ? "active" : ""}>
-              <a
+              
+              <a className="login-tab-link"
                 onClick={() => setActiveTab("company")}
-                style={{ cursor: "pointer" }}
               >
                 Företagsinloggning
               </a>
             </li>
             <li className={activeTab === "caseWorker" ? "active" : ""}>
-              <a
+              
+              <a  className="login-tab-link"
                 onClick={() => setActiveTab("caseWorker")}
-                style={{ cursor: "pointer" }}
               >
                 Handläggare
               </a>
@@ -71,9 +102,9 @@ export const Login: React.FC = () => {
           <div className="tab-content">
             {activeTab === "company" && (
               <div className="tab-pane active">
-                <div className="text-center" style={{ marginBottom: "15px" }}>
+                <div className="login-bankid-header">
                   <span className="bankid-icon">🔒</span>
-                  <p className="text-muted" style={{ marginTop: "8px" }}>
+                  <p className="text-muted login-bankid-text">
                     Autentisering via BankID
                   </p>
                 </div>
@@ -93,14 +124,15 @@ export const Login: React.FC = () => {
                       Ange organisationsnummer för bankID-autentisering
                     </p>
                   </div>
-                  <button type="submit" className="btn btn-primary btn-block">
-                    Logga in med bankID
+                  <button
+                    type="submit"
+                    className="btn btn-primary btn-block"
+                    disabled={loading}
+                  >
+                    {loading ? "Loggar in..." : "Logga in med bankID"}
                   </button>
                 </form>
-                <div
-                  className="alert alert-info"
-                  style={{ marginTop: "15px", fontSize: "12px" }}
-                >
+                <div className="alert alert-info login-test-info">
                   <strong>Testmiljö:</strong> Godkända org.nummer: 556000-1234,
                   556000-5678
                 </div>
@@ -133,8 +165,12 @@ export const Login: React.FC = () => {
                       required
                     />
                   </div>
-                  <button type="submit" className="btn btn-warning btn-block">
-                    Logga in
+                  <button
+                    type="submit"
+                    className="btn btn-warning btn-block"
+                    disabled={loading}
+                  >
+                    {loading ? "Loggar in..." : "Logga in"}
                   </button>
                 </form>
               </div>
