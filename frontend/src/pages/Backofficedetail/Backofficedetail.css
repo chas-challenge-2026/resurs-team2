@@ -1,0 +1,124 @@
+/* Backoffice.css */
+
+.backoffice-page {
+  max-width: 1170px;
+  margin: 0 auto;
+  padding: var(--spacing-md);
+}
+
+/* Navigering/Topprad */
+.backoffice-nav {
+  background-color: #003366;
+  color: #ffffff;
+  padding: 15px;
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.backoffice-nav a {
+  color: #aaccff;
+  text-decoration: none;
+}
+
+/* Tvåkolumnslayout */
+.backoffice-layout {
+  display: flex;
+  gap: var(--spacing-lg);
+}
+
+.col-left {
+  flex: 7; /* Ca 58% bredd (motsvarar col-md-7) */
+}
+
+.col-right {
+  flex: 5; /* Ca 42% bredd (motsvarar col-md-5) */
+}
+
+/* Paneler */
+.panel {
+  background-color: #ffffff;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  margin-bottom: 20px;
+}
+
+.panel-heading {
+  padding: 10px 15px;
+  background-color: #f5f5f5;
+  border-bottom: 1px solid var(--color-border);
+  font-weight: bold;
+}
+
+.panel-body {
+  padding: 15px;
+}
+
+/* Särskild panel för beslut (panel-warning) */
+.panel-warning {
+  border-color: #faebcc;
+}
+
+.panel-warning .panel-heading {
+  background-color: #fcf8e3;
+  color: #8a6d3b;
+  border-bottom-color: #faebcc;
+}
+
+/* Formulär & Knappar i beslutsrutan */
+.form-group {
+  margin-bottom: 15px;
+}
+
+.form-control {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  box-sizing: border-box;
+}
+
+.button-group {
+  display: flex;
+  gap: 10px;
+}
+
+.btn-success {
+  background-color: var(--color-success);
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.btn-danger {
+  background-color: var(--color-danger);
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+/* Dokumentlista & Logg */
+.document-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.document-list li {
+  margin-bottom: 8px;
+}
+
+.audit-pre {
+  font-size: 11px;
+  max-height: 250px;
+  overflow-y: auto;
+  background-color: #f8f9fa;
+  padding: 10px;
+  border: 1px solid #e9ecef;
+  border-radius: 4px;
+}
