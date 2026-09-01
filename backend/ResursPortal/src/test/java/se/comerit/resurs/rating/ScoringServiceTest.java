@@ -49,7 +49,18 @@ class ScoringServiceTest {
     @BeforeEach
     void setUp() {
         ScoringConfig config = ScoringTestData.config();
-        service = new ScoringService(config, new SolidityCheck(config));
+        service = new ScoringService(
+                new SolidityCheck(config),
+                new LiquidityCheck(config),
+                new DebtRatioCheck(config),
+                new ProfitMarginCheck(config),
+                new CashFlowCheck(config),
+                new InterestCoverageCheck(config),
+                new BrandFactorCheck(config),
+                new IndustryBenchmarkCheck(config),
+                new SignalChecks(config),
+                new CombinationChecks(config),
+                new DecisionEngine(config));
     }
 
     private Score run(ApplicationData data) {
