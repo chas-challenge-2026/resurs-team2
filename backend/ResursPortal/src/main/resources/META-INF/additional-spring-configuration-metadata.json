@@ -1,0 +1,222 @@
+{
+    "properties": [
+        {
+            "name": "resurs.scoring.solidity.reject",
+            "type": "java.lang.Double",
+            "description": "Solidity (equity / total capital) below which the application is hard-rejected.",
+            "defaultValue": 0.20
+        },
+        {
+            "name": "resurs.scoring.solidity.flag",
+            "type": "java.lang.Double",
+            "description": "Solidity below which the application is flagged for review.",
+            "defaultValue": 0.25
+        },
+        {
+            "name": "resurs.scoring.solidity.good",
+            "type": "java.lang.Double",
+            "description": "Solidity at or above which the metric is considered good.",
+            "defaultValue": 0.30
+        },
+        {
+            "name": "resurs.scoring.liquidity.reject",
+            "type": "java.lang.Double",
+            "description": "Liquidity (current assets / current liabilities) below which the application is flagged (soft reject).",
+            "defaultValue": 1.0
+        },
+        {
+            "name": "resurs.scoring.liquidity.flag",
+            "type": "java.lang.Double",
+            "description": "Liquidity at or above which is considered the strong/good threshold.",
+            "defaultValue": 2.0
+        },
+        {
+            "name": "resurs.scoring.liquidity.good",
+            "type": "java.lang.Double",
+            "description": "Alias for the liquidity good threshold.",
+            "defaultValue": 2.0
+        },
+        {
+            "name": "resurs.scoring.liquidity.marginal",
+            "type": "java.lang.Double",
+            "description": "Upper bound of the liquidity 'near the limit' band (reject < liquidity < marginal) that is flagged.",
+            "defaultValue": 1.2
+        },
+        {
+            "name": "resurs.scoring.debt-ratio.reject",
+            "type": "java.lang.Double",
+            "description": "Debt ratio (total liabilities / equity) above which the application is hard-rejected.",
+            "defaultValue": 3.0
+        },
+        {
+            "name": "resurs.scoring.debt-ratio.flag",
+            "type": "java.lang.Double",
+            "description": "Debt ratio above which the application is flagged for review.",
+            "defaultValue": 2.0
+        },
+        {
+            "name": "resurs.scoring.debt-ratio.good",
+            "type": "java.lang.Double",
+            "description": "Alias for the debt ratio good threshold.",
+            "defaultValue": 2.0
+        },
+        {
+            "name": "resurs.scoring.profit-margin.reject",
+            "type": "java.lang.Double",
+            "description": "Profit margin (operating income / net revenue) below which the application is flagged as low.",
+            "defaultValue": 0.02
+        },
+        {
+            "name": "resurs.scoring.profit-margin.flag",
+            "type": "java.lang.Double",
+            "description": "Alias for the profit margin low/warning threshold.",
+            "defaultValue": 0.02
+        },
+        {
+            "name": "resurs.scoring.profit-margin.good",
+            "type": "java.lang.Double",
+            "description": "Profit margin above which the metric is considered good.",
+            "defaultValue": 0.10
+        },
+        {
+            "name": "resurs.scoring.cash-flow.reject",
+            "type": "java.lang.Double",
+            "description": "Cash-flow ratio (operating cash flow / total liabilities) below which the application is hard-rejected (negative operating cash flow).",
+            "defaultValue": 0.0
+        },
+        {
+            "name": "resurs.scoring.cash-flow.flag",
+            "type": "java.lang.Double",
+            "description": "Cash-flow ratio below which the application is flagged for review.",
+            "defaultValue": 0.05
+        },
+        {
+            "name": "resurs.scoring.cash-flow.good",
+            "type": "java.lang.Double",
+            "description": "Alias for the cash-flow good threshold.",
+            "defaultValue": 0.05
+        },
+        {
+            "name": "resurs.scoring.interest-coverage.reject",
+            "type": "java.lang.Double",
+            "description": "Interest coverage (operating income / interest expenses) below which the application is hard-rejected.",
+            "defaultValue": 1.5
+        },
+        {
+            "name": "resurs.scoring.interest-coverage.flag",
+            "type": "java.lang.Double",
+            "description": "Interest coverage below which the application is flagged for review.",
+            "defaultValue": 2.5
+        },
+        {
+            "name": "resurs.scoring.interest-coverage.good",
+            "type": "java.lang.Double",
+            "description": "Alias for the interest coverage good threshold.",
+            "defaultValue": 2.5
+        },
+        {
+            "name": "resurs.scoring.extra.large-credit-threshold",
+            "type": "java.lang.Double",
+            "description": "Requested amount (kr) above which the application is flagged as a large credit requiring manual review.",
+            "defaultValue": 5000000
+        },
+        {
+            "name": "resurs.scoring.extra.large-credit-with-low-solvency",
+            "type": "java.lang.Double",
+            "description": "Requested amount (kr) that, combined with solvency below low-solvency-threshold, triggers an additional flag.",
+            "defaultValue": 1000000
+        },
+        {
+            "name": "resurs.scoring.extra.low-solvency-threshold",
+            "type": "java.lang.Double",
+            "description": "Solvency below which, combined with a large credit amount, triggers an additional flag.",
+            "defaultValue": 0.30
+        },
+        {
+            "name": "resurs.scoring.extra.high-debt-to-revenue-multiplier",
+            "type": "java.lang.Double",
+            "description": "Multiplier of net revenue beyond which total liabilities trigger a flag.",
+            "defaultValue": 2.0
+        },
+        {
+            "name": "resurs.scoring.extra.low-revenue-threshold",
+            "type": "java.lang.Double",
+            "description": "Net revenue (kr) below which the company is flagged as small.",
+            "defaultValue": 500000
+        },
+        {
+            "name": "resurs.scoring.extra.negative-equity-threshold",
+            "type": "java.lang.Double",
+            "description": "Equity below which the application is hard-rejected.",
+            "defaultValue": 0.0
+        },
+        {
+            "name": "resurs.scoring.extra.negative-income-threshold",
+            "type": "java.lang.Double",
+            "description": "Operating income below which the application is flagged.",
+            "defaultValue": 0.0
+        },
+        {
+            "name": "resurs.scoring.extra.negative-investing-ratio",
+            "type": "java.lang.Double",
+            "description": "Magnitude of negative investing cash flow relative to net revenue that triggers a flag.",
+            "defaultValue": 0.3
+        },
+        {
+            "name": "resurs.scoring.combination.credit-vs-revenue-minimum",
+            "type": "java.lang.Double",
+            "description": "Requested amount as a multiple of net revenue above which the combination is flagged.",
+            "defaultValue": 1.0
+        },
+        {
+            "name": "resurs.scoring.combination.equity-vs-credit-ratio",
+            "type": "java.lang.Double",
+            "description": "Equity to requested-amount ratio below which the combination is flagged.",
+            "defaultValue": 0.3
+        },
+        {
+            "name": "resurs.scoring.combination.debt-burden-vs-revenue-threshold",
+            "type": "java.lang.Double",
+            "description": "Debt-burden-to-revenue ratio above which the combination is flagged.",
+            "defaultValue": 2.0
+        },
+        {
+            "name": "resurs.scoring.review-flag-threshold",
+            "type": "java.lang.Integer",
+            "description": "Flag count from which a manual review is forced; any flag still triggers a review.",
+            "defaultValue": 2
+        },
+        {
+            "name": "resurs.scoring.industry-factors",
+            "type": "java.util.Map<java.lang.String,java.lang.Double>",
+            "description": "Industry correction multipliers keyed by industry code."
+        },
+        {
+            "name": "resurs.scoring.industry-averages.solidity",
+            "type": "java.util.Map<java.lang.String,java.lang.Double>",
+            "description": "Average solvency per industry, used for industry-benchmark comparison."
+        },
+        {
+            "name": "resurs.scoring.industry-averages.debt-ratio",
+            "type": "java.util.Map<java.lang.String,java.lang.Double>",
+            "description": "Average debt ratio per industry, used for industry-benchmark comparison."
+        },
+        {
+            "name": "resurs.scoring.industry-averages.margin",
+            "type": "java.util.Map<java.lang.String,java.lang.Double>",
+            "description": "Average profit margin per industry, used for industry-benchmark comparison."
+        },
+        {
+            "name": "resurs.scoring.industry-averages.solidity-comparison-ratio",
+            "type": "java.lang.Double",
+            "description": "Fraction of the industry solvency average below which the applicant is flagged.",
+            "defaultValue": 0.75
+        },
+        {
+            "name": "resurs.scoring.industry-averages.margin-comparison-ratio",
+            "type": "java.lang.Double",
+            "description": "Fraction of the industry margin average below which the applicant is flagged.",
+            "defaultValue": 0.5
+        }
+    ]
+}

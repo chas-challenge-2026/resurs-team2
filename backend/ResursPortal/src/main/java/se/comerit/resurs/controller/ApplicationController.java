@@ -1,6 +1,10 @@
 package se.comerit.resurs.controller;
 
+import se.comerit.resurs.api.v1.service.ScoringService;
 import se.comerit.resurs.dto.ScoringInput;
+import se.comerit.resurs.rating.ApplicationData;
+import se.comerit.resurs.rating.Score;
+import se.comerit.resurs.rating.ScoringResult;
 import se.comerit.resurs.service.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -99,26 +103,27 @@ public class ApplicationController {
         // ===========================================================
         // SCORING — delegerad till ScoringService
         // ===========================================================
-        ScoringInput scoringInput = new ScoringInput();
-        scoringInput.setEgetKapital(egetKapital);
-        scoringInput.setTotaltKapital(totaltKapital);
-        scoringInput.setOmsattningstillgangar(omsattningstillgangar);
-        scoringInput.setKortfristigaSkulder(kortfristigaSkulder);
-        scoringInput.setTotalaSkulder(totalaSkulder);
-        scoringInput.setRorelseresultat(rorelseresultat);
-        scoringInput.setNettoomsattning(nettoomsattning);
-        scoringInput.setRequestedAmount(requestedAmount);
-        scoringInput.setOperativtKassaflode(operativtKassaflode);
-        scoringInput.setInvesteringsKassaflode(investeringsKassaflode);
-        scoringInput.setRanteKostnader(ranteKostnader);
-        scoringInput.setBransch(bransch);
+        ApplicationData data = new ApplicationData(
+            egetKapital,
+            totaltKapital,
+            omsattningstillgangar,
+            kortfristigaSkulder,
+            totalaSkulder,
+            rorelseresultat,
+            nettoomsattning,
+            requestedAmount,
+            operativtKassaflode,
+            investeringsKassaflode,
+            ranteKostnader,
+            bransch
+        );
 
-        ScoringResult scoring = scoringService.score(scoringInput);
-        String decision = scoring.getDecision();
-        int flagCount = scoring.getFlagCount();
-        String scoringLog = scoring.getScoringLog();
-        String status = scoring.getStatus();
-        String decisionReason = scoring.getDecisionReason();
+        Score scoring = scoringService.score(data);
+        String decision = scoring.decision();
+        int flagCount = scoring.flagCount();
+        String scoringLog = scoring.scoringLog();
+        String status = scoring.status();
+        String decisionReason = scoring.decisionReason();
         // ===========================================================
         // INSERT 1: Upsert company (no ON CONFLICT — just check first)
         // No transaction — three separate INSERTs follow
