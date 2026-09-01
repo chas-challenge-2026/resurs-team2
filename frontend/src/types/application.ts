@@ -9,6 +9,7 @@ export interface Application {
   companyName: string;
   orgNumber: string;
   requestedAmount: number;
+  authorizedSignatory?: string;
   purpose: string;
   createdAt: string;
   status: ApplicationStatus;

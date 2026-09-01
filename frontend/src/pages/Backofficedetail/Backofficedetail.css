@@ -1,0 +1,149 @@
+@import "../../styles/tokens.css";
+
+.backoffice-page {
+  max-width: 1170px;
+  margin: 0 auto;
+  padding: var(--spacing-md);
+}
+
+.backoffice-page h2 {
+  margin-top: 0;
+  margin-bottom: var(--spacing-md);
+  font-size: 28px;
+  font-weight: 500;
+  color: var(--color-text);
+}
+
+/* Tvåkolumnslayout */
+.backoffice-layout {
+  display: flex;
+  gap: var(--spacing-lg);
+}
+
+.col-left {
+  flex: 7;
+}
+
+.col-right {
+  flex: 5;
+}
+
+/* Paneler */
+.panel {
+  background-color: var(--color-white);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  margin-bottom: var(--spacing-md);
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.05);
+}
+
+.panel-heading {
+  padding: 10px var(--spacing-md);
+  background-color: var(--color-background);
+  border-bottom: 1px solid var(--color-border);
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.panel-body {
+  padding: var(--spacing-md);
+}
+
+.panel-body p {
+  margin: 0 0 var(--spacing-xs) 0;
+}
+
+.panel-body p:last-child {
+  margin-bottom: 0;
+}
+
+/* Beslutspanel (panel-warning) */
+.panel-warning {
+  border-color: #faebcc;
+}
+
+.panel-warning .panel-heading {
+  background-color: #fcf8e3;
+  color: #8a6d3b;
+  border-bottom-color: #faebcc;
+}
+
+/* Knappar i beslutsrutan */
+.button-group {
+  display: flex;
+  gap: var(--spacing-sm);
+}
+
+.btn-danger {
+  color: var(--color-white);
+  background-color: var(--color-danger);
+  border: 1px solid var(--color-danger);
+  padding: 6px 12px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-size: var(--font-size-base);
+  transition: background-color 0.15s ease-in-out;
+}
+
+.btn-danger:hover {
+  background-color: var(--color-danger-hover);
+}
+
+/* Status Badges / Labels */
+.label {
+  display: inline-block;
+  padding: 3px 7px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-white);
+  border-radius: 3px;
+  text-transform: uppercase;
+}
+
+.label-success {
+  background-color: var(--color-success);
+}
+
+.label-warning {
+  background-color: var(--color-warning);
+}
+
+.label-danger {
+  background-color: var(--color-danger);
+}
+
+.label-default {
+  background-color: var(--color-muted);
+}
+
+/* Dokumentlista & Logg */
+.document-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.document-list li {
+  margin-bottom: var(--spacing-xs);
+}
+
+.document-list a {
+  color: var(--color-primary);
+  text-decoration: none;
+}
+
+.document-list a:hover {
+  text-decoration: underline;
+}
+
+.audit-pre {
+  font-family: monospace;
+  font-size: 12px;
+  max-height: 200px;
+  overflow-y: auto;
+  background-color: var(--color-background);
+  padding: var(--spacing-sm);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  margin: 0;
+}
