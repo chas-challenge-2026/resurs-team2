@@ -1,10 +1,10 @@
 package se.comerit.resurs.controller;
 
+import se.comerit.resurs.api.v1.service.ScoringService;
 import se.comerit.resurs.dto.ScoringInput;
 import se.comerit.resurs.rating.ApplicationData;
 import se.comerit.resurs.rating.Score;
 import se.comerit.resurs.rating.ScoringResult;
-import se.comerit.resurs.rating.ScoringService;
 import se.comerit.resurs.service.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;

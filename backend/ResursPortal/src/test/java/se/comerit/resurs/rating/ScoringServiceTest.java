@@ -26,6 +26,8 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
+import se.comerit.resurs.api.v1.service.ScoringService;
+
 /**
  * Behavioural lock-in tests for the ORIGINAL scoring engine (currently still
  * implemented inline in {@link ScoringService}).

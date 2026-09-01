@@ -1,10 +1,27 @@
-package se.comerit.resurs.rating;
+package se.comerit.resurs.api.v1.service;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
+
+import se.comerit.resurs.rating.ApplicationData;
+import se.comerit.resurs.rating.BrandFactorCheck;
+import se.comerit.resurs.rating.CashFlowCheck;
+import se.comerit.resurs.rating.CheckResult;
+import se.comerit.resurs.rating.CheckStatus;
+import se.comerit.resurs.rating.CombinationChecks;
+import se.comerit.resurs.rating.DebtRatioCheck;
+import se.comerit.resurs.rating.DecisionEngine;
+import se.comerit.resurs.rating.IndustryBenchmarkCheck;
+import se.comerit.resurs.rating.InterestCoverageCheck;
+import se.comerit.resurs.rating.LiquidityCheck;
+import se.comerit.resurs.rating.ProfitMarginCheck;
+import se.comerit.resurs.rating.Score;
+import se.comerit.resurs.rating.ScoringResult;
+import se.comerit.resurs.rating.SignalChecks;
+import se.comerit.resurs.rating.SolidityCheck;
 
 /**
  * ScoringService – orchestrates every scoring check and synthesizes the final
@@ -73,6 +90,7 @@ public class ScoringService {
         int flagCount = (int) checks.stream()
                 .filter(check -> check.status() == CheckStatus.FLAG)
                 .count();
+        @SuppressWarnings("null")
         int creditPoints = BASE_CREDIT_POINTS + checks.stream()
                 .mapToInt(CheckResult::scoreDelta)
                 .sum();
