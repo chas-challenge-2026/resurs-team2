@@ -7,5 +7,5 @@ public enum CheckStatus {
     REJECT,
     FLAG,
     OK,
-    SKIP, value
+    SKIP,
 }
