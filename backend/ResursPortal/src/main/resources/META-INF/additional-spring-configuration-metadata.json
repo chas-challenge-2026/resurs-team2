@@ -181,6 +181,12 @@
             "defaultValue": 2.0
         },
         {
+            "name": "resurs.scoring.review-flag-threshold",
+            "type": "java.lang.Integer",
+            "description": "Flag count from which a manual review is forced; any flag still triggers a review.",
+            "defaultValue": 2
+        },
+        {
             "name": "resurs.scoring.industry-factors",
             "type": "java.util.Map<java.lang.String,java.lang.Double>",
             "description": "Industry correction multipliers keyed by industry code."

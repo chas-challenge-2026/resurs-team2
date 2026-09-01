@@ -22,6 +22,7 @@ public record ScoringConfig(
                 MetricThreshold interestCoverage,
                 ExtraThresholds extra,
                 CombinationThresholds combination,
+                int reviewFlagThreshold, // review-flag-threshold
                 IndustryAverages industryAverages,
                 Map<String, Double> industryFactors) {
 

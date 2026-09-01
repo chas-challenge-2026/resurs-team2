@@ -37,6 +37,7 @@ public final class ScoringTestData {
                         1.0,                              // credit-vs-revenue-minimum
                         0.3,                              // equity-vs-credit-ratio
                         2.0),                             // debt-burden-vs-revenue-threshold
+                2,                                        // review-flag-threshold
                 new ScoringConfig.IndustryAverages(
                         defaultSolidityAverages(),
                         defaultDebtRatioAverages(),
