@@ -3,13 +3,13 @@ package se.comerit.resurs.api.v1.service;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import jakarta.annotation.Nonnull;
-import jakarta.validation.constraints.NotBlank;
 import se.comerit.resurs.api.v1.dto.ApplicationDetailsResponse;
 import se.comerit.resurs.api.v1.dto.ApplicationOverview;
 import se.comerit.resurs.api.v1.dto.ApplicationResponse;
@@ -68,15 +68,15 @@ public class BackofficeService {
     public @Nonnull ApplicationOverview applicationOverview(String caseWorker) {
         List<Application> reviewApplications = repository
                 .findByStatusOrderByCreatedAtAsc(ApplicationStatus.UNDER_REVIEW);
-        List<Application> decidedApplications = repository.findByStatusInOrderByUpdatedAtDesc(
+        var decidedApplications = repository.findByStatusInOrderByUpdatedAtDesc(
                 List.of(ApplicationStatus.APPROVED, ApplicationStatus.REJECTED),
                 PageRequest.of(0, 20));
 
-        return ApplicationMapper.toApplicationOverview(reviewApplications, decidedApplications, caseWorker);
+        return ApplicationMapper.toApplicationOverview(reviewApplications, decidedApplications.getContent(), caseWorker);
     }
 
     @Transactional(readOnly = true)
-    public @Nonnull ApplicationDetailsResponse viewApplicationDetails(@Nonnull Long id, @NotBlank String caseWorker) {
+    public @Nonnull ApplicationDetailsResponse viewApplicationDetails(@Nonnull Long id, String caseWorker) {
         return repository.findByIdWithDocuments(id)
                 .map(app -> ApplicationMapper.toDetailsResponse(app, caseWorker))
                 .orElseThrow(() -> new ApplicationNotFoundException(id));
