@@ -37,6 +37,12 @@
             "defaultValue": 2.0
         },
         {
+            "name": "resurs.scoring.liquidity.marginal",
+            "type": "java.lang.Double",
+            "description": "Upper bound of the liquidity 'near the limit' band (reject < liquidity < marginal) that is flagged.",
+            "defaultValue": 1.2
+        },
+        {
             "name": "resurs.scoring.debt-ratio.reject",
             "type": "java.lang.Double",
             "description": "Debt ratio (total liabilities / equity) above which the application is hard-rejected.",

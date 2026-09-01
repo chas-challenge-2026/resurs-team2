@@ -1,10 +1,8 @@
 package se.comerit.resurs.rating;
 
 import org.springframework.stereotype.Service;
-import se.comerit.resurs.dto.ScoringInput;
 
 import java.math.BigDecimal;
-import java.util.HashMap;
 import java.util.Map;
 
 @Service

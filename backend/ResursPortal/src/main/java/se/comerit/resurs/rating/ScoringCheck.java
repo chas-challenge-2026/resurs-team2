@@ -15,4 +15,8 @@ public interface ScoringCheck {
     default CheckResult ok(String message, double value, double threshold, int delta) {
         return new CheckResult(ruleName(), value, threshold, CheckStatus.OK, delta, message);
     }
+
+    default CheckResult skip(String message) {
+        return new CheckResult(ruleName(), 0.0, 0.0, CheckStatus.SKIP, 0, message);
+    }
 }

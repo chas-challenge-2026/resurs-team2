@@ -18,12 +18,12 @@ public final class ScoringTestData {
     /** A config fully populated with the values defined in application.properties. */
     public static ScoringConfig config() {
         return new ScoringConfig(
-                metric(0.20, 0.25, 0.30),                 // solidity
-                metric(1.0, 2.0, 2.0),                    // liquidity
-                metric(3.0, 2.0, 2.0),                    // debt ratio
-                metric(0.02, 0.02, 0.10),                 // profit margin
-                metric(0.0, 0.05, 0.05),                  // cash flow
-                metric(1.5, 2.5, 2.5),                    // interest coverage
+                metric(0.20, 0.25, 0.30, 0.0),            // solidity
+                metric(1.0, 2.0, 2.0, 1.2),               // liquidity (marginal band 1.0..1.2)
+                metric(3.0, 2.0, 2.0, 0.0),               // debt ratio
+                metric(0.02, 0.02, 0.10, 0.0),            // profit margin
+                metric(0.0, 0.05, 0.05, 0.0),             // cash flow
+                metric(1.5, 2.5, 2.5, 0.0),               // interest coverage
                 new ScoringConfig.ExtraThresholds(
                         5_000_000,                        // large-credit-threshold
                         1_000_000,                        // large-credit-with-low-solvency
@@ -46,8 +46,8 @@ public final class ScoringTestData {
                 defaultIndustryFactors());
     }
 
-    private static ScoringConfig.MetricThreshold metric(double reject, double flag, double good) {
-        return new ScoringConfig.MetricThreshold(reject, flag, good);
+    private static ScoringConfig.MetricThreshold metric(double reject, double flag, double good, double marginal) {
+        return new ScoringConfig.MetricThreshold(reject, flag, good, marginal);
     }
 
     /** An ApplicationData with every metric in a healthy/approved state. */

@@ -28,14 +28,17 @@ public record ScoringConfig(
         /**
          * Thresholds shared by the individual ratio checks.
          *
-         * @param reject hard-rejection boundary
-         * @param flag   warning/flag boundary
-         * @param good   strong/good boundary (may be unused by some checks)
+         * @param reject   hard-rejection boundary
+         * @param flag     warning/flag boundary
+         * @param good     strong/good boundary (may be unused by some checks)
+         * @param marginal upper bound of a "near the limit" band that is flagged
+         *                 (unused by checks without such a band)
          */
         public record MetricThreshold(
                         double reject,
                         double flag,
-                        double good) {
+                        double good,
+                        double marginal) {
         }
 
         /**
