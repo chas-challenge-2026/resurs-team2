@@ -1,8 +1,12 @@
 package se.comerit.resurs.rating;
 
+import java.util.List;
+
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
 
 @Service
+@Order(60)
 public class InterestCoverageCheck implements ScoringCheck {
     private final ScoringConfig config;
 
@@ -16,7 +20,7 @@ public class InterestCoverageCheck implements ScoringCheck {
     }
 
     @Override
-    public CheckResult evaluate(ApplicationData data) {
+    public List<CheckResult> evaluate(ApplicationData data) {
         final double interestExpenses = data.interestExpenses();
         if (interestExpenses <= 0) {
             return skip("Räntetäckningsgrad ej tillämplig (inga räntekostnader). ");

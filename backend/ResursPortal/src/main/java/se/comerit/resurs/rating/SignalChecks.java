@@ -3,6 +3,7 @@ package se.comerit.resurs.rating;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
 
 /**
@@ -12,13 +13,20 @@ import org.springframework.stereotype.Service;
  * returned when no signal fires.
  */
 @Service
-public class SignalChecks {
+@Order(90)
+public class SignalChecks implements ScoringCheck {
     private final ScoringConfig config;
 
     public SignalChecks(ScoringConfig config) {
         this.config = config;
     }
 
+    @Override
+    public String ruleName() {
+        return "Signaler";
+    }
+
+    @Override
     public List<CheckResult> evaluate(ApplicationData data) {
         List<CheckResult> results = new ArrayList<>();
         ScoringConfig.ExtraThresholds extra = config.extra();

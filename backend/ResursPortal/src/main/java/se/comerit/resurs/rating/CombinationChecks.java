@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
 
 /**
@@ -14,13 +15,20 @@ import org.springframework.stereotype.Service;
  * in the debt-burden rule).
  */
 @Service
-public class CombinationChecks {
+@Order(100)
+public class CombinationChecks implements ScoringCheck {
     private final ScoringConfig config;
 
     public CombinationChecks(ScoringConfig config) {
         this.config = config;
     }
 
+    @Override
+    public String ruleName() {
+        return "Kombinationsrisker";
+    }
+
+    @Override
     public List<CheckResult> evaluate(ApplicationData data) {
         List<CheckResult> results = new ArrayList<>();
         addIfPresent(results, largeCreditWithLowSolvency(data));

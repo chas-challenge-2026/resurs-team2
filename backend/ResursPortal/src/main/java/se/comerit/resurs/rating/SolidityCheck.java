@@ -1,8 +1,12 @@
 package se.comerit.resurs.rating;
 
+import java.util.List;
+
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
 
 @Service
+@Order(10)
 public class SolidityCheck implements ScoringCheck {
     private final ScoringConfig config;
 
@@ -16,7 +20,7 @@ public class SolidityCheck implements ScoringCheck {
     }
 
     @Override
-    public CheckResult evaluate(ApplicationData data) {
+    public List<CheckResult> evaluate(ApplicationData data) {
         final double solvency = data.totalCapital() != 0 ? data.equity() / data.totalCapital() : 0.0;
         final double rejectThreshold = config.solidity().reject();
         final double flagThreshold = config.solidity().flag();

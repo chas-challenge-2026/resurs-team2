@@ -1,8 +1,12 @@
 package se.comerit.resurs.rating;
 
+import java.util.List;
+
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
 
 @Service
+@Order(30)
 public class DebtRatioCheck implements ScoringCheck {
     private final ScoringConfig config;
 
@@ -16,7 +20,7 @@ public class DebtRatioCheck implements ScoringCheck {
     }
 
     @Override
-    public CheckResult evaluate(ApplicationData data) {
+    public List<CheckResult> evaluate(ApplicationData data) {
         final double debtRatio = data.equity() != 0 ? data.totalLiabilities() / data.equity() : 0.0;
         final double rejectThreshold = config.debtRatio().reject();
         final double flagThreshold = config.debtRatio().flag();

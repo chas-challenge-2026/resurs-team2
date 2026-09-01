@@ -1,8 +1,12 @@
 package se.comerit.resurs.rating;
 
+import java.util.List;
+
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
 
 @Service
+@Order(50)
 public class CashFlowCheck implements ScoringCheck {
     private final ScoringConfig config;
 
@@ -16,7 +20,7 @@ public class CashFlowCheck implements ScoringCheck {
     }
 
     @Override
-    public CheckResult evaluate(ApplicationData data) {
+    public List<CheckResult> evaluate(ApplicationData data) {
         final double ratio = data.totalLiabilities() != 0
                 ? data.operatingCashFlow() / data.totalLiabilities() : 0.0;
         final double rejectThreshold = config.cashFlow().reject();

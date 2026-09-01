@@ -20,6 +20,7 @@ import static se.comerit.resurs.rating.ScoringTestData.healthy;
 import static se.comerit.resurs.rating.ScoringTestData.mutate;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -52,16 +53,17 @@ class ScoringServiceTest {
     void setUp() {
         ScoringConfig config = ScoringTestData.config();
         service = new ScoringService(
-                new SolidityCheck(config),
-                new LiquidityCheck(config),
-                new DebtRatioCheck(config),
-                new ProfitMarginCheck(config),
-                new CashFlowCheck(config),
-                new InterestCoverageCheck(config),
-                new BrandFactorCheck(config),
-                new IndustryBenchmarkCheck(config),
-                new SignalChecks(config),
-                new CombinationChecks(config),
+                List.of(
+                        new SolidityCheck(config),
+                        new LiquidityCheck(config),
+                        new DebtRatioCheck(config),
+                        new ProfitMarginCheck(config),
+                        new CashFlowCheck(config),
+                        new InterestCoverageCheck(config),
+                        new BrandFactorCheck(config),
+                        new IndustryBenchmarkCheck(config),
+                        new SignalChecks(config),
+                        new CombinationChecks(config)),
                 new DecisionEngine(config));
     }
 

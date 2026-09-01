@@ -3,22 +3,30 @@ package se.comerit.resurs.rating;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
 
 /**
- * BrandBenchmarkCheck – compares the applicant's solvency and profit margin
+ * IndustryBenchmarkCheck – compares the applicant's solvency and profit margin
  * against the industry averages when the industry is known. Each comparison
  * produces its own {@link CheckResult}; nothing is returned when the industry
  * is unknown or within range.
  */
 @Service
-public class IndustryBenchmarkCheck {
+@Order(80)
+public class IndustryBenchmarkCheck implements ScoringCheck {
     private final ScoringConfig config;
 
     public IndustryBenchmarkCheck(ScoringConfig config) {
         this.config = config;
     }
 
+    @Override
+    public String ruleName() {
+        return "Branschjämförelse";
+    }
+
+    @Override
     public List<CheckResult> evaluate(ApplicationData data) {
         List<CheckResult> results = new ArrayList<>();
         String industry = data.industry();

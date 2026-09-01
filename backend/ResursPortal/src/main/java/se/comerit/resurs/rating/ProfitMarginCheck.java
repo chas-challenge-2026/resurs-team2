@@ -1,8 +1,12 @@
 package se.comerit.resurs.rating;
 
+import java.util.List;
+
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
 
 @Service
+@Order(40)
 public class ProfitMarginCheck implements ScoringCheck {
     private final ScoringConfig config;
 
@@ -16,7 +20,7 @@ public class ProfitMarginCheck implements ScoringCheck {
     }
 
     @Override
-    public CheckResult evaluate(ApplicationData data) {
+    public List<CheckResult> evaluate(ApplicationData data) {
         final double margin = data.netRevenue() != 0 ? data.operatingIncome() / data.netRevenue() : 0.0;
         final double warningThreshold = config.profitMargin().flag();
         final double goodThreshold = config.profitMargin().good();

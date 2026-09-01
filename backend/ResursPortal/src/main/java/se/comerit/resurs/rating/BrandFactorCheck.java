@@ -1,5 +1,8 @@
 package se.comerit.resurs.rating;
 
+import java.util.List;
+
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
 
 /**
@@ -8,6 +11,7 @@ import org.springframework.stereotype.Service;
  * is flagged). Mirrors the industry-factor check of the original engine.
  */
 @Service
+@Order(70)
 public class BrandFactorCheck implements ScoringCheck {
     private final ScoringConfig config;
 
@@ -21,7 +25,7 @@ public class BrandFactorCheck implements ScoringCheck {
     }
 
     @Override
-    public CheckResult evaluate(ApplicationData data) {
+    public List<CheckResult> evaluate(ApplicationData data) {
         double factor = config.industryFactors().getOrDefault(data.industry(), 1.0);
         double boundary = config.solidity().reject() * factor;
         double solvency = data.totalCapital() != 0 ? data.equity() / data.totalCapital() : 0.0;
