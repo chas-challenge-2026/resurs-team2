@@ -16,12 +16,17 @@ namespace resurs{
     // if the file is missing or not exactly kKeyLen bytes.
     void loadFromFile (const std::string& path);
 
-
+    
     // Seam for tests / for loadFromFile. Copies the given key in.
     void loadFromBytes (const Key& key);
 
     // Throws std::runtime_error if no key has been loaded.
     Key key() const;
+
+    // Returns true once a key has been loaded (loadFromFile / loadFromBytes),
+    // false before the first load and after cleanse(). Thread-safe.
+    bool isLoaded() const noexcept;
+
 
     // Wipe the key from memory (OPENSSL_cleanse). Safe to call anytime.
     void cleanse() noexcept;

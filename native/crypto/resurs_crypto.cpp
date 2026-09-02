@@ -9,11 +9,11 @@ int resurs_crypto_init(const char* key_file_path) {
     return RESURS_ERR_NOT_INIT;
 }
 
-int resurs_encrypt_pii(const char* plaintext, unsigned char* nonce_out, 
+int resurs_encrypt_pii(const char* plaintext, const unsigned char* nonce, 
     unsigned char* ciphertext_out, size_t* ciphertext_len) {
 
         (void) plaintext; 
-        (void) nonce_out; 
+        (void) nonce; 
         (void) ciphertext_out; 
         (void) ciphertext_len;
         return RESURS_ERR_NOT_INIT;

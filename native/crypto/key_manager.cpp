@@ -30,6 +30,11 @@ Key KeyManager::key() const {
     return key_;          // returns a copy (by value)
 }
 
+bool KeyManager::isLoaded() const noexcept {
+    std::lock_guard<std::mutex> lock(mutex_);
+    return loaded_;
+}
+
 void KeyManager::cleanse() noexcept {
     std::lock_guard<std::mutex> lock(mutex_);
     OPENSSL_cleanse(key_.data(), key_.size());
