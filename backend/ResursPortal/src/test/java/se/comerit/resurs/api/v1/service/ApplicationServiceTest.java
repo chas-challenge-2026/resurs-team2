@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import se.comerit.resurs.api.v1.dto.ApplicationRequest;
 import se.comerit.resurs.entity.Application;
+import se.comerit.resurs.entity.ApplicationStatus;
 import se.comerit.resurs.entity.Company;
 import se.comerit.resurs.exception.CompanyNotFoundException;
 import se.comerit.resurs.rating.CheckResult;
@@ -257,16 +258,9 @@ class ApplicationServiceTest {
     @DisplayName("Scoring result")
     class ScoringResultCheck {
 
-        // NOTE: The scoringResult persisted onto the application is not yet
-        // finalized — the Application constructor currently receives the raw
-        // ScoringResult.summary() into the decision_reason field and leaves the
-        // structured scoring_result NULL. These tests document current
-        // behaviour and should be tightened once the scoring result
-        // representation is finalised.
-
         @Test
-        @DisplayName("Currently the summary lands in decision_reason and the scoring_result is null")
-        void summaryIsStoredAsDecisionReasonAndScoringResultIsNull() {
+        @DisplayName("Summary lands in decision_reason, scoring log in scoring_result, and status/decision are set")
+        void scoringFieldsAreSetCorrectly() {
             when(companyRepository.findByOrgNumber("556677-8899"))
                     .thenReturn(Optional.of(company));
             ScoringResult result = approvedScoringResult();
@@ -275,14 +269,41 @@ class ApplicationServiceTest {
 
             try (MockedStatic<ScoringService> staticMock = Mockito.mockStatic(ScoringService.class)) {
                 staticMock.when(() -> ScoringService.toScore(result))
-                        .thenReturn(new Score("APPROVED", 0, "log", "APPROVED", "ANSÖKAN GODKÄND"));
+                        .thenReturn(new Score("APPROVED", 0, "solidity=OK, kreditPoäng=100 (ANVÄNDS EJ I BESLUT)", "APPROVED", "ANSÖKAN GODKÄND"));
 
                 applicationService.submitApplication("556677-8899", validRequest);
             }
 
             verify(applicationRepository).save(argThat(app ->
                     "ANSÖKAN GODKÄND".equals(app.getDecisionReason())
-                    && app.getScoringResult() == null));
+                    && "solidity=OK, kreditPoäng=100 (ANVÄNDS EJ I BESLUT)".equals(app.getScoringResult())
+                    && app.getStatus() == ApplicationStatus.APPROVED
+                    && app.getDecision() == se.comerit.resurs.entity.Decision.APPROVED));
+        }
+
+        @Test
+        @DisplayName("REVIEW decision maps to null decision and UNDER_REVIEW status")
+        void reviewDecisionSetsNullDecisionAndUnderReviewStatus() {
+            when(companyRepository.findByOrgNumber("556677-8899"))
+                    .thenReturn(Optional.of(company));
+            ScoringResult result = new ScoringResult(
+                    se.comerit.resurs.rating.Decision.UNDER_REVIEW,
+                    List.of(new CheckResult("solidity", 0.5, 0.2, CheckStatus.OK, 0, "ok")),
+                    "MANUELL GRANSKNING");
+            when(scoringService.score(any())).thenReturn(result);
+            stubSaveReturnsSavedWithId(1L);
+
+            try (MockedStatic<ScoringService> staticMock = Mockito.mockStatic(ScoringService.class)) {
+                staticMock.when(() -> ScoringService.toScore(result))
+                        .thenReturn(new Score("REVIEW", 0, "solidity=OK, kreditPoäng=100 (ANVÄNDS EJ I BESLUT)", "UNDER_REVIEW", "MANUELL GRANSKNING"));
+
+                applicationService.submitApplication("556677-8899", validRequest);
+            }
+
+            verify(applicationRepository).save(argThat(app ->
+                    "MANUELL GRANSKNING".equals(app.getDecisionReason())
+                    && app.getDecision() == null
+                    && app.getStatus() == ApplicationStatus.UNDER_REVIEW));
         }
     }
 }

@@ -8,12 +8,38 @@ import se.comerit.resurs.api.v1.dto.ApplicationRequest;
 import se.comerit.resurs.api.v1.dto.ApplicationResponse;
 import se.comerit.resurs.api.v1.dto.DocumentResponse;
 import se.comerit.resurs.entity.Application;
+import se.comerit.resurs.entity.ApplicationStatus;
+import se.comerit.resurs.entity.Decision;
 import se.comerit.resurs.entity.Document;
 import se.comerit.resurs.rating.ApplicationData;
+import se.comerit.resurs.rating.ScoringResult;
 
 public final class ApplicationMapper {
 
     private ApplicationMapper() {
+    }
+
+    /**
+     * Derives the application status from the scoring decision.
+     */
+    public static ApplicationStatus toStatus(ScoringResult score) {
+        return switch (score.decision()) {
+            case APPROVED -> ApplicationStatus.APPROVED;
+            case REJECTED -> ApplicationStatus.REJECTED;
+            case UNDER_REVIEW -> ApplicationStatus.UNDER_REVIEW;
+        };
+    }
+
+    /**
+     * Derives the persisted decision from the scoring decision. A manual
+     * review decision has no persisted decision value ({@code null}).
+     */
+    public static Decision toDecision(ScoringResult score) {
+        return switch (score.decision()) {
+            case APPROVED -> Decision.APPROVED;
+            case REJECTED -> Decision.REJECTED;
+            case UNDER_REVIEW -> null;
+        };
     }
 
     public static ApplicationDetailsResponse toDetailsResponse(Application app, String caseWorker) {

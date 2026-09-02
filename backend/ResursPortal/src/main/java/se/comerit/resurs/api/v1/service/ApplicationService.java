@@ -60,10 +60,10 @@ public class ApplicationService {
             company, 
             application.requestedAmount(), 
             application.purpose(),
-            null,
-            null,
+            ApplicationMapper.toStatus(score),
+            ApplicationMapper.toDecision(score),
             score.summary(),
-            null,
+            scoring.scoringLog(),
             null
         );
 
