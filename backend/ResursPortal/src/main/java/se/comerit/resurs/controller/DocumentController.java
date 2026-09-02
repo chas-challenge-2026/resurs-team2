@@ -51,7 +51,7 @@ public class DocumentController {
 
     @PreAuthorize("hasRole('COMPANY')")
     @PostMapping(
-            path = "applications/{id}documents",
+            path = "applications/{id}/documents",
             consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
 
     public ResponseEntity<DocumentDto> uploadDocument(
