@@ -5,18 +5,31 @@ import type { ApplicationStep } from "../../types/timeline";
 import type { ApplicationDocument } from "../../types/document";
 
 interface StatusProps {
-  application: Application;
-  steps: ApplicationStep[];
-  documents: ApplicationDocument[];
+  application?: Application;
+  steps?: ApplicationStep[];
+  documents?: ApplicationDocument[];
   auditLogRaw?: string;
 }
 
 export const Status: React.FC<StatusProps> = ({
   application,
-  steps,
-  documents,
+  steps = [],
+  documents = [],
   auditLogRaw = "[]",
 }) => {
+  if (!application) {
+    return (
+      <div className="status-page">
+        <p className="text-muted">Ingen ansökan hittades.</p>
+      </div>
+    );
+  }
+
+  const formatCurrency = (amount?: number) => {
+    if (!amount) return "0 kr";
+    return new Intl.NumberFormat("sv-SE").format(amount) + " kr";
+  };
+
   return (
     <div className="status-page">
       <h2>Ansökan #{application.id || "000"}</h2>
@@ -50,9 +63,7 @@ export const Status: React.FC<StatusProps> = ({
           {application.scoringResult && (
             <div className="panel">
               <div className="panel-heading">Scoringresultat</div>
-              <div className="panel-body">
-                {application.scoringResult}
-              </div>
+              <div className="panel-body">{application.scoringResult}</div>
             </div>
           )}
 
@@ -63,7 +74,6 @@ export const Status: React.FC<StatusProps> = ({
                 <div className={`dot dot-${step.status}`} />
                 <div className="content">
                   <strong>{step.name}</strong>{" "}
-
                   {step.status === "DONE" && (
                     <span className="label label-success">Klart</span>
                   )}
@@ -73,10 +83,8 @@ export const Status: React.FC<StatusProps> = ({
                   {step.status === "PENDING" && (
                     <span className="label label-default">Väntar</span>
                   )}
-
                   <br />
                   <small>{step.description}</small>
-
                   {step.eta && step.eta !== "—" && (
                     <>
                       <br />
@@ -108,9 +116,7 @@ export const Status: React.FC<StatusProps> = ({
               <p>
                 <strong>Kreditbelopp:</strong>
                 <br />
-                {application.requestedAmount
-                  ? `${application.requestedAmount} kr`
-                  : "0 kr"}
+                {formatCurrency(application.requestedAmount)}
               </p>
               <p>
                 <strong>Syfte:</strong>
