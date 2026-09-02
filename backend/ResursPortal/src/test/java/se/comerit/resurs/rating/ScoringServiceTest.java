@@ -68,7 +68,7 @@ class ScoringServiceTest {
     }
 
     private Score run(ApplicationData data) {
-        return service.score(data);
+        return ScoringService.toScore(service.score(data));
     }
 
     // ================================================================

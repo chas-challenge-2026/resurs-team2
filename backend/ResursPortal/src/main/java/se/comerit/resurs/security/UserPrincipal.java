@@ -1,5 +1,7 @@
 package se.comerit.resurs.security;
 
+import se.comerit.resurs.exception.ForbiddenPrincipalException;
+
 /**
  * Sealed union of the two roles that can authenticate against the API: a
  * {@link CompanyPrincipal} (applies for funding) and a
@@ -15,14 +17,24 @@ public sealed interface UserPrincipal permits CompanyPrincipal, CaseWorkerPrinci
     PrincipalRole role();
 
     default CompanyPrincipal asCompany() {
-        if (this instanceof CompanyPrincipal c)
+        if (this instanceof CompanyPrincipal c) {
             return c;
-        throw new IllegalStateException("Not a company principal");
+        }
+        throw new ForbiddenPrincipalException(
+                "Expected principal of type CompanyPrincipal but was "
+                        + actualType(this) + " (id=" + id() + ")");
     }
 
     default CaseWorkerPrincipal asCaseWorker() {
-        if (this instanceof CaseWorkerPrincipal cw)
+        if (this instanceof CaseWorkerPrincipal cw) {
             return cw;
-        throw new IllegalStateException("Not a case worker principal");
+        }
+        throw new ForbiddenPrincipalException(
+                "Expected principal of type CaseWorkerPrincipal but was "
+                        + actualType(this) + " (id=" + id() + ")");
+    }
+
+    private static String actualType(UserPrincipal principal) {
+        return principal == null ? "null" : principal.getClass().getSimpleName();
     }
 }
