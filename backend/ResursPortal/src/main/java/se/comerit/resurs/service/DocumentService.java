@@ -9,6 +9,7 @@ import se.comerit.resurs.entity.Application;
 import se.comerit.resurs.entity.ApplicationStatus;
 import se.comerit.resurs.entity.Document;
 import se.comerit.resurs.exception.ApplicationNotFoundException;
+import se.comerit.resurs.exception.DocumentNotFoundException;
 import se.comerit.resurs.exception.EmptyFileException;
 import se.comerit.resurs.exception.FileUploadException;
 import se.comerit.resurs.repository.ApplicationRepository;
@@ -87,7 +88,7 @@ public class DocumentService {
         Document document = documentRepository
                 .findById(documentId)
                 .orElseThrow(() ->
-                        new RuntimeException("Document not found with ID: " + documentId)
+                        new DocumentNotFoundException(documentId)
                 );
 
         File file = new File(
@@ -130,7 +131,7 @@ public class DocumentService {
 
         if (!uploadDir.exists() && !uploadDir.mkdirs()) {
             throw new FileUploadException(
-                    "Kunde inte skapa uppladdningskatalog."
+                    "Could not create upload directory."
             );
         }
 
@@ -145,7 +146,7 @@ public class DocumentService {
             file.transferTo(destination);
         } catch (IOException e) {
             throw new FileUploadException(
-                    "Uppladdning misslyckades."
+                    "Upload failed."
 
             );
         }
@@ -196,7 +197,7 @@ public class DocumentService {
             Application application,
             String docType) {
 
-        if ("arsredovisning".equals(docType)
+        if ("AnnualReview".equals(docType)
                 && application.getStatus()
                 == ApplicationStatus.PENDING_DOCS) {
 
