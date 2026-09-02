@@ -66,7 +66,10 @@ public class DocumentController {
     public ResponseEntity<List<DocumentDto>> getDocuments(
             @PathVariable Long applicationId) {
 
-        return documentService.getDocuments(applicationId);
+        List<DocumentDto> documents =
+                documentService.getDocuments(applicationId);
+
+        return ResponseEntity.ok(documents);
     }
 
     @PreAuthorize("hasRole('COMPANY')")
@@ -79,7 +82,7 @@ public class DocumentController {
             @RequestParam String docType,
             @RequestParam MultipartFile file) {
 
-        ResponseEntity<Object> document = documentService.uploadDocument(
+        DocumentDto document = documentService.uploadDocument(
                 applicationId,
                 docType,
                 file
@@ -112,6 +115,7 @@ public class DocumentController {
                 .contentType(MediaType.APPLICATION_OCTET_STREAM)
                 .body(resource);
     }
+}
 
 
 
@@ -191,6 +195,6 @@ public class DocumentController {
 
 
 
-}
+
 
 
