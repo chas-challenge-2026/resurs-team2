@@ -1,61 +1,52 @@
-/* Backoffice.css */
+@import "../../styles/tokens.css";
 
+/* Sidstruktur */
 .backoffice-page {
+  padding-top: 20px;
   max-width: 1170px;
   margin: 0 auto;
-  padding: var(--spacing-md);
+  padding-left: var(--spacing-md);
+  padding-right: var(--spacing-md);
 }
 
-/* Navigering/Topprad */
-.backoffice-nav {
-  background-color: #003366;
-  color: #ffffff;
-  padding: 15px;
-  margin-bottom: 20px;
+.backoffice-title {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  gap: var(--spacing-sm);
+  margin-top: 0;
+  margin-bottom: var(--spacing-md);
+  font-size: 28px;
+  font-weight: 300;
+  color: var(--color-text);
 }
 
-.backoffice-nav a {
-  color: #aaccff;
-  text-decoration: none;
-}
-
-/* Tvåkolumnslayout */
-.backoffice-layout {
-  display: flex;
-  gap: var(--spacing-lg);
-}
-
-.col-left {
-  flex: 7; /* Ca 58% bredd (motsvarar col-md-7) */
-}
-
-.col-right {
-  flex: 5; /* Ca 42% bredd (motsvarar col-md-5) */
+/* Badge för antal ärenden i kö */
+.badge-count {
+  background-color: var(--color-warning);
+  color: var(--color-white);
+  padding: 4px 8px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 700;
 }
 
 /* Paneler */
 .panel {
-  background-color: #ffffff;
+  background-color: var(--color-white);
   border: 1px solid var(--color-border);
-  border-radius: 4px;
-  margin-bottom: 20px;
+  border-radius: var(--radius);
+  margin-bottom: var(--spacing-lg);
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.05);
 }
 
 .panel-heading {
-  padding: 10px 15px;
+  padding: 10px var(--spacing-md);
   background-color: #f5f5f5;
   border-bottom: 1px solid var(--color-border);
-  font-weight: bold;
+  font-weight: 700;
+  color: #333;
 }
 
-.panel-body {
-  padding: 15px;
-}
-
-/* Särskild panel för beslut (panel-warning) */
 .panel-warning {
   border-color: #faebcc;
 }
@@ -66,59 +57,115 @@
   border-bottom-color: #faebcc;
 }
 
-/* Formulär & Knappar i beslutsrutan */
-.form-group {
-  margin-bottom: 15px;
+.panel-body {
+  padding: var(--spacing-md);
 }
 
-.form-control {
-  width: 100%;
-  padding: 8px;
-  border: 1px solid var(--color-border);
-  border-radius: 4px;
-  box-sizing: border-box;
-}
-
-.button-group {
-  display: flex;
-  gap: 10px;
-}
-
-.btn-success {
-  background-color: var(--color-success);
-  color: white;
-  border: none;
-  padding: 8px 16px;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-.btn-danger {
-  background-color: var(--color-danger);
-  color: white;
-  border: none;
-  padding: 8px 16px;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-/* Dokumentlista & Logg */
-.document-list {
-  list-style: none;
-  padding: 0;
+.text-muted {
+  color: var(--color-muted);
   margin: 0;
 }
 
-.document-list li {
-  margin-bottom: 8px;
+/* Tabeller */
+.table {
+  width: 100%;
+  max-width: 100%;
+  margin-bottom: 0;
+  border-collapse: collapse;
 }
 
-.audit-pre {
+.table th,
+.table td {
+  padding: 8px 12px;
+  vertical-align: middle;
+  border-top: 1px solid var(--color-border);
+  font-size: var(--font-size-base);
+  text-align: left;
+}
+
+/* Tabell för under granskning */
+.table-review th {
+  background-color: #003366;
+  color: var(--color-white);
+  border-bottom: none;
+}
+
+/* Randig tabell för historik */
+.table-striped tbody tr:nth-of-type(odd) {
+  background-color: #f9f9f9;
+}
+
+/* Inramad tabell */
+.table-bordered {
+  border: 1px solid var(--color-border);
+}
+
+.table-bordered th,
+.table-bordered td {
+  border: 1px solid var(--color-border);
+}
+
+/* Formulär & Inmatning i tabellceller */
+.inline-form {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.input-comment {
+  width: 140px;
+  padding: 4px 8px;
+  font-size: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  height: 30px;
+}
+
+/* Små knappar för tabellåtgärder */
+.btn-sm {
+  padding: 4px 8px;
+  font-size: 12px;
+  border-radius: 3px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  font-weight: 600;
+}
+
+.btn-success-sm {
+  background-color: var(--color-success);
+  color: var(--color-white);
+  border-color: var(--color-success);
+}
+
+.btn-success-sm:hover {
+  background-color: var(--color-success-hover);
+}
+
+.btn-danger-sm {
+  background-color: var(--color-danger);
+  color: var(--color-white);
+  border-color: var(--color-danger);
+}
+
+.btn-danger-sm:hover {
+  background-color: var(--color-danger-hover);
+}
+
+/* Badges / Labels */
+.label {
+  display: inline-block;
+  padding: 3px 7px;
   font-size: 11px;
-  max-height: 250px;
-  overflow-y: auto;
-  background-color: #f8f9fa;
-  padding: 10px;
-  border: 1px solid #e9ecef;
-  border-radius: 4px;
+  font-weight: 700;
+  color: var(--color-white);
+  border-radius: 3px;
+  text-transform: uppercase;
+}
+
+.label-success {
+  background-color: var(--color-success);
+}
+
+.label-danger {
+  background-color: var(--color-danger);
 }
