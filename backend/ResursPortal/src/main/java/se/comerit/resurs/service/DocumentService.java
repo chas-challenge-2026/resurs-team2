@@ -24,6 +24,7 @@ public class DocumentService {
 
     private static final String UPLOAD_DIR = "/tmp/uploads/";
 
+
     private final ApplicationRepository applicationRepository;
     private final DocumentRepository documentRepository;
 
@@ -31,6 +32,7 @@ public class DocumentService {
         this.applicationRepository = applicationRepository;
         this.documentRepository = documentRepository;
     }
+
 
     public List<DocumentDto> getDocuments(
             Long applicationId) {
@@ -120,10 +122,8 @@ public class DocumentService {
                 );
     }
 
-    // ---------------------------------------------------------
-    // Filename handling
-    // ---------------------------------------------------------
 
+    // Filename handling
     private File prepareDestination(String storedFilename) {
 
         File uploadDir = new File(UPLOAD_DIR);
@@ -152,10 +152,7 @@ public class DocumentService {
     }
 
 
-    // ---------------------------------------------------------
     // File handling
-    // ---------------------------------------------------------
-
     private String getOriginalFilename(MultipartFile file) {
 
         String filename = file.getOriginalFilename();
@@ -177,10 +174,8 @@ public class DocumentService {
         return applicationId + "_" + safeFilename;
     }
 
-    // ---------------------------------------------------------
-    // Document
-    // ---------------------------------------------------------
 
+    // Document
     private Document saveDocument(
             Application application,
             String storedFilename,
@@ -195,10 +190,8 @@ public class DocumentService {
         return documentRepository.save(document);
     }
 
-    // ---------------------------------------------------------
-    // Application status
-    // ---------------------------------------------------------
 
+    // Application status
     private void updateApplicationStatus(
             Application application,
             String docType) {
@@ -212,4 +205,6 @@ public class DocumentService {
             );
         }
     }
+
+
 }
