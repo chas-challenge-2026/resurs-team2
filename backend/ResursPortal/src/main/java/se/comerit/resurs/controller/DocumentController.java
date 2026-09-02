@@ -39,28 +39,28 @@ public class DocumentController {
     }
 
     @PreAuthorize("hasRole('CASE_WORKER')")
-    @GetMapping("/documents/{applicationId}")
+    @GetMapping("applications/{id}/documents")
     public ResponseEntity<List<DocumentDto>> getDocuments(
-            @PathVariable Long applicationId) {
+            @PathVariable Long id) {
 
         List<DocumentDto> documents =
-                documentService.getDocuments(applicationId);
+                documentService.getDocuments(id);
 
         return ResponseEntity.ok(documents);
     }
 
     @PreAuthorize("hasRole('COMPANY')")
     @PostMapping(
-            path = "/document/upload",
-            consumes = MediaType.MULTIPART_FORM_DATA_VALUE
-    )
+            path = "applications/{id}documents",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+
     public ResponseEntity<DocumentDto> uploadDocument(
-            @RequestParam Long applicationId,
+            @RequestParam Long id,
             @RequestParam String docType,
             @RequestParam MultipartFile file) {
 
         DocumentDto document = documentService.uploadDocument(
-                applicationId,
+                id,
                 docType,
                 file
         );
@@ -71,7 +71,7 @@ public class DocumentController {
     }
 
     @PreAuthorize("hasAnyRole('COMPANY', 'CASE_WORKER')")
-    @GetMapping("/document/{id}")
+    @GetMapping("/documents/{id}")
     public ResponseEntity<Resource> downloadDocument(
             @PathVariable Long id,
             @AuthenticationPrincipal UserPrincipal principal) {
@@ -92,6 +92,17 @@ public class DocumentController {
                 .contentType(MediaType.APPLICATION_OCTET_STREAM)
                 .body(resource);
     }
+
+    @PreAuthorize("hasRole('CASE_WORKER')")
+    @DeleteMapping("/documents/{id}")
+    public ResponseEntity<Void> deleteDocument(
+            @PathVariable Long id) {
+
+        documentService.deleteDocument(id);
+
+        return ResponseEntity.noContent().build();
+    }
+
 }
 
 

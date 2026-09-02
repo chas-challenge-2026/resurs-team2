@@ -206,5 +206,15 @@ public class DocumentService {
         }
     }
 
+    public void deleteDocument(Long documentId) {
+
+        Document document = documentRepository
+                .findById(documentId)
+                .orElseThrow(() ->
+                        new ApplicationNotFoundException(documentId)
+                );
+
+        documentRepository.delete(document);
+    }
 
 }
