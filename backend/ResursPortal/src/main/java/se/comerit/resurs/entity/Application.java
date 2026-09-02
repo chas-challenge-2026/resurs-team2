@@ -24,7 +24,6 @@ import jakarta.persistence.Table;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Size;
 
 @Entity
 @Table(name = "applications")
@@ -84,6 +83,20 @@ public class Application {
         this.company = company;
         this.requestedAmount = requestedAmount;
         this.purpose = purpose;
+    }
+
+    public Application(Company company, BigDecimal requestedAmount,
+            String purpose, ApplicationStatus statusValue, Decision decision,
+            String decisionReason, String scoringResult, String auditLog) {
+        this.company = company;
+        this.requestedAmount = requestedAmount;
+        this.purpose = purpose;
+        this.status = statusValue;
+        this.decision = decision;
+        this.decisionReason = decisionReason;
+        this.scoringResult = scoringResult;
+        this.auditLog = auditLog;
+
     }
 
     protected Application() {
