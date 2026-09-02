@@ -1,14 +1,18 @@
 package se.comerit.resurs.api.v1.service;
 
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Optional;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import se.comerit.resurs.api.v1.dto.ApplicationRequest;
 import se.comerit.resurs.api.v1.mapper.ApplicationMapper;
 import se.comerit.resurs.entity.Application;
 import se.comerit.resurs.entity.Company;
 import se.comerit.resurs.rating.ApplicationData;
+import se.comerit.resurs.rating.Score;
 import se.comerit.resurs.rating.ScoringResult;
 import se.comerit.resurs.repository.ApplicationRepository;
 import se.comerit.resurs.repository.CompanyRepository;
@@ -32,6 +36,7 @@ public class ApplicationService {
         return companyRepository.findByOrgNumber(orgNumber);
     }
 
+    @Transactional
     public Long submitApplication(
         String orgNumber,
         ApplicationRequest application) {
@@ -39,8 +44,7 @@ public class ApplicationService {
 
         ApplicationData data = ApplicationMapper.toApplicationData(application);
         ScoringResult score = scoringService.score(data);
-
-        // TODO Audit log
+        Score scoring = ScoringService.toScore(score);
 
         Application app = new Application(
             company, 
@@ -52,6 +56,15 @@ public class ApplicationService {
             null, // ScoringResult
             null // AuditLog
         );
+
+        Map<String, String> createdDetails = new LinkedHashMap<>();
+        createdDetails.put("orgNumber", orgNumber);
+        app.setAuditLog(auditLogService.append(app, "APPLICATION_CREATED", createdDetails));
+
+        Map<String, String> scoringDetails = new LinkedHashMap<>();
+        scoringDetails.put("result", scoring.decision());
+        scoringDetails.put("flags", String.valueOf(scoring.flagCount()));
+        app.setAuditLog(auditLogService.append(app, "SCORING_RUN", scoringDetails));
 
         app = applicationRepository.save(app);
 
