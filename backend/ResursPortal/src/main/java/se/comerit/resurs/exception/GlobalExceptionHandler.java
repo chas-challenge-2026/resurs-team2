@@ -12,6 +12,8 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
 
 import jakarta.validation.ConstraintViolationException;
 import org.springframework.http.ProblemDetail;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authorization.AuthorizationDeniedException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
@@ -64,6 +66,25 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         problemDetail.setTitle("Constraint Violation");
         problemDetail.setType(PROBLEM_TYPE_DEFAULT);
         return ResponseEntity.badRequest().body(problemDetail);
+    }
+
+    @ExceptionHandler({AccessDeniedException.class, AuthorizationDeniedException.class})
+    public ResponseEntity<ProblemDetail> handleAccessDenied(Exception e) {
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(
+                HttpStatus.FORBIDDEN, "Forbidden");
+        problemDetail.setTitle("Access Denied");
+        problemDetail.setType(PROBLEM_TYPE_DEFAULT);
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(problemDetail);
+    }
+
+    @ExceptionHandler(ForbiddenPrincipalException.class)
+    public ResponseEntity<ProblemDetail> handleForbiddenPrincipal(ForbiddenPrincipalException e) {
+        log.warn("Forbidden principal access: {}", e.getMessage());
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(
+                HttpStatus.FORBIDDEN, "Forbidden");
+        problemDetail.setTitle("Access Denied");
+        problemDetail.setType(PROBLEM_TYPE_DEFAULT);
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(problemDetail);
     }
 
     @ExceptionHandler(Exception.class)
