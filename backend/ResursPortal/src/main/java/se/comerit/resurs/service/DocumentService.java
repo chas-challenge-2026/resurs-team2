@@ -2,18 +2,15 @@ package se.comerit.resurs.service;
 
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
 import se.comerit.resurs.dto.DocumentDto;
 import se.comerit.resurs.entity.Application;
 import se.comerit.resurs.entity.ApplicationStatus;
 import se.comerit.resurs.entity.Document;
+import se.comerit.resurs.exception.ApplicationNotFoundException;
+import se.comerit.resurs.exception.EmptyFileException;
+import se.comerit.resurs.exception.FileUploadException;
 import se.comerit.resurs.repository.ApplicationRepository;
 import se.comerit.resurs.repository.DocumentRepository;
 
@@ -22,11 +19,10 @@ import java.io.IOException;
 import java.util.List;
 
 
-
 @Service
 public class DocumentService {
 
-    private static  final String UPLOAD_DIR = "/tmp/uploads/";
+    private static final String UPLOAD_DIR = "/tmp/uploads/";
 
     private final ApplicationRepository applicationRepository;
     private final DocumentRepository documentRepository;
@@ -36,103 +32,129 @@ public class DocumentService {
         this.documentRepository = documentRepository;
     }
 
-    public ResponseEntity<List<DocumentDto>> getDocuments(
+    public List<DocumentDto> getDocuments(
             Long applicationId) {
 
         if (!applicationRepository.existsById(applicationId)) {
-            return ResponseEntity.notFound().build();
+            throw new ApplicationNotFoundException(applicationId);
         }
 
-        List<DocumentDto> documents = documentRepository
+        return documentRepository
                 .findByApplicationIdOrderByUploadedAtDesc(applicationId)
                 .stream()
                 .map(DocumentDto::from)
                 .toList();
 
-        return ResponseEntity.ok(documents);
+
     }
 
-    public ResponseEntity<Object> uploadDocument(
-            @RequestParam("applicationId") Long applicationId,
-            @RequestParam("docType") String docType,
-            @RequestParam("file") MultipartFile file) {
+    public DocumentDto uploadDocument(
+            Long applicationId,
+            String docType,
+            MultipartFile file) {
 
-        // Kontrollera att fil skickades
-        if (file.isEmpty()) {
-            return ResponseEntity
-                    .badRequest()
-                    .body("Ingen fil vald.");
-        }
+        validateFile(file);
 
         // Hämta application
-        Application application = applicationRepository
-                .findById(applicationId)
-                .orElse(null);
-
-        if (application == null) {
-            return ResponseEntity.notFound().build();
-        }
+        Application application = getApplication(applicationId);
 
 
         // Hämta original filename
-        String originalFilename = file.getOriginalFilename() == null
-                ? "upload.bin"
-                : file.getOriginalFilename();
+        String originalFilename = getOriginalFilename(file);
 
-        // Skydda mot path traversal
-        String safeFilename = originalFilename
-                .replaceAll("[/\\\\]", "_");
+        String storedFilename = createStoredFilename(applicationId, originalFilename);
 
-        String storedFilename = applicationId + "_" + safeFilename;
+        File destinationFile = prepareDestination(storedFilename);
+        saveFile(file, destinationFile);
 
-        // Skapa upload directory
+        Document document = saveDocument(
+                application,
+                storedFilename,
+                docType
+        );
+
+        updateApplicationStatus(application, docType);
+
+        applicationRepository.save(application);
+        return DocumentDto.from(document);
+
+    }
+
+    public Resource downloadDocument(Long documentId) {
+
+        Document document = documentRepository
+                .findById(documentId)
+                .orElseThrow(() ->
+                        new RuntimeException("Document not found with ID: " + documentId)
+                );
+
+        File file = new File(
+                UPLOAD_DIR,
+                document.getFilename()
+        );
+
+        if (!file.exists()) {
+            throw new RuntimeException(
+                    "File not found: " +
+                            document.getFilename()
+            );
+        }
+
+        return new FileSystemResource(file);
+    }
+
+
+    private void validateFile(MultipartFile file) {
+
+        if (file == null || file.isEmpty()) {
+            throw new EmptyFileException();
+        }
+    }
+
+    private Application getApplication(Long applicationId) {
+
+        return applicationRepository
+                .findById(applicationId)
+                .orElseThrow(() ->
+                        new ApplicationNotFoundException(applicationId)
+                );
+    }
+
+    // ---------------------------------------------------------
+    // Filename handling
+    // ---------------------------------------------------------
+
+    private File prepareDestination(String storedFilename) {
+
         File uploadDir = new File(UPLOAD_DIR);
 
         if (!uploadDir.exists() && !uploadDir.mkdirs()) {
-            return ResponseEntity
-                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Kunde inte skapa uppladdningskatalog.");
+            throw new FileUploadException(
+                    "Kunde inte skapa uppladdningskatalog."
+            );
         }
 
-        File destination = new File(
-                uploadDir,
-                storedFilename
-        );
+        return new File(uploadDir, storedFilename);
+    }
 
-        // Spara filen
+    private void saveFile(
+            MultipartFile file,
+            File destination) {
+
         try {
             file.transferTo(destination);
         } catch (IOException e) {
-            return ResponseEntity
-                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Uppladdning misslyckades: " + e.getMessage());
+            throw new FileUploadException(
+                    "Uppladdning misslyckades."
+
+            );
         }
-
-        // Spara dokumentet i databasen
-        Document document = documentRepository.save(
-                new Document(
-                        application,
-                        storedFilename,
-                        docType
-                )
-        );
-
-        applicationRepository.save(application);
-
-        return ResponseEntity
-                .status(HttpStatus.CREATED)
-                .body(DocumentDto.from(document));
     }
 
-        public ResponseEntity<Resource> downloadDocument(Long documentId) {
 
-            return documentRepository
-                    .findById(documentId)
-                    .map(this::createResourceResponse)
-                    .orElseGet(() ->
-                            ResponseEntity.notFound().build()
-                    );
-        }
+    // ---------------------------------------------------------
+    // File handling
+    // ---------------------------------------------------------
 
     private String getOriginalFilename(MultipartFile file) {
 
@@ -155,17 +177,27 @@ public class DocumentService {
         return applicationId + "_" + safeFilename;
     }
 
-    private File prepareDestination(String storedFilename) {
-        File uploadDir = new File(UPLOAD_DIR);
+    // ---------------------------------------------------------
+    // Document
+    // ---------------------------------------------------------
 
+    private Document saveDocument(
+            Application application,
+            String storedFilename,
+            String docType) {
 
-        if (!uploadDir.exists() && !uploadDir.mkdirs()) {
-            return null;
-        }
+        Document document = new Document(
+                application,
+                storedFilename,
+                docType
+        );
 
-        return new File(uploadDir, storedFilename);
+        return documentRepository.save(document);
     }
 
+    // ---------------------------------------------------------
+    // Application status
+    // ---------------------------------------------------------
 
     private void updateApplicationStatus(
             Application application,
@@ -179,26 +211,5 @@ public class DocumentService {
                     ApplicationStatus.UNDER_REVIEW
             );
         }
-    }
-
-    private ResponseEntity<Resource> createResourceResponse(
-            Document document) {
-
-        String filename = document.getFilename();
-        File file = new File(UPLOAD_DIR + filename);
-
-        if (!file.exists()) {
-            return ResponseEntity.notFound().build();
-        }
-
-        Resource resource = new FileSystemResource(file);
-
-        return ResponseEntity.ok()
-                .header(
-                        HttpHeaders.CONTENT_DISPOSITION,
-                        "attachment; filename=\"" + filename + "\""
-                )
-                .contentType(MediaType.APPLICATION_OCTET_STREAM)
-                .body(resource);
     }
 }
