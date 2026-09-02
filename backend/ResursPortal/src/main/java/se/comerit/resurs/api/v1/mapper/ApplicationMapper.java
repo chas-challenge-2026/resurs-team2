@@ -3,7 +3,6 @@ package se.comerit.resurs.api.v1.mapper;
 import java.util.List;
 
 import se.comerit.resurs.api.v1.dto.ApplicationDetailsResponse;
-import se.comerit.resurs.api.v1.dto.ApplicationOverview;
 import se.comerit.resurs.api.v1.dto.ApplicationRequest;
 import se.comerit.resurs.api.v1.dto.ApplicationResponse;
 import se.comerit.resurs.api.v1.dto.DocumentResponse;
@@ -27,6 +26,16 @@ public final class ApplicationMapper {
             case APPROVED -> ApplicationStatus.APPROVED;
             case REJECTED -> ApplicationStatus.REJECTED;
             case UNDER_REVIEW -> ApplicationStatus.UNDER_REVIEW;
+        };
+    }
+
+    /**
+     * Derives the application status from a manual decision.
+     */
+    public static ApplicationStatus toStatus(Decision decision) {
+        return switch (decision) {
+            case APPROVED -> ApplicationStatus.APPROVED;
+            case REJECTED -> ApplicationStatus.REJECTED;
         };
     }
 
@@ -91,13 +100,5 @@ public final class ApplicationMapper {
 
     private static double valueOrZero(Double value) {
         return value == null ? 0.0 : value;
-    }
-
-    public static ApplicationOverview toApplicationOverview(List<Application> reviewApplications,
-            List<Application> decidedApplications, String workerName) {
-        return new ApplicationOverview(
-                reviewApplications.stream().map(ApplicationMapper::toResponse).toList(),
-                decidedApplications.stream().map(ApplicationMapper::toResponse).toList(),
-                workerName, reviewApplications.size());
     }
 }
