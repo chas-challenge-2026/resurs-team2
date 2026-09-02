@@ -8,12 +8,14 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import se.comerit.resurs.api.v1.dto.ApplicationDetailsResponse;
 import se.comerit.resurs.api.v1.dto.ApplicationRequest;
 import se.comerit.resurs.api.v1.dto.ApplicationResponse;
 import se.comerit.resurs.api.v1.service.ApplicationService;
+import se.comerit.resurs.entity.ApplicationStatus;
 import se.comerit.resurs.security.UserPrincipal;
 
 import java.util.List;
@@ -51,7 +53,8 @@ public class ApplicationController {
     @PreAuthorize("hasAnyRole('COMPANY','CASE_WORKER')")
     @GetMapping
     public ResponseEntity<List<ApplicationResponse>> listApplications(
-            @AuthenticationPrincipal UserPrincipal principal) {
-        return ResponseEntity.ok(service.listApplications(principal));
+            @AuthenticationPrincipal UserPrincipal principal,
+            @RequestParam(required = false) ApplicationStatus status) {
+        return ResponseEntity.ok(service.listApplications(principal, status));
     }
 }

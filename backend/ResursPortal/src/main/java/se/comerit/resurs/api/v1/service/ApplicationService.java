@@ -82,20 +82,28 @@ public class ApplicationService {
     }
 
     /**
-     * Returns the applications visible to the caller. A case worker gets all
-     * pending ({@link ApplicationStatus#UNDER_REVIEW}) applications; a company
-     * gets all of its own applications.
+     * Returns the applications visible to the caller. A case worker sees all
+     * applications; a company sees only its own. When {@code status} is
+     * supplied the result is narrowed to that status, otherwise case workers
+     * default to {@link ApplicationStatus#UNDER_REVIEW} and companies see
+     * everything.
      */
     @Transactional(readOnly = true)
-    public @Nonnull List<ApplicationResponse> listApplications(UserPrincipal principal) {
+    public @Nonnull List<ApplicationResponse> listApplications(UserPrincipal principal,
+            ApplicationStatus status) {
         if (principal instanceof CaseWorkerPrincipal) {
-            return applicationRepository.findByStatus(ApplicationStatus.UNDER_REVIEW).stream()
+            ApplicationStatus effective = status != null ? status : ApplicationStatus.UNDER_REVIEW;
+            return applicationRepository.findByStatus(effective).stream()
                     .map(ApplicationMapper::toResponse).toList();
         }
 
         String orgNumber = principal.asCompany().orgNumber();
         Company company = getCompany(orgNumber)
                 .orElseThrow(() -> new CompanyNotFoundException(orgNumber));
+        if (status != null) {
+            return applicationRepository.findByCompanyIdAndStatus(company.getId(), status).stream()
+                    .map(ApplicationMapper::toResponse).toList();
+        }
         return applicationRepository.findByCompanyId(company.getId()).stream()
                 .map(ApplicationMapper::toResponse).toList();
     }

@@ -323,5 +323,79 @@ class ApplicationControllerIntegrationTest {
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.length()").value(0));
         }
+
+        @Test
+        @WithCaseWorker
+        @Sql(statements = {
+                "DELETE FROM documents",
+                "DELETE FROM applications",
+                "DELETE FROM companies",
+                "INSERT INTO companies (id, org_number, company_name, authorized_signatory) VALUES (900, '556000-1234', 'Company A', 'Test')",
+                "INSERT INTO applications (id, company_id, requested_amount, purpose, status, audit_log) VALUES (910, 900, 300000.00, 'Under Review', 'UNDER_REVIEW', '[]')",
+                "INSERT INTO applications (id, company_id, requested_amount, purpose, status, audit_log) VALUES (911, 900, 300000.00, 'Approved', 'APPROVED', '[]')",
+                "INSERT INTO applications (id, company_id, requested_amount, purpose, status, audit_log) VALUES (912, 900, 300000.00, 'Rejected', 'REJECTED', '[]')"
+        })
+        void caseWorkerCanFilterByStatus() throws Exception {
+            mockMvc.perform(get("/api/v1/applications").param("status", "APPROVED"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.length()").value(1))
+                    .andExpect(jsonPath("$[0].id").value(911))
+                    .andExpect(jsonPath("$[0].status").value("APPROVED"));
+        }
+
+        @Test
+        @WithCaseWorker
+        @Sql(statements = {
+                "DELETE FROM documents",
+                "DELETE FROM applications",
+                "DELETE FROM companies",
+                "INSERT INTO companies (id, org_number, company_name, authorized_signatory) VALUES (920, '556000-1234', 'Company A', 'Test')",
+                "INSERT INTO applications (id, company_id, requested_amount, purpose, status, audit_log) VALUES (930, 920, 300000.00, 'A', 'UNDER_REVIEW', '[]')",
+                "INSERT INTO applications (id, company_id, requested_amount, purpose, status, audit_log) VALUES (931, 920, 300000.00, 'B', 'APPROVED', '[]')"
+        })
+        void caseWorkerFilterUnderReviewMatchesDefault() throws Exception {
+            mockMvc.perform(get("/api/v1/applications").param("status", "UNDER_REVIEW"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.length()").value(1))
+                    .andExpect(jsonPath("$[0].status").value("UNDER_REVIEW"));
+        }
+
+        @Test
+        @WithCompany(orgNumber = "556000-1234")
+        @Sql(statements = {
+                "DELETE FROM documents",
+                "DELETE FROM applications",
+                "DELETE FROM companies",
+                "INSERT INTO companies (id, org_number, company_name, authorized_signatory) VALUES (940, '556000-1234', 'Company A', 'Test')",
+                "INSERT INTO applications (id, company_id, requested_amount, purpose, status, audit_log) VALUES (950, 940, 300000.00, 'Under Review', 'UNDER_REVIEW', '[]')",
+                "INSERT INTO applications (id, company_id, requested_amount, purpose, status, audit_log) VALUES (951, 940, 300000.00, 'Approved', 'APPROVED', '[]')",
+                "INSERT INTO applications (id, company_id, requested_amount, purpose, status, audit_log) VALUES (952, 940, 300000.00, 'Rejected', 'REJECTED', '[]')"
+        })
+        void companyCanFilterByStatus() throws Exception {
+            mockMvc.perform(get("/api/v1/applications").param("status", "APPROVED"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.length()").value(1))
+                    .andExpect(jsonPath("$[0].id").value(951))
+                    .andExpect(jsonPath("$[0].status").value("APPROVED"));
+        }
+
+        @Test
+        @WithCompany(orgNumber = "556000-1234")
+        @Sql(statements = {
+                "DELETE FROM documents",
+                "DELETE FROM applications",
+                "DELETE FROM companies",
+                "INSERT INTO companies (id, org_number, company_name, authorized_signatory) VALUES (960, '556000-1234', 'Company A', 'Test')",
+                "INSERT INTO companies (id, org_number, company_name, authorized_signatory) VALUES (961, '556000-5678', 'Company B', 'Test')",
+                "INSERT INTO applications (id, company_id, requested_amount, purpose, status, audit_log) VALUES (970, 960, 300000.00, 'Own', 'UNDER_REVIEW', '[]')",
+                "INSERT INTO applications (id, company_id, requested_amount, purpose, status, audit_log) VALUES (971, 961, 300000.00, 'Other', 'UNDER_REVIEW', '[]')"
+        })
+        void companyFilterDoesNotLeakOtherCompaniesApplications() throws Exception {
+            mockMvc.perform(get("/api/v1/applications").param("status", "UNDER_REVIEW"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.length()").value(1))
+                    .andExpect(jsonPath("$[0].id").value(970))
+                    .andExpect(jsonPath("$[0].orgNumber").value(COMPANY_ORG));
+        }
     }
 }
