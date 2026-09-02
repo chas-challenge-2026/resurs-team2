@@ -36,14 +36,17 @@ public class ScoringService {
         this.decisionEngine = decisionEngine;
     }
 
-    public Score score(ApplicationData input) {
+    public ScoringResult score(ApplicationData input) {
         List<CheckResult> checks = new ArrayList<>();
         for (ScoringCheck check : scoringChecks) {
             checks.addAll(check.evaluate(input));
         }
 
-        ScoringResult result = decisionEngine.decide(checks);
+        return decisionEngine.decide(checks);
+    }
 
+    public static Score toScore(ScoringResult result) {
+        var checks = result.checks();
         int flagCount = (int) checks.stream()
                 .filter(check -> check.status() == CheckStatus.FLAG)
                 .count();

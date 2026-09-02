@@ -15,6 +15,7 @@ import se.comerit.resurs.entity.ApplicationStatus;
 
 public interface ApplicationRepository extends JpaRepository<Application, Long> {
     List<Application> findByCompanyId(Long companyId);
+    List<Application> findByCompanyIdAndStatus(Long companyId, ApplicationStatus status);
     List<Application> findByStatus(ApplicationStatus status);
 
     @Query("SELECT a FROM Application a JOIN FETCH a.company WHERE a.status = :status ORDER BY a.createdAt ASC")
