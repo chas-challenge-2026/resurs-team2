@@ -8,6 +8,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -21,6 +22,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.ProblemDetail;
 
 @Configuration
+@EnableMethodSecurity
 public class SecurityConfig {
 
     private static final URI PROBLEM_TYPE_DEFAULT = URI.create("about:blank");

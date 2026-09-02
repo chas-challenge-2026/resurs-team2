@@ -44,7 +44,7 @@ import java.util.Map;
  *  - Session-check copy-pasteat i varje metod
  *  - Magic numbers spridda i scoring-logiken
  */
-@Controller
+@Controller("legacyApplication")
 public class ApplicationController {
 
     private final ScoringService scoringService;
@@ -118,7 +118,7 @@ public class ApplicationController {
             bransch
         );
 
-        Score scoring = scoringService.score(data);
+        Score scoring = ScoringService.toScore(scoringService.score(data));
         String decision = scoring.decision();
         int flagCount = scoring.flagCount();
         String scoringLog = scoring.scoringLog();
