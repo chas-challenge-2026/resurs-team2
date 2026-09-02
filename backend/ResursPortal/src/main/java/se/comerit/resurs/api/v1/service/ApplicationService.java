@@ -7,16 +7,21 @@ import java.util.Optional;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import jakarta.annotation.Nonnull;
+import se.comerit.resurs.api.v1.dto.ApplicationDetailsResponse;
 import se.comerit.resurs.api.v1.dto.ApplicationRequest;
 import se.comerit.resurs.api.v1.mapper.ApplicationMapper;
 import se.comerit.resurs.entity.Application;
 import se.comerit.resurs.entity.Company;
+import se.comerit.resurs.exception.ApplicationNotFoundException;
 import se.comerit.resurs.exception.CompanyNotFoundException;
 import se.comerit.resurs.rating.ApplicationData;
 import se.comerit.resurs.rating.Score;
 import se.comerit.resurs.rating.ScoringResult;
 import se.comerit.resurs.repository.ApplicationRepository;
 import se.comerit.resurs.repository.CompanyRepository;
+import se.comerit.resurs.security.CaseWorkerPrincipal;
+import se.comerit.resurs.security.UserPrincipal;
 
 @Service
 public class ApplicationService {
@@ -71,5 +76,28 @@ public class ApplicationService {
         app = applicationRepository.save(app);
 
         return app.getId();
+    }
+
+    /**
+     * Returns the details of a single application. A case worker may view any
+     * application; a company may only view its own (mirrors the legacy
+     * controller). For anything the caller is not allowed to see, or that does
+     * not exist, an {@link ApplicationNotFoundException} is thrown so that the
+     * existence of other applications is not leaked.
+     */
+    @Transactional(readOnly = true)
+    public @Nonnull ApplicationDetailsResponse viewApplication(Long id, UserPrincipal principal) {
+        Application app = applicationRepository.findByIdWithDocuments(id)
+                .orElseThrow(() -> new ApplicationNotFoundException(id));
+
+        if (principal instanceof CaseWorkerPrincipal caseWorker) {
+            return ApplicationMapper.toDetailsResponse(app, caseWorker.name());
+        }
+
+        String orgNumber = principal.asCompany().orgNumber();
+        if (!app.getCompany().getOrgNumber().equals(orgNumber)) {
+            throw new ApplicationNotFoundException(id);
+        }
+        return ApplicationMapper.toDetailsResponse(app, app.getCompany().getName());
     }
 }

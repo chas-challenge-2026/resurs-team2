@@ -123,6 +123,7 @@ class ApplicationControllerIntegrationTest {
         @Test
         @WithCompany
         @Sql(statements = {
+                "DELETE FROM documents",
                 "DELETE FROM applications",
                 "DELETE FROM companies",
                 "INSERT INTO companies (id, org_number, company_name, authorized_signatory) VALUES (600, '556000-1234', 'Malmö Fastigheter AB', 'Test Person')"
@@ -160,6 +161,100 @@ class ApplicationControllerIntegrationTest {
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(VALID_REQUEST_JSON))
                     .andExpect(status().isBadRequest());
+        }
+    }
+
+    @Nested
+    @DisplayName("GET view application")
+    class ViewApplication {
+
+        @Test
+        void unauthenticatedIs401() throws Exception {
+            mockMvc.perform(get("/api/v1/application/1"))
+                    .andExpect(status().isUnauthorized())
+                    .andExpect(jsonPath("$.status").value(401))
+                    .andExpect(jsonPath("$.title").value("Unauthorized"));
+        }
+
+        @Test
+        @WithCompany
+        void nonExistentApplicationIs404() throws Exception {
+            mockMvc.perform(get("/api/v1/application/99999"))
+                    .andExpect(status().isNotFound())
+                    .andExpect(jsonPath("$.status").value(404))
+                    .andExpect(jsonPath("$.title").value("Application Not Found"));
+        }
+
+        @Test
+        @WithCompany(orgNumber = "556000-1234")
+        @Sql(statements = {
+                "DELETE FROM documents",
+                "DELETE FROM applications",
+                "DELETE FROM companies",
+                "INSERT INTO companies (id, org_number, company_name, authorized_signatory) VALUES (700, '556000-1234', 'Malmö Fastigheter AB', 'Test Person')",
+                "INSERT INTO applications (id, company_id, requested_amount, purpose, status, decision, decision_reason, scoring_result, audit_log) VALUES (700, 700, 300000.00, 'Rörelsekapital', 'UNDER_REVIEW', NULL, NULL, NULL, '[]')",
+                "INSERT INTO documents (id, application_id, filename, doc_type) VALUES (700, 700, 'bokaplan.pdf', 'BOKFORING')"
+        })
+        void companyCanViewOwnApplication() throws Exception {
+            mockMvc.perform(get("/api/v1/application/700"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.application.id").value(700))
+                    .andExpect(jsonPath("$.application.companyName").value("Malmö Fastigheter AB"))
+                    .andExpect(jsonPath("$.application.orgNumber").value("556000-1234"))
+                    .andExpect(jsonPath("$.application.purpose").value("Rörelsekapital"))
+                    .andExpect(jsonPath("$.application.status").value("UNDER_REVIEW"))
+                    .andExpect(jsonPath("$.documents.length()").value(1))
+                    .andExpect(jsonPath("$.documents[0].filename").value("bokaplan.pdf"))
+                    .andExpect(jsonPath("$.documents[0].docType").value("BOKFORING"));
+        }
+
+        @Test
+        @WithCompany(orgNumber = "556000-9999")
+        @Sql(statements = {
+                "DELETE FROM documents",
+                "DELETE FROM applications",
+                "DELETE FROM companies",
+                "INSERT INTO companies (id, org_number, company_name, authorized_signatory) VALUES (701, '556000-1234', 'Ägarens Bolag AB', 'Test Person')",
+                "INSERT INTO applications (id, company_id, requested_amount, purpose, status, decision, decision_reason, scoring_result, audit_log) VALUES (701, 701, 300000.00, 'Rörelsekapital', 'UNDER_REVIEW', NULL, NULL, NULL, '[]')"
+        })
+        void companyCannotViewAnotherCompanysApplication() throws Exception {
+            // The authenticated company (556000-9999) must NOT be able to see
+            // an application owned by a different company (556000-1234). It
+            // should be indistinguishable from a missing application.
+            mockMvc.perform(get("/api/v1/application/701"))
+                    .andExpect(status().isNotFound())
+                    .andExpect(jsonPath("$.status").value(404))
+                    .andExpect(jsonPath("$.title").value("Application Not Found"));
+        }
+
+        @Test
+        @WithCaseWorker(name = "Karin Handläggare")
+        @Sql(statements = {
+                "DELETE FROM documents",
+                "DELETE FROM applications",
+                "DELETE FROM companies",
+                "INSERT INTO companies (id, org_number, company_name, authorized_signatory) VALUES (702, '556000-1234', 'Malmö Fastigheter AB', 'Test Person')",
+                "INSERT INTO applications (id, company_id, requested_amount, purpose, status, decision, decision_reason, scoring_result, audit_log) VALUES (702, 702, 400000.00, 'Expansion', 'APPROVED', 'APPROVED', 'Godkänd', NULL, '[]')"
+        })
+        void caseWorkerCanViewAnyApplication() throws Exception {
+            mockMvc.perform(get("/api/v1/application/702"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.application.id").value(702))
+                    .andExpect(jsonPath("$.application.companyName").value("Malmö Fastigheter AB"))
+                    .andExpect(jsonPath("$.application.status").value("APPROVED"))
+                    .andExpect(jsonPath("$.application.decision").value("APPROVED"))
+                    .andExpect(jsonPath("$.application.decisionReason").value("Godkänd"))
+                    .andExpect(jsonPath("$.workerName").value("Karin Handläggare"))
+                    .andExpect(jsonPath("$.documents").isEmpty());
+        }
+
+        @Test
+        @WithCaseWorker
+        void caseWorkerNonExistentApplicationIs404() throws Exception {
+            mockMvc.perform(get("/api/v1/application/99999"))
+                    .andExpect(status().isNotFound())
+                    .andExpect(jsonPath("$.status").value(404))
+                    .andExpect(jsonPath("$.title").value("Application Not Found"));
         }
     }
 }
