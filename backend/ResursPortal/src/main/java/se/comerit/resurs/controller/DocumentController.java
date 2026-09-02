@@ -1,177 +1,196 @@
 package se.comerit.resurs.controller;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.security.access.prepost.PreAuthorize;
+
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import jakarta.servlet.http.HttpSession;
+
+import se.comerit.resurs.dto.DocumentDto;
 import se.comerit.resurs.entity.Application;
 import se.comerit.resurs.entity.ApplicationStatus;
 import se.comerit.resurs.entity.Document;
 import se.comerit.resurs.repository.ApplicationRepository;
 import se.comerit.resurs.repository.DocumentRepository;
+import se.comerit.resurs.security.UserPrincipal;
+import se.comerit.resurs.service.DocumentService;
 
 import java.io.File;
 import java.io.IOException;
+
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
+import static org.springframework.data.jpa.domain.AbstractPersistable_.id;
+
+
 /**
  * DocumentController – Hanterar dokumentuppladdning.
- *
+ * <p>
  * VARNING: PDF sparas men parsas INTE.
  * TODO: implement PDF parsing in v2 (see native/README.md)
- *
+ * <p>
  * Anti-patterns:
  * - Filer sparas i /tmp/uploads — rensas vid omstart
  * - Ingen validering av filtyp (accepterar vad som helst)
  * - Audit log uppdateras via JSON string manipulation
  * - Session check copy-pasteat
  */
-@Controller
+@RestController
+@RequestMapping("/api")
 public class DocumentController {
 
-    private ApplicationRepository applicationRepository;
-    private DocumentRepository documentRepository;
+    private final DocumentService documentService;
 
-    // Uploads dir — /tmp rensas vid omstart, ingen persistent lagring
-    // TODO: använd ett persistent filsystem eller S3 i v2
-    private static final String UPLOAD_DIR = "/tmp/uploads/";
-
-    public DocumentController(ApplicationRepository applicationRepository, DocumentRepository documentRepository) {
-        this.applicationRepository = applicationRepository;
-        this.documentRepository = documentRepository;
+    public DocumentController(DocumentService documentService) {
+        this.documentService = documentService;
     }
 
+    @PreAuthorize("hasRole('CASE_WORKER')")
     @GetMapping("/documents/{applicationId}")
-    public String showDocumentsPage(@PathVariable("applicationId") Long applicationId,
-            HttpSession session,
-            Model model) {
-        // Session check copy-pasted in every method — should be an interceptor
-        if (session.getAttribute("userId") == null)
-            return "redirect:/login";
+    public ResponseEntity<List<DocumentDto>> getDocuments(
+            @PathVariable Long applicationId) {
 
-        return applicationRepository.findById(applicationId).map(application -> {
-            List<Document> documents = documentRepository.findByApplicationIdOrderByUploadedAtDesc(applicationId);
-
-            model.addAttribute("application", application);
-            model.addAttribute("documents", documents);
-            model.addAttribute("applicationId", applicationId);
-            return "documents";
-
-        }).orElseGet(() -> "redirect:/applications");
+        return documentService.getDocuments(applicationId);
     }
 
-    @PostMapping("/document/upload")
-    public String uploadDocument(@RequestParam("applicationId") Long applicationId,
-            @RequestParam("docType") String docType,
-            @RequestParam("file") MultipartFile file,
-            HttpSession session,
-            Model model) {
-        // Session check copy-pasted in every method — should be an interceptor
-        if (session.getAttribute("userId") == null)
-            return "redirect:/login";
+    @PreAuthorize("hasRole('COMPANY')")
+    @PostMapping(
+            path = "/document/upload",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE
+    )
+    public ResponseEntity<DocumentDto> uploadDocument(
+            @RequestParam Long applicationId,
+            @RequestParam String docType,
+            @RequestParam MultipartFile file) {
 
-        if (file.isEmpty()) {
-            model.addAttribute("error", "Ingen fil vald.");
-            return "redirect:/documents/" + applicationId;
+        ResponseEntity<Object> document = documentService.uploadDocument(
+                applicationId,
+                docType,
+                file
+        );
+
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(document);
+    }
+
+    @PreAuthorize("hasAnyRole('COMPANY', 'CASE_WORKER')")
+    @GetMapping("/document/{id}")
+    public ResponseEntity<Resource> downloadDocument(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserPrincipal principal) {
+
+        if (principal == null) {
+            return ResponseEntity
+                    .status(HttpStatus.UNAUTHORIZED)
+                    .build();
         }
 
-        // No file type validation — accepts anything, not just PDF
-        // TODO: validate that uploaded file is actually a PDF
-        String originalFilename = file.getOriginalFilename();
-        String storedFilename = applicationId + "_" + originalFilename;
+        Resource resource = documentService.downloadDocument(id);
 
-        File uploadDir = new File(UPLOAD_DIR);
-        if (!uploadDir.exists()) {
-            uploadDir.mkdirs();
-        }
+        return ResponseEntity.ok()
+                .header(
+                        HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment"
+                )
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .body(resource);
+    }
 
-        File destination = new File(UPLOAD_DIR + storedFilename);
 
-        try {
-            file.transferTo(destination);
-        } catch (IOException e) {
-            model.addAttribute("error", "Uppladdning misslyckades: " + e.getMessage());
-            return "redirect:/documents/" + applicationId;
-        }
 
-        Application application = applicationRepository.findById(applicationId).orElseThrow();
+    /*    // =========================
+        // Update audit log
+        // =========================
 
-        // Store filename in DB — file path is /tmp which is not persistent
-        // TODO: implement PDF parsing in v2 (see native/README.md)
-        // The file is saved but its contents are never read or validated
-        Document newDocument = new Document(application, storedFilename, docType);
-        documentRepository.save(newDocument);
-
-        // Update audit log JSON blob — same string manipulation pattern as
-        // ApplicationController
-        // TODO: skapa separat audit_log-tabell med index
-        String newEntry = "{\"ts\":\"" + LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)
-                + "\",\"action\":\"DOCUMENT_UPLOADED\",\"filename\":\"" + originalFilename
-                + "\",\"docType\":\"" + docType + "\"}";
+        ObjectMapper mapper = new ObjectMapper();
+        ArrayNode logArray;
 
         String currentLog = application.getAuditLog();
 
-        String updatedLog;
-        if (currentLog == null || currentLog.equals("[]")) {
-            updatedLog = "[" + newEntry + "]";
-        } else {
-            updatedLog = currentLog.substring(0, currentLog.lastIndexOf("]")) + "," + newEntry + "]";
+        try {
+
+            if (currentLog.trim().isEmpty()
+                    || "[]".equals(currentLog.trim())) {
+
+                logArray = mapper.createArrayNode();
+
+            } else {
+
+                JsonNode parsed = mapper.readTree(currentLog);
+
+                if (parsed != null && parsed.isArray()) {
+                    logArray = (ArrayNode) parsed;
+                } else {
+                    logArray = mapper.createArrayNode();
+                }
+            }
+
+        } catch (IOException e) {
+
+            // Om befintlig audit log är trasig,
+            // börja om med en tom array.
+            logArray = mapper.createArrayNode();
         }
 
-        application.setAuditLog(updatedLog);
-        applicationRepository.save(application);
+        // Skapa ny audit-log entry
+        ObjectNode newEntry = mapper.createObjectNode();
 
-        // Update application status from PENDING_DOCS to UNDER_REVIEW if årsredovisning
-        // uploaded
-        // No business rules validation — just check docType string
-        if (("arsredovisning".equals(docType) || "årsredovisning".equals(docType))
-                && application.getStatus() == ApplicationStatus.PENDING_DOCS) {
-            application.setStatus(ApplicationStatus.UNDER_REVIEW);
-            applicationRepository.save(application);
-        }
+        newEntry.put(
+                "ts",
+                LocalDateTime
+                        .now(ZoneId.of("UTC"))
+                        .format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)
+        );
 
-        return "redirect:/documents/" + applicationId;
-    }
+        newEntry.put(
+                "action",
+                "DOCUMENT_UPLOADED"
+        );
 
-    @GetMapping("/document/{id}")
-    public ResponseEntity<Resource> downloadDocument(@PathVariable("id") Long documentId,
-            HttpSession session) {
-        // Session check copy-pasted in every method — should be an interceptor
-        if (session.getAttribute("userId") == null) {
-            return ResponseEntity.status(302).header("Location", "/login").build();
-        }
+        newEntry.put(
+                "filename",
+                originalFilename
+        );
 
-        ResponseEntity<Resource> response = (ResponseEntity<Resource>) documentRepository.findById(documentId)
-                .map(document -> {
-                    String filename = document.getFilename();
-                    File file = new File(UPLOAD_DIR + filename);
+        newEntry.put(
+                "docType",
+                docType
+        );
 
-                    if (!file.exists()) {
-                        // File was in /tmp and got cleared on server restart
-                        return ResponseEntity.notFound().build();
-                    }
+        logArray.add(newEntry);
 
-                    Resource resource = new FileSystemResource(file);
+        // Spara audit log
+        try {
 
-                    return ResponseEntity.ok()
-                            .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
-                            .contentType(MediaType.APPLICATION_OCTET_STREAM)
-                            .body(resource);
+            application.setAuditLog(
+                    mapper.writeValueAsString(logArray)
+            );
 
-                }).orElseGet(() -> ResponseEntity.notFound().build());
+        } catch (JsonProcessingException e) {
 
-        return response;
-    }
+            // Behåll gammal audit log om serialisering misslyckas.
+        } */
+
+
+
+
 }
+
+
