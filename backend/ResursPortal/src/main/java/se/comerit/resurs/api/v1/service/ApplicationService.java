@@ -59,12 +59,12 @@ public class ApplicationService {
 
         Map<String, String> createdDetails = new LinkedHashMap<>();
         createdDetails.put("orgNumber", orgNumber);
-        app.setAuditLog(auditLogService.append(app, "APPLICATION_CREATED", createdDetails));
+        auditLogService.append(app, "APPLICATION_CREATED", createdDetails);
 
         Map<String, String> scoringDetails = new LinkedHashMap<>();
         scoringDetails.put("result", scoring.decision());
         scoringDetails.put("flags", String.valueOf(scoring.flagCount()));
-        app.setAuditLog(auditLogService.append(app, "SCORING_RUN", scoringDetails));
+        auditLogService.append(app, "SCORING_RUN", scoringDetails);
 
         app = applicationRepository.save(app);
 

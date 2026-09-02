@@ -30,7 +30,8 @@ public class AuditLogService {
     }
 
     /**
-     * Appends a single audit entry to the given application's log and returns the
+     * Appends a single audit entry to the given application's log, persists it
+     * on the application via {@link Application#setAuditLog}, and returns the
      * resulting full log JSON. The entry always carries a timestamp and an
      * {@code action}, plus any additional {@code details} supplied.
      */
@@ -44,10 +45,14 @@ public class AuditLogService {
 
         String entry = toJson(fields);
         String currentLog = application.getAuditLog();
+        String updatedLog;
         if (isEmptyLog(currentLog)) {
-            return newLog(entry);
+            updatedLog = newLog(entry);
+        } else {
+            updatedLog = appendEntry(currentLog, entry);
         }
-        return appendEntry(currentLog, entry);
+        application.setAuditLog(updatedLog);
+        return updatedLog;
     }
 
     /**

@@ -57,7 +57,7 @@ public class BackofficeService {
         if (request.comment() != null && !request.comment().isBlank()) {
             auditDetails.put("comment", request.comment());
         }
-        application.setAuditLog(auditLogService.append(application, "MANUAL_DECISION", auditDetails));
+        auditLogService.append(application, "MANUAL_DECISION", auditDetails);
 
         // TODO: send email notification to the company about the decision.
 
