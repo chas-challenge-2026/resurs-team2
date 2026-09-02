@@ -52,7 +52,7 @@ import static org.springframework.data.jpa.domain.AbstractPersistable_.id;
  * - Session check copy-pasteat
  */
 @RestController
-@RequestMapping("/api")
+@RequestMapping("/api/v1")
 public class DocumentController {
 
     private final DocumentService documentService;
