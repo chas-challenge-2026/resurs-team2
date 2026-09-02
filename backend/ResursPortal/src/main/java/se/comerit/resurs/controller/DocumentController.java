@@ -41,11 +41,10 @@ public class DocumentController {
     @PreAuthorize("hasRole('CASE_WORKER')")
     @GetMapping("applications/{id}/documents")
     public ResponseEntity<List<DocumentDto>> getDocuments(
-            @PathVariable Long id) {
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserPrincipal principal) {
 
-        List<DocumentDto> documents =
-                documentService.getDocuments(id);
-
+        List<DocumentDto> documents =documentService.getDocuments(id);
         return ResponseEntity.ok(documents);
     }
 
@@ -57,12 +56,14 @@ public class DocumentController {
     public ResponseEntity<DocumentDto> uploadDocument(
             @RequestParam Long id,
             @RequestParam String docType,
-            @RequestParam MultipartFile file) {
+            @RequestParam MultipartFile file,
+            @AuthenticationPrincipal UserPrincipal principal) {
 
         DocumentDto document = documentService.uploadDocument(
                 id,
                 docType,
-                file
+                file,
+                principal
         );
 
         return ResponseEntity
@@ -76,19 +77,12 @@ public class DocumentController {
             @PathVariable Long id,
             @AuthenticationPrincipal UserPrincipal principal) {
 
-        if (principal == null) {
-            return ResponseEntity
-                    .status(HttpStatus.UNAUTHORIZED)
-                    .build();
-        }
 
-        Resource resource = documentService.downloadDocument(id);
+        Resource resource = documentService.downloadDocument(id,principal);
 
         return ResponseEntity.ok()
-                .header(
-                        HttpHeaders.CONTENT_DISPOSITION,
-                        "attachment"
-                )
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment")
                 .contentType(MediaType.APPLICATION_OCTET_STREAM)
                 .body(resource);
     }
@@ -96,9 +90,11 @@ public class DocumentController {
     @PreAuthorize("hasRole('CASE_WORKER')")
     @DeleteMapping("/documents/{id}")
     public ResponseEntity<Void> deleteDocument(
-            @PathVariable Long id) {
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserPrincipal principal) {
 
-        documentService.deleteDocument(id);
+
+        documentService.deleteDocument(id, principal);
 
         return ResponseEntity.noContent().build();
     }

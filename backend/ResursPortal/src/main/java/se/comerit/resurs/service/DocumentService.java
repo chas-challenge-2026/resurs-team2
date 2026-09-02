@@ -14,6 +14,8 @@ import se.comerit.resurs.exception.EmptyFileException;
 import se.comerit.resurs.exception.FileUploadException;
 import se.comerit.resurs.repository.ApplicationRepository;
 import se.comerit.resurs.repository.DocumentRepository;
+import se.comerit.resurs.security.CompanyPrincipal;
+import se.comerit.resurs.security.UserPrincipal;
 
 import java.io.File;
 import java.io.IOException;
@@ -54,13 +56,14 @@ public class DocumentService {
     public DocumentDto uploadDocument(
             Long applicationId,
             String docType,
-            MultipartFile file) {
+            MultipartFile file,
+            UserPrincipal principal) {
 
         validateFile(file);
 
         // Hämta application
         Application application = getApplication(applicationId);
-
+        checkApplicationAccess(application, principal);
 
         // Hämta original filename
         String originalFilename = getOriginalFilename(file);
@@ -83,13 +86,15 @@ public class DocumentService {
 
     }
 
-    public Resource downloadDocument(Long documentId) {
+    public Resource downloadDocument(Long documentId, UserPrincipal principal) {
 
         Document document = documentRepository
                 .findById(documentId)
                 .orElseThrow(() ->
                         new DocumentNotFoundException(documentId)
                 );
+
+        checkDocumentAccess(document, principal);
 
         File file = new File(
                 UPLOAD_DIR,
@@ -206,8 +211,8 @@ public class DocumentService {
             );
         }
     }
-
-    public void deleteDocument(Long documentId) {
+    //delete document
+    public void deleteDocument(Long documentId, UserPrincipal principal) {
 
         Document document = documentRepository
                 .findById(documentId)
@@ -216,6 +221,25 @@ public class DocumentService {
                 );
 
         documentRepository.delete(document);
+    }
+
+    // Access control
+    private void checkApplicationAccess(Application application, UserPrincipal principal) {
+        if (principal instanceof CompanyPrincipal companyPrincipal) {
+            String appCompanyOrgNumber = application.getCompany().getOrgNumber();
+            if (!appCompanyOrgNumber.equals(companyPrincipal.orgNumber())) {
+                throw new ApplicationNotFoundException(application.getId());
+            }
+        }
+    }
+
+    private void checkDocumentAccess(Document document, UserPrincipal principal) {
+        if (principal instanceof CompanyPrincipal companyPrincipal) {
+            String documentCompanyOrgNumber = document.getApplication().getCompany().getOrgNumber();
+            if (!documentCompanyOrgNumber.equals(companyPrincipal.orgNumber())) {
+                throw new DocumentNotFoundException(document.getId());
+            }
+        }
     }
 
 }
