@@ -11,6 +11,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import jakarta.validation.Valid;
+
 import se.comerit.resurs.api.v1.dto.ApplicationDetailsResponse;
 import se.comerit.resurs.api.v1.dto.ApplicationRequest;
 import se.comerit.resurs.api.v1.dto.ApplicationResponse;
@@ -32,7 +34,7 @@ public class ApplicationController {
 
     @PreAuthorize("hasRole('COMPANY')")
     @PostMapping
-    public ResponseEntity<Long> submit(@RequestBody ApplicationRequest application,
+    public ResponseEntity<Long> submit(@Valid @RequestBody ApplicationRequest application,
             @AuthenticationPrincipal UserPrincipal principal) {
         // NOTE: Currently requires company to be registered, the original would create
         // the company if missing

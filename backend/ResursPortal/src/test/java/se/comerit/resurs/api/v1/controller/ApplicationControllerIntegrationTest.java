@@ -56,6 +56,26 @@ class ApplicationControllerIntegrationTest {
             }
             """;
 
+    private static String requestJsonWithAmount(long amount) {
+        return """
+                {
+                  "equity": 500000.0,
+                  "totalCapital": 1000000.0,
+                  "currentAssets": 400000.0,
+                  "currentLiabilities": 200000.0,
+                  "totalLiabilities": 500000.0,
+                  "operatingIncome": 150000.0,
+                  "netRevenue": 1000000.0,
+                  "requestedAmount": %d,
+                  "purpose": "Rörelsekapital",
+                  "operatingCashFlow": 120000.0,
+                  "investingCashFlow": -50000.0,
+                  "interestExpenses": 20000.0,
+                  "industry": "IT"
+                }
+                """.formatted(amount);
+    }
+
     @Nested
     @DisplayName("POST submit application")
     class Submit {
@@ -122,6 +142,74 @@ class ApplicationControllerIntegrationTest {
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(VALID_REQUEST_JSON))
                     .andExpect(status().isBadRequest());
+        }
+
+        @Test
+        @WithCompany
+        @Sql(statements = {
+                "DELETE FROM documents",
+                "DELETE FROM applications",
+                "DELETE FROM companies",
+                "INSERT INTO companies (id, org_number, company_name, authorized_signatory) VALUES (601, '556000-1234', 'Malmö Fastigheter AB', 'Test Person')"
+        })
+        void requestedAmountBelowMinimumIs400() throws Exception {
+            mockMvc.perform(post("/api/v1/applications")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(requestJsonWithAmount(49999)))
+                    .andExpect(status().isBadRequest());
+
+            assertThat(applicationRepository.findAll()).isEmpty();
+        }
+
+        @Test
+        @WithCompany
+        @Sql(statements = {
+                "DELETE FROM documents",
+                "DELETE FROM applications",
+                "DELETE FROM companies",
+                "INSERT INTO companies (id, org_number, company_name, authorized_signatory) VALUES (602, '556000-1234', 'Malmö Fastigheter AB', 'Test Person')"
+        })
+        void requestedAmountAboveMaximumIs400() throws Exception {
+            mockMvc.perform(post("/api/v1/applications")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(requestJsonWithAmount(10000001)))
+                    .andExpect(status().isBadRequest());
+
+            assertThat(applicationRepository.findAll()).isEmpty();
+        }
+
+        @Test
+        @WithCompany
+        @Sql(statements = {
+                "DELETE FROM documents",
+                "DELETE FROM applications",
+                "DELETE FROM companies",
+                "INSERT INTO companies (id, org_number, company_name, authorized_signatory) VALUES (603, '556000-1234', 'Malmö Fastigheter AB', 'Test Person')"
+        })
+        void requestedAmountAtMinimumIsAccepted() throws Exception {
+            mockMvc.perform(post("/api/v1/applications")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(requestJsonWithAmount(50000)))
+                    .andExpect(status().isOk());
+
+            assertThat(applicationRepository.findAll()).hasSize(1);
+        }
+
+        @Test
+        @WithCompany
+        @Sql(statements = {
+                "DELETE FROM documents",
+                "DELETE FROM applications",
+                "DELETE FROM companies",
+                "INSERT INTO companies (id, org_number, company_name, authorized_signatory) VALUES (604, '556000-1234', 'Malmö Fastigheter AB', 'Test Person')"
+        })
+        void requestedAmountAtMaximumIsAccepted() throws Exception {
+            mockMvc.perform(post("/api/v1/applications")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(requestJsonWithAmount(10000000)))
+                    .andExpect(status().isOk());
+
+            assertThat(applicationRepository.findAll()).hasSize(1);
         }
     }
 
