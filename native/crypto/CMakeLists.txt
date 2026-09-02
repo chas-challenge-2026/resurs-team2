@@ -1,4 +1,3 @@
-
 # The crypto shared library - loaded from Java via JNA (dlopen).
 add_library(resurs_crypto SHARED
     resurs_crypto.cpp
@@ -32,5 +31,13 @@ add_executable(sandbox_test
     key_manager.cpp
     aes_gcm_cipher.cpp
 )
+
 target_link_libraries(sandbox_test PRIVATE OpenSSL::Crypto)
 add_test(NAME sandbox_test COMMAND sandbox_test)
+
+# --- Local ABI test (links against libresurs_crypto.so) ---
+
+add_executable(abi_test abi_test.c)
+
+target_link_libraries(abi_test PRIVATE resurs_crypto)
+add_test(NAME abi_test COMMAND abi_test)

@@ -186,18 +186,6 @@ int main()
         const std::string back = resurs::AesGcmCipher::decrypt(demo_ciphertext, demo_key, demo_nonce);
         check(back == plain, "encrypt -> decrypt round-trip");
 
-        // output
-
-        std::printf("--- AesGcmCipher demo ---\n");
-        std::printf("  plaintext      : \"%s\"\n", plain.c_str());
-        dump("key", demo_key.data(), demo_key.size());
-        dump("nonce", demo_nonce.data(), demo_nonce.size());
-        dump("ciphertext", demo_ciphertext.data(), plain.size());
-        dump("tag", demo_ciphertext.data() + plain.size(), resurs::kTagLen);
-        dump("ciphertext+tag", demo_ciphertext.data(), demo_ciphertext.size());
-        std::printf("length   :  plaintext=%zu  ciphertext+tag=%zu  tag=%zu\n", plain.size(),demo_ciphertext.size(), resurs::kTagLen);
-        std::printf("decrypted:  \"%s\"\n", back.c_str());
-
         auto tampered = demo_ciphertext;
         tampered[0] ^= 0x01;
         check(throws_as<resurs::AuthError>([&]
@@ -214,7 +202,19 @@ int main()
         wrong_nonce[0] ^= 0x01;
         check(throws_as<resurs::AuthError>([&]
                                            { resurs::AesGcmCipher::decrypt(demo_ciphertext, demo_key, wrong_nonce); }),
-              "wrong nonce -> AuthError");        
+              "wrong nonce -> AuthError");
+
+        // output
+
+        std::printf("\n--- AesGcmCipher demo ---\n");
+        std::printf("  plaintext      : \"%s\"\n", plain.c_str());
+        dump("key", demo_key.data(), demo_key.size());
+        dump("nonce", demo_nonce.data(), demo_nonce.size());
+        dump("ciphertext", demo_ciphertext.data(), plain.size());
+        dump("tag", demo_ciphertext.data() + plain.size(), resurs::kTagLen);
+        dump("ciphertext+tag", demo_ciphertext.data(), demo_ciphertext.size());
+        std::printf("length   :  plaintext=%zu  ciphertext+tag=%zu  tag=%zu\n", plain.size(), demo_ciphertext.size(), resurs::kTagLen);
+        std::printf("decrypted:  \"%s\"\n", back.c_str());
     }
 
     std::printf("\n%d failure(s)\n", g_failures);
