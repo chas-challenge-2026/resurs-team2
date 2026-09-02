@@ -8,17 +8,18 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import se.comerit.resurs.api.v1.dto.ApplicationDetailsResponse;
 import se.comerit.resurs.api.v1.dto.ApplicationRequest;
-import se.comerit.resurs.api.v1.dto.CurrentCompanyResponse;
+import se.comerit.resurs.api.v1.dto.ApplicationResponse;
 import se.comerit.resurs.api.v1.service.ApplicationService;
 import se.comerit.resurs.security.UserPrincipal;
 
+import java.util.List;
+
 @RestController
-@RequestMapping("api/v1/application")
+@RequestMapping("api/v1/applications")
 public class ApplicationController {
 
     private final ApplicationService service;
@@ -28,16 +29,7 @@ public class ApplicationController {
     }
 
     @PreAuthorize("hasRole('COMPANY')")
-    @GetMapping("apply")
-    public ResponseEntity<CurrentCompanyResponse> showApplyForm(@AuthenticationPrincipal UserPrincipal principal) {
-        var company = principal.asCompany();
-        String orgNumber = company.orgNumber();
-        String name = company.name();
-        return ResponseEntity.ok(new CurrentCompanyResponse(name, orgNumber));
-    }
-
-    @PreAuthorize("hasRole('COMPANY')")
-    @PostMapping("apply")
+    @PostMapping
     public ResponseEntity<Long> submit(@RequestBody ApplicationRequest application,
             @AuthenticationPrincipal UserPrincipal principal) {
         // NOTE: Currently requires company to be registered, the original would create
@@ -56,16 +48,10 @@ public class ApplicationController {
         return ResponseEntity.ok(service.viewApplication(id, principal));
     }
 
-    @PreAuthorize("hasRole('COMPANY')")
+    @PreAuthorize("hasAnyRole('COMPANY','CASE_WORKER')")
     @GetMapping
-    public String listApplications(@RequestParam String param) {
-        return new String();
+    public ResponseEntity<List<ApplicationResponse>> listApplications(
+            @AuthenticationPrincipal UserPrincipal principal) {
+        return ResponseEntity.ok(service.listApplications(principal));
     }
-
-    @PreAuthorize("hasRole('COMPANY')")
-    @GetMapping("/dashboard")
-    public String dashboard(@RequestParam String param) {
-        return new String();
-    }
-
 }

@@ -1,6 +1,7 @@
 package se.comerit.resurs.api.v1.service;
 
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -10,8 +11,10 @@ import org.springframework.transaction.annotation.Transactional;
 import jakarta.annotation.Nonnull;
 import se.comerit.resurs.api.v1.dto.ApplicationDetailsResponse;
 import se.comerit.resurs.api.v1.dto.ApplicationRequest;
+import se.comerit.resurs.api.v1.dto.ApplicationResponse;
 import se.comerit.resurs.api.v1.mapper.ApplicationMapper;
 import se.comerit.resurs.entity.Application;
+import se.comerit.resurs.entity.ApplicationStatus;
 import se.comerit.resurs.entity.Company;
 import se.comerit.resurs.exception.ApplicationNotFoundException;
 import se.comerit.resurs.exception.CompanyNotFoundException;
@@ -76,6 +79,25 @@ public class ApplicationService {
         app = applicationRepository.save(app);
 
         return app.getId();
+    }
+
+    /**
+     * Returns the applications visible to the caller. A case worker gets all
+     * pending ({@link ApplicationStatus#UNDER_REVIEW}) applications; a company
+     * gets all of its own applications.
+     */
+    @Transactional(readOnly = true)
+    public @Nonnull List<ApplicationResponse> listApplications(UserPrincipal principal) {
+        if (principal instanceof CaseWorkerPrincipal) {
+            return applicationRepository.findByStatus(ApplicationStatus.UNDER_REVIEW).stream()
+                    .map(ApplicationMapper::toResponse).toList();
+        }
+
+        String orgNumber = principal.asCompany().orgNumber();
+        Company company = getCompany(orgNumber)
+                .orElseThrow(() -> new CompanyNotFoundException(orgNumber));
+        return applicationRepository.findByCompanyId(company.getId()).stream()
+                .map(ApplicationMapper::toResponse).toList();
     }
 
     /**

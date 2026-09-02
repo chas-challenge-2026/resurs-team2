@@ -16,6 +16,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 
 import se.comerit.resurs.entity.Application;
 import se.comerit.resurs.repository.ApplicationRepository;
@@ -56,52 +57,12 @@ class ApplicationControllerIntegrationTest {
             """;
 
     @Nested
-    @DisplayName("GET apply")
-    class ShowApplyForm {
-
-        @Test
-        void unauthenticatedIs401() throws Exception {
-            mockMvc.perform(get("/api/v1/application/apply"))
-                    .andExpect(status().isUnauthorized())
-                    .andExpect(jsonPath("$.status").value(401))
-                    .andExpect(jsonPath("$.title").value("Unauthorized"));
-        }
-
-        @Test
-        @WithCaseWorker
-        void wrongRoleCaseWorkerIs403() throws Exception {
-            mockMvc.perform(get("/api/v1/application/apply"))
-                    .andExpect(status().isForbidden())
-                    .andExpect(jsonPath("$.status").value(403))
-                    .andExpect(jsonPath("$.title").value("Access Denied"));
-        }
-
-        @Test
-        @WithCompany
-        void returnsCurrentCompanyDetails() throws Exception {
-            mockMvc.perform(get("/api/v1/application/apply"))
-                    .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.companyName").value("Malmö Fastigheter AB"))
-                    .andExpect(jsonPath("$.orgNumber").value(COMPANY_ORG));
-        }
-
-        @Test
-        @WithCompany(name = "Alternativ Bolag AB", orgNumber = "556000-7777")
-        void reflectsPrincipalFields() throws Exception {
-            mockMvc.perform(get("/api/v1/application/apply"))
-                    .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.companyName").value("Alternativ Bolag AB"))
-                    .andExpect(jsonPath("$.orgNumber").value("556000-7777"));
-        }
-    }
-
-    @Nested
-    @DisplayName("POST apply")
+    @DisplayName("POST submit application")
     class Submit {
 
         @Test
         void unauthenticatedIs401() throws Exception {
-            mockMvc.perform(post("/api/v1/application/apply")
+            mockMvc.perform(post("/api/v1/applications")
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(VALID_REQUEST_JSON))
                     .andExpect(status().isUnauthorized())
@@ -112,7 +73,7 @@ class ApplicationControllerIntegrationTest {
         @Test
         @WithCaseWorker
         void wrongRoleCaseWorkerIs403() throws Exception {
-            mockMvc.perform(post("/api/v1/application/apply")
+            mockMvc.perform(post("/api/v1/applications")
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(VALID_REQUEST_JSON))
                     .andExpect(status().isForbidden())
@@ -129,7 +90,7 @@ class ApplicationControllerIntegrationTest {
                 "INSERT INTO companies (id, org_number, company_name, authorized_signatory) VALUES (600, '556000-1234', 'Malmö Fastigheter AB', 'Test Person')"
         })
         void submitsAndPersistsApplication() throws Exception {
-            mockMvc.perform(post("/api/v1/application/apply")
+            mockMvc.perform(post("/api/v1/applications")
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(VALID_REQUEST_JSON))
                     .andExpect(status().isOk());
@@ -157,7 +118,7 @@ class ApplicationControllerIntegrationTest {
         @Test
         @WithCompany(orgNumber = "556000-9999")
         void missingCompanyIs400() throws Exception {
-            mockMvc.perform(post("/api/v1/application/apply")
+            mockMvc.perform(post("/api/v1/applications")
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(VALID_REQUEST_JSON))
                     .andExpect(status().isBadRequest());
@@ -170,7 +131,7 @@ class ApplicationControllerIntegrationTest {
 
         @Test
         void unauthenticatedIs401() throws Exception {
-            mockMvc.perform(get("/api/v1/application/1"))
+            mockMvc.perform(get("/api/v1/applications/1"))
                     .andExpect(status().isUnauthorized())
                     .andExpect(jsonPath("$.status").value(401))
                     .andExpect(jsonPath("$.title").value("Unauthorized"));
@@ -179,7 +140,7 @@ class ApplicationControllerIntegrationTest {
         @Test
         @WithCompany
         void nonExistentApplicationIs404() throws Exception {
-            mockMvc.perform(get("/api/v1/application/99999"))
+            mockMvc.perform(get("/api/v1/applications/99999"))
                     .andExpect(status().isNotFound())
                     .andExpect(jsonPath("$.status").value(404))
                     .andExpect(jsonPath("$.title").value("Application Not Found"));
@@ -196,7 +157,7 @@ class ApplicationControllerIntegrationTest {
                 "INSERT INTO documents (id, application_id, filename, doc_type) VALUES (700, 700, 'bokaplan.pdf', 'BOKFORING')"
         })
         void companyCanViewOwnApplication() throws Exception {
-            mockMvc.perform(get("/api/v1/application/700"))
+            mockMvc.perform(get("/api/v1/applications/700"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.application.id").value(700))
                     .andExpect(jsonPath("$.application.companyName").value("Malmö Fastigheter AB"))
@@ -221,7 +182,7 @@ class ApplicationControllerIntegrationTest {
             // The authenticated company (556000-9999) must NOT be able to see
             // an application owned by a different company (556000-1234). It
             // should be indistinguishable from a missing application.
-            mockMvc.perform(get("/api/v1/application/701"))
+            mockMvc.perform(get("/api/v1/applications/701"))
                     .andExpect(status().isNotFound())
                     .andExpect(jsonPath("$.status").value(404))
                     .andExpect(jsonPath("$.title").value("Application Not Found"));
@@ -237,7 +198,7 @@ class ApplicationControllerIntegrationTest {
                 "INSERT INTO applications (id, company_id, requested_amount, purpose, status, decision, decision_reason, scoring_result, audit_log) VALUES (702, 702, 400000.00, 'Expansion', 'APPROVED', 'APPROVED', 'Godkänd', NULL, '[]')"
         })
         void caseWorkerCanViewAnyApplication() throws Exception {
-            mockMvc.perform(get("/api/v1/application/702"))
+            mockMvc.perform(get("/api/v1/applications/702"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.application.id").value(702))
                     .andExpect(jsonPath("$.application.companyName").value("Malmö Fastigheter AB"))
@@ -251,10 +212,116 @@ class ApplicationControllerIntegrationTest {
         @Test
         @WithCaseWorker
         void caseWorkerNonExistentApplicationIs404() throws Exception {
-            mockMvc.perform(get("/api/v1/application/99999"))
+            mockMvc.perform(get("/api/v1/applications/99999"))
                     .andExpect(status().isNotFound())
                     .andExpect(jsonPath("$.status").value(404))
                     .andExpect(jsonPath("$.title").value("Application Not Found"));
+        }
+    }
+
+    @Nested
+    @DisplayName("GET list applications")
+    class ListApplications {
+
+        @Test
+        void unauthenticatedIs401() throws Exception {
+            mockMvc.perform(get("/api/v1/applications"))
+                    .andExpect(status().isUnauthorized())
+                    .andExpect(jsonPath("$.status").value(401))
+                    .andExpect(jsonPath("$.title").value("Unauthorized"));
+        }
+
+        @Test
+        @WithCaseWorker
+        @Sql(statements = {
+                "DELETE FROM documents",
+                "DELETE FROM applications",
+                "DELETE FROM companies",
+                "INSERT INTO companies (id, org_number, company_name, authorized_signatory) VALUES (800, '556000-1234', 'Company A', 'Test')",
+                "INSERT INTO companies (id, org_number, company_name, authorized_signatory) VALUES (801, '556000-5678', 'Company B', 'Test')",
+                "INSERT INTO applications (id, company_id, requested_amount, purpose, status, audit_log) VALUES (810, 800, 300000.00, 'App A', 'UNDER_REVIEW', '[]')",
+                "INSERT INTO applications (id, company_id, requested_amount, purpose, status, audit_log) VALUES (811, 801, 300000.00, 'App B', 'UNDER_REVIEW', '[]')",
+                "INSERT INTO applications (id, company_id, requested_amount, purpose, status, audit_log) VALUES (812, 800, 300000.00, 'App C', 'APPROVED', '[]')"
+        })
+        void caseWorkerSeesOnlyUnderReviewApplications() throws Exception {
+            mockMvc.perform(get("/api/v1/applications"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.length()").value(2))
+                    .andExpect(jsonPath("$[0].id").value(810))
+                    .andExpect(jsonPath("$[1].id").value(811))
+                    .andExpect(jsonPath("$[0].status").value("UNDER_REVIEW"))
+                    .andExpect(jsonPath("$[1].status").value("UNDER_REVIEW"));
+        }
+
+        @Test
+        @WithCaseWorker
+        @Sql(statements = {
+                "DELETE FROM documents",
+                "DELETE FROM applications",
+                "DELETE FROM companies",
+                "INSERT INTO companies (id, org_number, company_name, authorized_signatory) VALUES (820, '556000-1234', 'Company A', 'Test')",
+                "INSERT INTO applications (id, company_id, requested_amount, purpose, status, audit_log) VALUES (830, 820, 300000.00, 'App X', 'APPROVED', '[]')",
+                "INSERT INTO applications (id, company_id, requested_amount, purpose, status, audit_log) VALUES (831, 820, 300000.00, 'App Y', 'REJECTED', '[]')"
+        })
+        void caseWorkerWithNoPendingApplicationsSeesEmptyList() throws Exception {
+            mockMvc.perform(get("/api/v1/applications"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.length()").value(0));
+        }
+
+        @Test
+        @WithCompany(orgNumber = "556000-1234")
+        @Sql(statements = {
+                "DELETE FROM documents",
+                "DELETE FROM applications",
+                "DELETE FROM companies",
+                "INSERT INTO companies (id, org_number, company_name, authorized_signatory) VALUES (840, '556000-1234', 'Company A', 'Test')",
+                "INSERT INTO companies (id, org_number, company_name, authorized_signatory) VALUES (841, '556000-5678', 'Company B', 'Test')",
+                "INSERT INTO applications (id, company_id, requested_amount, purpose, status, audit_log) VALUES (850, 840, 300000.00, 'Own Under Review', 'UNDER_REVIEW', '[]')",
+                "INSERT INTO applications (id, company_id, requested_amount, purpose, status, audit_log) VALUES (851, 840, 300000.00, 'Own Approved', 'APPROVED', '[]')",
+                "INSERT INTO applications (id, company_id, requested_amount, purpose, status, audit_log) VALUES (852, 841, 300000.00, 'Other Company', 'UNDER_REVIEW', '[]')"
+        })
+        void companySeesOnlyItsOwnApplications() throws Exception {
+            mockMvc.perform(get("/api/v1/applications"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.length()").value(2))
+                    .andExpect(jsonPath("$[*].orgNumber").value(org.hamcrest.Matchers.everyItem(
+                            org.hamcrest.Matchers.is(COMPANY_ORG))));
+        }
+
+        @Test
+        @WithCompany(orgNumber = "556000-1234")
+        @Sql(statements = {
+                "DELETE FROM documents",
+                "DELETE FROM applications",
+                "DELETE FROM companies",
+                "INSERT INTO companies (id, org_number, company_name, authorized_signatory) VALUES (860, '556000-1234', 'Company A', 'Test')",
+                "INSERT INTO applications (id, company_id, requested_amount, purpose, status, audit_log) VALUES (870, 860, 300000.00, 'Under Review', 'UNDER_REVIEW', '[]')",
+                "INSERT INTO applications (id, company_id, requested_amount, purpose, status, audit_log) VALUES (871, 860, 300000.00, 'Approved', 'APPROVED', '[]')",
+                "INSERT INTO applications (id, company_id, requested_amount, purpose, status, audit_log) VALUES (872, 860, 300000.00, 'Rejected', 'REJECTED', '[]')"
+        })
+        void companySeesAllOwnApplicationsRegardlessOfStatus() throws Exception {
+            mockMvc.perform(get("/api/v1/applications"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.length()").value(3))
+                    .andExpect(jsonPath("$[*].status").value(
+                            org.hamcrest.Matchers.hasItems("UNDER_REVIEW", "APPROVED", "REJECTED")));
+        }
+
+        @Test
+        @WithCompany(orgNumber = "556000-9999")
+        @Sql(statements = {
+                "DELETE FROM documents",
+                "DELETE FROM applications",
+                "DELETE FROM companies",
+                "INSERT INTO companies (id, org_number, company_name, authorized_signatory) VALUES (880, '556000-1234', 'Company A', 'Test')",
+                "INSERT INTO companies (id, org_number, company_name, authorized_signatory) VALUES (881, '556000-9999', 'Company With No Apps', 'Test')",
+                "INSERT INTO applications (id, company_id, requested_amount, purpose, status, audit_log) VALUES (890, 880, 300000.00, 'App', 'UNDER_REVIEW', '[]')"
+        })
+        void companyWithNoApplicationsSeesEmptyList() throws Exception {
+            mockMvc.perform(get("/api/v1/applications"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.length()").value(0));
         }
     }
 }
