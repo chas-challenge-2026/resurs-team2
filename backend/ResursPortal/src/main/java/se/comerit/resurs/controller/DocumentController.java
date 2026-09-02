@@ -1,42 +1,19 @@
 package se.comerit.resurs.controller;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-
-import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-
-
 import se.comerit.resurs.dto.DocumentDto;
-import se.comerit.resurs.entity.Application;
-import se.comerit.resurs.entity.ApplicationStatus;
-import se.comerit.resurs.entity.Document;
-import se.comerit.resurs.repository.ApplicationRepository;
-import se.comerit.resurs.repository.DocumentRepository;
 import se.comerit.resurs.security.UserPrincipal;
 import se.comerit.resurs.service.DocumentService;
 
-import java.io.File;
-import java.io.IOException;
-
-import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
-
-import static org.springframework.data.jpa.domain.AbstractPersistable_.id;
 
 
 /**
