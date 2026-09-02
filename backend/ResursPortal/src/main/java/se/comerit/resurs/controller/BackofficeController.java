@@ -53,7 +53,7 @@ public class BackofficeController {
         // Also get approved/rejected for history — same query pattern, no reuse
         List<Application> devidedApplications = applicationRepository.findByStatusInOrderByUpdatedAtDesc(
                 List.of(ApplicationStatus.APPROVED, ApplicationStatus.REJECTED),
-                PageRequest.of(0, 20));
+                PageRequest.of(0, 20)).toList();
 
         model.addAttribute("reviewApplications", reviewApplications);
         model.addAttribute("decidedApplications", devidedApplications);
