@@ -38,6 +38,16 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(problemDetail);
     }
 
+    @ExceptionHandler(CompanyNotFoundException.class)
+    public ResponseEntity<ProblemDetail> handleCompanyNotFound(CompanyNotFoundException e) {
+        log.info("Company not found: {}", e.getMessage());
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(
+                HttpStatus.BAD_REQUEST, "Unable to process the application");
+        problemDetail.setTitle("Bad Request");
+        problemDetail.setType(PROBLEM_TYPE_DEFAULT);
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(problemDetail);
+    }
+
     @ExceptionHandler(ApplicationAlreadyDecidedException.class)
     public ResponseEntity<ProblemDetail> handleApplicationAlreadyDecided(ApplicationAlreadyDecidedException e) {
         ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(
