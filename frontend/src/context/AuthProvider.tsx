@@ -4,13 +4,8 @@ import { AuthContext, type User } from "./AuthContext";
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
 
-  const login = (userData?: User) => {
-    const mockUser: User = userData || {
-      id: "1",
-      name: "Test Användare",
-      email: "test@example.com",
-    };
-    setUser(mockUser);
+  const login = (userData: User) => {
+    setUser(userData);
   };
 
   const logout = () => {
@@ -21,7 +16,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     <AuthContext.Provider
       value={{
         user,
+        token: null,
         isAuthenticated: !!user,
+        isLoading: false,
         login,
         logout,
       }}
