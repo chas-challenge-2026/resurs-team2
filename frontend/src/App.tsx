@@ -1,6 +1,6 @@
 import React from "react";
 import { BrowserRouter } from "react-router-dom";
-import { AuthProvider } from "./context/AuthContext.tsx";
+import { AuthProvider } from "./context/AuthProvider";
 import { Layout } from "./components/Layout/Layout";
 import { AppRoutes } from "./routes/AppRoutes";
 

@@ -14,28 +14,38 @@ export const Backoffice: React.FC<BackofficeProps> = ({
   initialReviewApplications = [],
   initialDecidedApplications = [],
 }) => {
-  const [reviewApps, setReviewApps] = useState<Application[]>(initialReviewApplications);
-  const [decidedApps, setDecidedApps] = useState<Application[]>(initialDecidedApplications);
-  const [comments, setComments] = useState<{ [key: number]: string }>({});
+  const [reviewApps, setReviewApps] = useState<Application[]>(
+    initialReviewApplications
+  );
+  const [decidedApps, setDecidedApps] = useState<Application[]>(
+    initialDecidedApplications
+  );
+  const [comments, setComments] = useState<{ [key: string | number]: string }>({});
 
-  const handleCommentChange = (id: number, value: string) => {
+  const handleCommentChange = (id: string | number, value: string) => {
     setComments((prev) => ({ ...prev, [id]: value }));
   };
 
-  const handleDecision = (id: number, decision: "APPROVED" | "REJECTED") => {
-    const comment = comments[id] || (decision === "REJECTED" ? "Manuellt avslagen av handläggare." : "");
+  const handleDecision = (
+    id: string | number,
+    decision: "APPROVED" | "REJECTED"
+  ) => {
+    const comment =
+      comments[id] ||
+      (decision === "REJECTED" ? "Manuellt avslagen av handläggare." : "");
     const actionText = decision === "APPROVED" ? "Godkänn" : "Avslå";
 
     if (window.confirm(`${actionText} ansökan #${id}?`)) {
       console.log(`Beslut för #${id}: ${decision}, Kommentar: ${comment}`);
-      
+
       const appToMove = reviewApps.find((app) => app.id === id);
       if (appToMove) {
         const updatedApp: Application = {
           ...appToMove,
           status: decision,
           decision: decision,
-          decisionReason: comment || (decision === "APPROVED" ? "Godkänd" : "Avslagen"),
+          decisionReason:
+            comment || (decision === "APPROVED" ? "Godkänd" : "Avslagen"),
         };
 
         setReviewApps((prev) => prev.filter((app) => app.id !== id));
@@ -50,10 +60,13 @@ export const Backoffice: React.FC<BackofficeProps> = ({
 
   return (
     <div className="backoffice-page">
-      <h2 className="backoffice-title">
-        Handläggarkö
-        <span className="badge-count">{reviewApps.length}</span>
-      </h2>
+      <header className="backoffice-header">
+        <h2 className="backoffice-title">
+          Handläggarkö
+          <span className="badge-count">{reviewApps.length}</span>
+        </h2>
+        <p className="text-muted">Inloggad handläggare: {workerName}</p>
+      </header>
 
       <div className="panel panel-warning">
         <div className="panel-heading">
@@ -96,7 +109,9 @@ export const Backoffice: React.FC<BackofficeProps> = ({
                         placeholder="Kommentar (valfri)"
                         className="input-comment"
                         value={comments[app.id] || ""}
-                        onChange={(e) => handleCommentChange(app.id, e.target.value)}
+                        onChange={(e) =>
+                          handleCommentChange(app.id, e.target.value)
+                        }
                       />
                       <button
                         type="button"
@@ -150,7 +165,9 @@ export const Backoffice: React.FC<BackofficeProps> = ({
                   <td>
                     <span
                       className={`label ${
-                        app.status === "APPROVED" ? "label-success" : "label-danger"
+                        app.status === "APPROVED"
+                          ? "label-success"
+                          : "label-danger"
                       }`}
                     >
                       {app.status}

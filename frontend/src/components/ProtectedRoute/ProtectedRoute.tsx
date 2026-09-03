@@ -1,6 +1,7 @@
 import React from "react";
 import { Navigate } from "react-router-dom";
-import { useAuth, type Role } from "../../context/AuthContext";
+import { useAuth } from "../hooks/useAuth";
+import { type Role } from "../../context/AuthContext";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -8,13 +9,13 @@ interface ProtectedRouteProps {
 }
 
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowedRole }) => {
-  const { isLoggedIn, isLoading, user } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
 
   if (isLoading) {
     return <div className="loading-screen">Laddar...</div>;
   }
 
-  if (!isLoggedIn) {
+  if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
 

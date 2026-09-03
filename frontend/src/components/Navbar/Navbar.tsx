@@ -1,11 +1,18 @@
-import React from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { useAuth } from "../../context/AuthContext";
+import { useAuth } from "../hooks/useAuth";
 import "./Navbar.css";
 
-export const Navbar: React.FC = () => {
-  const { user, isLoggedIn, logout } = useAuth();
+interface NavbarProps {
+  role?: string;
+  userName?: string;
+}
+
+export const Navbar: React.FC<NavbarProps> = ({ role, userName }) => {
+  const { user, isAuthenticated, logout } = useAuth();
   const navigate = useNavigate();
+
+  const currentRole = (user?.role || role || "").toUpperCase();
+  const displayName = user?.name || userName || "";
 
   const handleLogoutClick = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -34,13 +41,13 @@ export const Navbar: React.FC = () => {
           </div>
 
           <div className="top-nav-right">
-            {isLoggedIn && user ? (
+            {isAuthenticated && (user || displayName) ? (
               <>
                 <span className="user-info">
                   👤{" "}
-                  {user.role === "company"
-                    ? `Företag: ${user.name}`
-                    : `Handläggare: ${user.name}`}
+                  {currentRole === "COMPANY"
+                    ? `Företag: ${displayName}`
+                    : `Handläggare: ${displayName}`}
                 </span>
                 <button onClick={handleLogoutClick} className="logout-btn">
                   Logga ut
@@ -63,7 +70,7 @@ export const Navbar: React.FC = () => {
           </Link>
 
           <ul className="navbar-nav">
-            {isLoggedIn && user?.role === "company" && (
+            {isAuthenticated && currentRole === "COMPANY" && (
               <>
                 <li>
                   <Link to="/apply">Ny ansökan</Link>
@@ -74,7 +81,7 @@ export const Navbar: React.FC = () => {
               </>
             )}
 
-            {isLoggedIn && user?.role === "caseWorker" && (
+            {isAuthenticated && currentRole === "CASEWORKER" && (
               <li>
                 <Link to="/backoffice">💼 Backoffice</Link>
               </li>

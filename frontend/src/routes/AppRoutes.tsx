@@ -24,7 +24,7 @@ export const AppRoutes: React.FC = () => {
       <Route
         path="/application"
         element={
-          <ProtectedRoute allowedRole="company">
+          <ProtectedRoute allowedRole="COMPANY">
             <Application />
           </ProtectedRoute>
         }
@@ -32,7 +32,7 @@ export const AppRoutes: React.FC = () => {
       <Route
         path="/applications"
         element={
-          <ProtectedRoute allowedRole="company">
+          <ProtectedRoute allowedRole="COMPANY">
             <Application />
           </ProtectedRoute>
         }
@@ -41,7 +41,7 @@ export const AppRoutes: React.FC = () => {
       <Route
         path="/apply"
         element={
-          <ProtectedRoute allowedRole="company">
+          <ProtectedRoute allowedRole="COMPANY">
             <CreditApplication />
           </ProtectedRoute>
         }
@@ -49,7 +49,7 @@ export const AppRoutes: React.FC = () => {
       <Route
         path="/credit-application"
         element={
-          <ProtectedRoute allowedRole="company">
+          <ProtectedRoute allowedRole="COMPANY">
             <CreditApplication />
           </ProtectedRoute>
         }
@@ -58,7 +58,7 @@ export const AppRoutes: React.FC = () => {
       <Route
         path="/dashboard"
         element={
-          <ProtectedRoute allowedRole="company">
+          <ProtectedRoute allowedRole="COMPANY">
             <Dashboard />
           </ProtectedRoute>
         }
@@ -67,7 +67,7 @@ export const AppRoutes: React.FC = () => {
       <Route
         path="/documents/:id?"
         element={
-          <ProtectedRoute allowedRole="company">
+          <ProtectedRoute allowedRole="COMPANY">
             <Documents />
           </ProtectedRoute>
         }
@@ -76,7 +76,7 @@ export const AppRoutes: React.FC = () => {
       <Route
         path="/status/:id?"
         element={
-          <ProtectedRoute allowedRole="company">
+          <ProtectedRoute allowedRole="COMPANY">
             <Status
               application={mockApplications[0]}
               steps={mockTimelineSteps}
@@ -89,7 +89,7 @@ export const AppRoutes: React.FC = () => {
       <Route
         path="/backoffice"
         element={
-          <ProtectedRoute allowedRole="caseWorker">
+          <ProtectedRoute allowedRole="CASEWORKER">
             <Backoffice />
           </ProtectedRoute>
         }
@@ -97,8 +97,23 @@ export const AppRoutes: React.FC = () => {
       <Route
         path="/backoffice/:id"
         element={
-          <ProtectedRoute allowedRole="caseWorker">
-            <Backofficedetail />
+          <ProtectedRoute allowedRole="CASEWORKER">
+            <Backofficedetail
+              application={{
+                id: 1,
+                companyName: "Test Företag AB",
+                orgNumber: "556000-1234",
+                requestedAmount: 500000,
+                status: "UNDER_REVIEW",
+                purpose: "Investering",
+                authorizedSignatory: "Anna Svensson",
+                createdAt: "2026-03-30",
+                decision: null,
+                scoringResult: "GREEN",
+                decisionReason: "Godkänd kreditprövning",
+              }}
+              documents={[]}
+            />
           </ProtectedRoute>
         }
       />
