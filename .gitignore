@@ -17,3 +17,6 @@ node_modules/
 dist/
 *.local
 
+# Native C++
+native/build/
+

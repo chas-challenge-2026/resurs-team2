@@ -2,6 +2,7 @@ package se.comerit.resurs.controller;
 
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.context.annotation.Profile;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 
@@ -26,6 +27,7 @@ import java.util.Optional;
  * - Statussteg beräknas inte dynamiskt — alltid samma ordning
  */
 @Controller
+@Profile("!v2")
 public class StatusController {
     private ApplicationRepository applicationRepository;
 

@@ -2,6 +2,7 @@ package se.comerit.resurs.controller;
 
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.context.annotation.Profile;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -29,6 +30,7 @@ import java.util.List;
  * - Ingen pagination — hämtar ALLA ansökningar i REVIEW
  */
 @Controller("legacyBackofficeController")
+@Profile("!v2")
 public class BackofficeController {
 
     private final ApplicationRepository applicationRepository;
