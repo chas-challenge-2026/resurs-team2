@@ -16,6 +16,9 @@ public class SpaConfig implements WebMvcConfigurer {
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
         registry.addResourceHandler("/**")
+                .excludePathPatterns("/swagger-ui/**")
+                .excludePathPatterns("/swagger-ui.html")
+                .excludePathPatterns("/v3/api-docs/**")
                 .addResourceLocations(
                         "file:target/frontend/",
                         "classpath:/static/",
