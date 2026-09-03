@@ -66,10 +66,10 @@ export const Navbar: React.FC = () => {
             {isLoggedIn && user?.role === "company" && (
               <>
                 <li>
-                  <Link to="/apply">➕ Ny ansökan</Link>
+                  <Link to="/apply">Ny ansökan</Link>
                 </li>
                 <li>
-                  <Link to="/applications">📋 Mina ansökningar</Link>
+                  <Link to="/application">Mina ansökningar</Link>
                 </li>
               </>
             )}
