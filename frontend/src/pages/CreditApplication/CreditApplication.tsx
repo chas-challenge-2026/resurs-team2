@@ -29,8 +29,8 @@ export function CreditApplication() {
       currentAssets: 0,
       currentLiabilities: 0,
       totalLiabilities: 0,
-      operatingResult: 0,
-      netSales: 0,
+      operatingIncome: 0,
+      netRevenue: 0,
     });
 
   const [creditAmount, setCreditAmount] = useState<CreditAmountData>({
