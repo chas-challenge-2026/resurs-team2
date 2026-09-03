@@ -8,9 +8,11 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 import jakarta.servlet.http.HttpSession;
 import se.comerit.resurs.service.AuthService;
+import org.springframework.context.annotation.Profile;
 
 
 @Controller("legacyAuthController")
+@Profile("!v2")
 public class AuthController {
 
     private final AuthService service;
