@@ -24,7 +24,7 @@ export const Status: React.FC<StatusProps> = ({
 
   const currentApplication =
     initialApplication ||
-    mockApplications.find((app) => app.id === id) ||
+    mockApplications.find((app) => String(app.id) === String(id)) ||
     mockApplications[0];
 
   if (!currentApplication) {
