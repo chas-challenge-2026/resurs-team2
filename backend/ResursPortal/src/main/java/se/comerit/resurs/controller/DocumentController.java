@@ -38,7 +38,7 @@ public class DocumentController {
         this.documentService = documentService;
     }
 
-    @PreAuthorize("hasRole('CASE_WORKER')")
+    @PreAuthorize("hasAnyRole('COMPANY', 'CASE_WORKER')")
     @GetMapping("applications/{id}/documents")
     public ResponseEntity<List<DocumentDto>> getDocuments(
             @PathVariable Long id,
@@ -87,7 +87,7 @@ public class DocumentController {
                 .body(resource);
     }
 
-    @PreAuthorize("hasRole('CASE_WORKER')")
+    @PreAuthorize("hasAnyRole('COMPANY', 'CASE_WORKER')")
     @DeleteMapping("/documents/{id}")
     public ResponseEntity<Void> deleteDocument(
             @PathVariable Long id,
