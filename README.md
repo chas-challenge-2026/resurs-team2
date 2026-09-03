@@ -36,10 +36,14 @@ Data i H2 nollställs vid omstart. `Ctrl+C` stoppar båda processerna.
 ### Med Docker (PostgreSQL)
 
 ```bash
-docker compose -f infra/docker-compose.yml up --build
+cd infra && docker compose up -d
 ```
 
 Det bygger hela projektet i en enda image (root-`Dockerfile` anropar `make package`) och startar PostgreSQL + appen. Appen servar React-SPA:t direkt.
+
+> Öppna [http://localhost:8083](http://localhost:8083)
+
+Se `DRIFT.md` för hur du uppdaterar `infra/docker-compose.yml` vid deployment till stage/prod. Använder du Docker för lokal utveckling kan du hålla koll på applikationsloggen med `docker compose logs -f --tail=100`.
 
 ### Testa
 
