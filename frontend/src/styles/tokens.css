@@ -1,48 +1,59 @@
 :root {
-  --color-primary: #003366;
-  --color-primary-light: #aac0dd;
-  --color-primary-hover: #002347;
-  --color-success: #5cb85c;
-  --color-success-hover: #449d44;
-  --color-danger: #d9534f;
-  --color-danger-hover: #c9302c;
-  --color-danger-bg: #f2dede;
-  --color-danger-border: #ebccd1;
-  --color-danger-text: #a94442;
-  --color-warning: #f0ad4e;
-  --color-warning-hover: #ec971f;
-  --color-info-bg: #d9edf7;
-  --color-info-border: #bce8f1;
-  --color-info-text: #31708f;
-  --color-background: #f5f5f5;
-  --color-white: #fff;
-  --color-text: #212529;
-  --color-muted: #6c757d;
-  --color-border: #dee2e6;
-  --color-input-border: #ccc;
-  --color-input-focus-border: #66afe9;
-  --color-input-focus-shadow: rgba(102, 175, 233, 0.6);
-  --color-warning-text: #8a6d3b;
-  --color-warning-bg: #fcf8e3;
-  --color-warning-border: #faebcc;
+  /* Resurs Bank Varumärkesfärger */
+  --color-primary: #002538;             /* Resurs Navy Blue (Huvudfärg) */
+  --color-primary-light: #e6f0f5;       /* Ljus bakgrundston */
+  --color-primary-hover: #001724;       /* Mörkare nyans vid hover */
+
+  /* Accent & Action (Knappar, Notiser, Status) */
+  --color-accent: #00e676;              /* Resurs Mint/Neon Green */
+  --color-accent-hover: #00c853;
+  
+  --color-success: #2e7d32;
+  --color-success-hover: #1b5e20;
+  
+  --color-danger: #d32f2f;
+  --color-danger-hover: #c62828;
+  --color-danger-bg: #ffebee;
+  --color-danger-border: #ffcdd2;
+  --color-danger-text: #c62828;
+  
+  --color-warning: #f57c00;
+  --color-warning-hover: #ef6c00;
+  --color-warning-bg: #fff3e0;
+  --color-warning-border: #ffe0b2;
+  --color-warning-text: #e65100;
+  
+  --color-info-bg: #e1f5fe;
+  --color-info-border: #b3e5fc;
+  --color-info-text: #0288d1;
+
+  /* Neutrala ytor & Bakgrunder */
+  --color-background: #f4f6f8;          /* Ljusgrå bakgrund i appen */
+  --color-white: #ffffff;
+  --color-text: #102a43;                 /* Mörk, läsbar text */
+  --color-muted: #627d98;                /* Dämpad sekundärtext */
+  --color-border: #d9e2ec;
+  --color-input-border: #bccadc;
+  --color-input-focus-border: #002538;
+  --color-input-focus-shadow: rgba(0, 37, 56, 0.2);
 
   /* Spacing */
-  --spacing-xs: 5px;
+  --spacing-xs: 4px;
   --spacing-sm: 8px;
-  --spacing-md: 15px;
-  --spacing-lg: 30px;
+  --spacing-md: 16px;
+  --spacing-lg: 32px;
 
   /* Radius */
   --radius: 4px;
-  --radius-lg: 6px;
+  --radius-lg: 8px;
 
   /* Typography */
-  --font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-family: "Open Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-size-base: 14px;
   --font-size-lg: 18px;
-  --line-height-base: 1.428571429;
+  --line-height-base: 1.5;
 
   /* Shadow */
-  --shadow-box: 0 4px 20px rgba(0, 0, 0, 0.3);
-  --shadow-input-focus: 0 0 8px var(--color-input-focus-shadow);
+  --shadow-box: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --shadow-input-focus: 0 0 0 3px var(--color-input-focus-shadow);
 }

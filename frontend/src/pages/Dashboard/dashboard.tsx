@@ -1,3 +1,4 @@
+import React from "react";
 import { useNavigate } from "react-router-dom";
 import type { Application } from "../../types/application";
 import styles from "./dashboard.module.css";
