@@ -4,7 +4,6 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
-import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ProblemDetail;
@@ -42,7 +41,6 @@ public class SecurityConfig {
     }
 
     @Bean
-    @Order(2)
     public SecurityFilterChain apiChain(HttpSecurity http,
                                         SessionTokenAuthenticationFilter filter) throws Exception {
         http
@@ -63,19 +61,6 @@ public class SecurityConfig {
         return http.build();
     }
 
-    // TODO: Temporary to keep old version working
-    @Bean
-    @Order(3)
-    public SecurityFilterChain webChain(HttpSecurity http) throws Exception {
-        // Non-breaking: keep the old Thymeleaf/session app working as before.
-        http
-                .authorizeHttpRequests(auth -> auth.anyRequest().permitAll())
-                .csrf(csrf -> csrf.disable())
-                .formLogin(form -> form.disable())
-                .httpBasic(basic -> basic.disable());
-        return http.build();
-    }
-
     /**
      * Permits unauthenticated access to Swagger UI and OpenAPI spec endpoints.
      * Only active on the "local" profile — never included in packaged builds.
@@ -85,7 +70,6 @@ public class SecurityConfig {
      * are unaffected.
      */
     @Bean
-    @Order(1)
     @Profile("local")
     public SecurityFilterChain swaggerChain(HttpSecurity http) throws Exception {
         http
