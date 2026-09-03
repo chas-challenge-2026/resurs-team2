@@ -222,31 +222,26 @@ public class DocumentService {
 
     // Access control
     private void checkApplicationAccess(Application application, UserPrincipal principal) {
-        if (principal instanceof CompanyPrincipal companyPrincipal) {
-            String appCompanyOrgNumber = application.getCompany().getOrgNumber();
-            if (!appCompanyOrgNumber.equals(companyPrincipal.orgNumber())) {
-                throw new ApplicationNotFoundException(application.getId());
-            }
-            return;
+        boolean hasAccess = switch (principal) {
+            case CompanyPrincipal companyPrincipal ->
+                    application.getCompany().getOrgNumber().equals(companyPrincipal.orgNumber());
+            case CaseWorkerPrincipal ignored -> true;
+        };
+
+        if (!hasAccess) {
+            throw new ApplicationNotFoundException(application.getId());
         }
-        if (principal instanceof CaseWorkerPrincipal) {
-            return;
-        }
-        throw new ApplicationNotFoundException(application.getId());
     }
 
     private void checkDocumentAccess(Document document, UserPrincipal principal) {
-        if (principal instanceof CompanyPrincipal companyPrincipal) {
-            String documentCompanyOrgNumber = document.getApplication().getCompany().getOrgNumber();
-            if (!documentCompanyOrgNumber.equals(companyPrincipal.orgNumber())) {
-                throw new DocumentNotFoundException(document.getId());
-            }
-            return;
+        boolean hasAccess = switch (principal) {
+            case CompanyPrincipal companyPrincipal ->
+                    document.getApplication().getCompany().getOrgNumber().equals(companyPrincipal.orgNumber());
+            case CaseWorkerPrincipal ignored -> true;
+        };
+        if (!hasAccess) {
+            throw new DocumentNotFoundException(document.getId());
         }
-        if (principal instanceof CaseWorkerPrincipal) {
-            return;
-        }
-        throw new DocumentNotFoundException(document.getId());
 
     }
 }
