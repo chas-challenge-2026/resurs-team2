@@ -4,27 +4,61 @@ B2B-kreditansökningsportal för Resurs Bank. Företag ansöker om kredit, ladda
 
 ## Snabbstart
 
-### Lokalt med H2 (ingen Docker)
+Projektet byggs med en **enhetlig Makefile** som orkestrerar React-frontenden (Vite/npm), Spring Boot-backenden (Maven/`./mvnw`) och den framtida C++-modulen (CMake). Alla artefakter kopieras till en gemensam `target/`-katalog.
+
+> Alla kommandon körs från **repo-roten**.
+
+### Bygg allt (frontend + backend)
 
 ```bash
-cd backend/ResursPortal
-./mvnw spring-boot:run -Plocal
+make build
 ```
 
-Appen startar med en in-memory H2-databas. Data nollställs vid omstart.
+Resultatet läggs i `target/`:
+
+```
+target/
+  frontend/                     ← byggd React-SPA
+  resurs-portal-1.0-SNAPSHOT.jar ← Spring Boot-jar (tjänar SPA:t)
+```
+
+### Starta i dev (HMR + lokalt H2)
+
+```bash
+make dev
+```
+
+- Vite dev-server med hot reload: [http://localhost:5173](http://localhost:5173)
+- Spring Boot med `local`-profil (in-memory H2) och Vite-proxy för `/api`: [http://localhost:8083](http://localhost:8083)
+
+Data i H2 nollställs vid omstart. `Ctrl+C` stoppar båda processerna.
 
 ### Med Docker (PostgreSQL)
 
 ```bash
-cd infra && docker compose up
+docker compose -f infra/docker-compose.yml up --build
 ```
+
+Det bygger hela projektet i en enda image (root-`Dockerfile` anropar `make package`) och startar PostgreSQL + appen. Appen servar React-SPA:t direkt.
 
 ### Testa
 
 ```bash
-cd backend/ResursPortal
-mvn test
+make test
 ```
+
+Kör frontend-lint och backend-tester.
+
+### Övriga targets
+
+| Target                | Beskrivning                               |
+| --------------------- | ----------------------------------------- |
+| `make build-frontend` | Bygg bara React-frontenden                |
+| `make build-backend`  | Bygg bara Spring Boot-jaren               |
+| `make clean`          | Ta bort alla byggartefakter               |
+| `make package`        | Alias för `build` (används av Dockerfile) |
+
+> C++-modulen (`native/`) är inte på denna branch ännu. När `CMakeLists.txt` läggs till aktiverar du den genom att kommentera in `build-native` i `Makefile`.
 
 Öppna [http://localhost:8083](http://localhost:8083)
 
@@ -34,35 +68,38 @@ När appen körs med `-Plocal` finns Swagger UI tillgängligt på [http://localh
 
 ### Testinloggningar
 
-| Roll | Uppgifter |
-|------|-----------|
-| Företag (Malmö Fastigheter AB) | Org.nr: `556000-1234` |
-| Företag (Göteborg Handel AB) | Org.nr: `556000-5678` |
-| Handläggare | `karin@resurs.se` / `password123` |
+| Roll                           | Uppgifter                         |
+| ------------------------------ | --------------------------------- |
+| Företag (Malmö Fastigheter AB) | Org.nr: `556000-1234`             |
+| Företag (Göteborg Handel AB)   | Org.nr: `556000-5678`             |
+| Handläggare                    | `karin@resurs.se` / `password123` |
 
 ## Mappstruktur
 
 ```
-backend/ResursPortal/   ← Spring Boot 3.5 Maven-projekt
+Makefile                     ← enhetligt byggsystem (clean/build/test/dev)
+Dockerfile                   ← bygger hela projektet via `make package`
+
+frontend/                    ← React + TypeScript + Vite (SPA)
+  src/pages/                 ← Login, Backoffice, Documents, m.m.
+
+backend/ResursPortal/        ← Spring Boot 3.5 Maven-projekt
   src/main/java/se/comerit/resurs/
     ResursPortalApplication.java
-    controller/
-      AuthController.java        ← BankID mock + BCrypt-login
-      ApplicationController.java ← 800+ rader scoring-logik inline
-      DocumentController.java    ← filuppladdning (PDF parsas ej)
-      StatusController.java      ← status + hårdkodade ETAer
-      BackofficeController.java  ← handläggargränssnitt
+    api/v1/controller/       ← ny REST-API (SPA använder /api/v1/...)
+    controller/              ← legacy Thymeleaf (avstängd i `v2`-profilen)
+    config/                  ← JnaConfig, SpaFallbackController
+    security/                ← SecurityConfig (api-/v2-kedjor)
   src/main/resources/
-    application.properties
-    templates/                   ← Thymeleaf + Bootstrap 3
-    static/steps.js              ← jQuery multi-step logic
+    application.properties   ← `v2`-profil aktiv som default
+    application-local.properties
 
 infra/
-  docker-compose.yml             ← PostgreSQL + Spring Boot
-  seed.sql                       ← schema + seed-data
+  docker-compose.yml         ← PostgreSQL + Spring Boot
+  seed.sql                   ← schema + seed-data
 
 native/
-  README.md                      ← v2 C/C++ moduler (PII-kryptering, audit-signering)
+  README.md                  ← v2 C/C++ moduler (PII-kryptering, audit-signering)
 
 docs/
   architecture.md
