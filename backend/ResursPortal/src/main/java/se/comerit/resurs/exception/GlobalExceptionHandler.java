@@ -86,6 +86,14 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         problemDetail.setType(PROBLEM_TYPE_DEFAULT);
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(problemDetail);
     }
+    @ExceptionHandler(DocumentNotFoundException.class)
+    public ResponseEntity<ProblemDetail> handleDocumentNotFound(DocumentNotFoundException e) {
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(
+                HttpStatus.NOT_FOUND, e.getMessage());
+        problemDetail.setTitle("Document Not Found");
+        problemDetail.setType(PROBLEM_TYPE_DEFAULT);
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(problemDetail); }
+
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ProblemDetail> handleGeneralError(Exception e) {
