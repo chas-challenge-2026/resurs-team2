@@ -7,20 +7,22 @@ import java.nio.charset.StandardCharsets;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
+import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.http.ProblemDetail;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.security.web.AuthenticationEntryPoint;
+import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.access.AccessDeniedHandler;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.http.ProblemDetail;
 
 @Configuration
 @EnableMethodSecurity
@@ -40,6 +42,7 @@ public class SecurityConfig {
     }
 
     @Bean
+    @Order(2)
     public SecurityFilterChain apiChain(HttpSecurity http,
             SessionTokenAuthenticationFilter filter) throws Exception {
         http
@@ -61,18 +64,20 @@ public class SecurityConfig {
     }
 
     /**
-     * Permits unauthenticated access to Swagger UI and OpenAPI spec endpoints.
-     * Only active on the "local" profile — never included in packaged builds.
-     * Registered before {@link #webChain} (which matches any request) so it can
-     * intercept swagger URLs first. Its matcher ({@code /v3/api-docs/**},
-     * {@code /swagger-ui/**}) does not overlap {@code /api/**}, so API endpoints
-     * are unaffected.
+     * Allows the local Swagger UI to load without being intercepted by the SPA
+     * fallback or by the API security chain.
      */
     @Bean
+    @Order(1)
     @Profile("local")
     public SecurityFilterChain swaggerChain(HttpSecurity http) throws Exception {
         http
-                .securityMatcher("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html")
+                .securityMatcher(
+                        "/v3/api-docs/**",
+                        "/swagger-ui/**",
+                        "/swagger-ui.html",
+                        "/swagger-resources/**",
+                        "/webjars/**")
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth.anyRequest().permitAll());

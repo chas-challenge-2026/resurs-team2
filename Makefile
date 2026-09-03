@@ -39,9 +39,8 @@ dev-run:
 	@echo "  Spring:   http://localhost:8083"
 	@trap 'kill 0' INT TERM; \
 	(cd $(FRONTEND_DIR) && npm run dev) & \
-	(cd $(BACKEND_DIR) && ./mvnw spring-boot:run \
-		-Dspring-boot.run.profiles=local \
-		-Dspring-boot.run.workingDirectory=$(ROOT)) & \
+	(cd $(BACKEND_DIR) && ./mvnw -Plocal spring-boot:run \
+		-Dspring-boot.run.profiles=local) & \
 	wait
 
 test: build-frontend
