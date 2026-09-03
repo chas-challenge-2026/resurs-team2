@@ -1,13 +1,17 @@
 .footer {
   margin-top: 50px;
-  padding: 20px;
-  background-color: #00aeef;
+  padding: 30px 20px;
+  background-color: #222222; /* Mörk grafitgrå färg som matchar Resurs nuvarande profil */
   color: #ffffff;
   text-align: center;
   width: 100%;
+  border-top: 3px solid #fce682; /* Resurs gula varumärkesfärg som subtil accentlinje */
 }
 
 .footer p {
   margin: 0;
   font-size: 14px;
+  font-weight: 400;
+  letter-spacing: 0.3px;
+  color: #e0e0e0;
 }

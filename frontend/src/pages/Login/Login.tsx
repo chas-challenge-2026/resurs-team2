@@ -1,69 +1,44 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
 import "./Login.css";
 
 export const Login: React.FC = () => {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<"company" | "caseWorker">(
-    "company",
-  );
+  const { loginCompany, loginCaseWorker } = useAuth();
+
+  const [activeTab, setActiveTab] = useState<"company" | "caseWorker">("company");
   const [orgNumber, setOrgNumber] = useState<string>("");
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
 
-  const handleCompanyLogin = async (
-    e: React.SyntheticEvent<HTMLFormElement>,
-  ) => {
+  const handleCompanyLogin = async (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError(null);
     setLoading(true);
 
     try {
-      const response = await fetch("/api/v1/auth/login/company", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ orgNumber }),
-      });
-
-      if (!response.ok) {
-        setError("Inloggning misslyckades. Kontrollera organisationsnumret.");
-        return;
-      }
-
+      await loginCompany({ orgNumber, email });
       navigate("/status");
-    } catch {
-      setError("Något gick fel. Försök igen.");
+    } catch (err: any) {
+      setError(err.message || "Inloggning misslyckades. Kontrollera organisationsnumret.");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleCaseWorkerLogin = async (
-    e: React.SyntheticEvent<HTMLFormElement>,
-  ) => {
+  const handleCaseWorkerLogin = async (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError(null);
     setLoading(true);
 
     try {
-      const response = await fetch("/api/v1/auth/login/caseWorker", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ email, password }),
-      });
-
-      if (!response.ok) {
-        setError("Felaktig e-post eller lösenord.");
-        return;
-      }
-
+      await loginCaseWorker({ username: email, password });
       navigate("/backoffice");
-    } catch {
-      setError("Något gick fel. Försök igen.");
+    } catch (err: any) {
+      setError(err.message || "Felaktig e-post eller lösenord.");
     } finally {
       setLoading(false);
     }
@@ -82,16 +57,16 @@ export const Login: React.FC = () => {
 
           <ul className="nav nav-tabs">
             <li className={activeTab === "company" ? "active" : ""}>
-              
-              <a className="login-tab-link"
+              <a
+                className="login-tab-link"
                 onClick={() => setActiveTab("company")}
               >
                 Företagsinloggning
               </a>
             </li>
             <li className={activeTab === "caseWorker" ? "active" : ""}>
-              
-              <a  className="login-tab-link"
+              <a
+                className="login-tab-link"
                 onClick={() => setActiveTab("caseWorker")}
               >
                 Handläggare
@@ -121,7 +96,7 @@ export const Login: React.FC = () => {
                       required
                     />
                     <p className="help-block">
-                      Ange organisationsnummer för bankID-autentisering
+                      Ange organisationsnummer för BankID-autentisering
                     </p>
                   </div>
                   <button
@@ -129,7 +104,7 @@ export const Login: React.FC = () => {
                     className="btn btn-primary btn-block"
                     disabled={loading}
                   >
-                    {loading ? "Loggar in..." : "Logga in med bankID"}
+                    {loading ? "Loggar in..." : "Logga in med BankID"}
                   </button>
                 </form>
                 <div className="alert alert-info login-test-info">

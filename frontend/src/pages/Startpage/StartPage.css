@@ -1,0 +1,60 @@
+.hero-container {
+  /* Pekar direkt mot mappen public/assets/images/ */
+  background-image: linear-gradient(rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.4)), 
+                    url('/assets/images/Foretagsbanken.jpg');
+  background-size: cover;
+  background-position: center 35%; /* Justerar fokuset på ansiktet */
+  background-repeat: no-repeat;
+  min-height: 80vh;
+  display: flex;
+  align-items: center;
+  padding: 0 10%;
+  color: #ffffff;
+}
+
+.hero-content {
+  max-width: 600px;
+}
+
+.hero-badge {
+  background-color: rgba(255, 255, 255, 0.2);
+  padding: 6px 16px;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  display: inline-block;
+  margin-bottom: 1rem;
+}
+
+.hero-content h1 {
+  font-size: 3rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  line-height: 1.2;
+}
+
+.hero-features {
+  list-style: none;
+  padding: 0;
+  margin: 1.5rem 0;
+}
+
+.hero-features li {
+  margin-bottom: 0.5rem;
+  font-size: 1.1rem;
+}
+
+.hero-button {
+  background-color: #fce682; /* Resurs Banks gula färg */
+  color: #000;
+  border: none;
+  padding: 14px 28px;
+  border-radius: 25px;
+  font-weight: bold;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.hero-button:hover {
+  transform: translateY(-2px);
+}

@@ -1,5 +1,6 @@
 import React from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
+import { StartPage } from "../pages/Startpage/StartPage";
 import { Login } from "../pages/Login/Login";
 import { Status } from "../pages/Status/Status";
 import { Backoffice } from "../pages/Backoffice/Backoffice";
@@ -10,7 +11,9 @@ import { mockTimelineSteps } from "../mockdata/timeline";
 export const AppRoutes: React.FC = () => {
   return (
     <Routes>
-      <Route path="/" element={<Login />} />
+      <Route path="/" element={<StartPage />} />
+      <Route path="/foretagsbanken" element={<StartPage />} />
+
       <Route path="/login" element={<Login />} />
 
       <Route
@@ -25,7 +28,8 @@ export const AppRoutes: React.FC = () => {
       />
 
       <Route path="/backoffice" element={<Backoffice />} />
-      <Route path="*" element={<Navigate to="/login" replace />} />
+      
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 };

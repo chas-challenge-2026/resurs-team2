@@ -1,52 +1,88 @@
 import React from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
 import "./Navbar.css";
 
-interface NavbarProps {
-  role?: "company" | "caseWorker";
-  userName?: string;
-}
+export const Navbar: React.FC = () => {
+  const { user, isLoggedIn, logout } = useAuth();
+  const navigate = useNavigate();
 
-export const Navbar: React.FC<NavbarProps> = ({
-  role = "caseWorker",
-  userName = "Erik Mattsson",
-}) => {
+  const handleLogoutClick = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    await logout();
+    navigate("/");
+  };
+
   return (
-    <nav className="navbar">
-      <div className="navbar-container">
-        <a className="navbar-brand" href="/">
-          <span className="brand-title">Resurs Bank</span>
-        </a>
+    <header className="navbar-wrapper">
+      <div className="navbar-top-bar">
+        <div className="navbar-container navbar-top-container">
+          <div className="top-nav-left">
+            <Link to="/" className="nav-tab">
+              Privat
+            </Link>
+            <Link to="/" className="nav-tab">
+              Betallösningar
+            </Link>
+            <Link to="/" className="nav-tab active-pill">
+              Företagsbanken
+            </Link>
+          </div>
 
-        <ul className="navbar-nav">
-          {role === "company" && (
-            <>
-              <li>
-                <a href="/apply">➕ Ny ansökan</a>
-              </li>
-              <li>
-                <a href="/applications">📋 Mina ansökningar</a>
-              </li>
-            </>
-          )}
+          <div className="top-nav-center">
+            <span className="demo-badge">Skolprojekt (Ej officiell sida)</span>
+          </div>
 
-          {role === "caseWorker" && (
-            <li>
-              <a href="/backoffice">💼 Backoffice</a>
-            </li>
-          )}
-
-          {userName && (
-            <li className="user-info">
-              👤 {role === "company" ? `Företag: ${userName}` : `Handläggare: ${userName}`}
-            </li>
-          )}
-
-          <li>
-            <a href="/logout">Logga ut</a>
-          </li>
-        </ul>
+          <div className="top-nav-right">
+            {isLoggedIn && user ? (
+              <>
+                <span className="user-info">
+                  👤{" "}
+                  {user.role === "company"
+                    ? `Företag: ${user.name}`
+                    : `Handläggare: ${user.name}`}
+                </span>
+                <button onClick={handleLogoutClick} className="logout-btn">
+                  Logga ut
+                </button>
+              </>
+            ) : (
+              <Link to="/login" className="login-link">
+                Logga in
+              </Link>
+            )}
+          </div>
+        </div>
       </div>
-    </nav>
+
+      <div className="navbar-main">
+        <div className="navbar-container">
+          <Link className="navbar-brand" to="/">
+            <span className="brand-logo-text">Resurs</span>
+            <span className="brand-subtext">Kreditansökan</span>
+          </Link>
+
+          <ul className="navbar-nav">
+            {isLoggedIn && user?.role === "company" && (
+              <>
+                <li>
+                  <Link to="/apply">➕ Ny ansökan</Link>
+                </li>
+                <li>
+                  <Link to="/applications">📋 Mina ansökningar</Link>
+                </li>
+              </>
+            )}
+
+            {isLoggedIn && user?.role === "caseWorker" && (
+              <li>
+                <Link to="/backoffice">💼 Backoffice</Link>
+              </li>
+            )}
+          </ul>
+        </div>
+      </div>
+    </header>
   );
 };
 
