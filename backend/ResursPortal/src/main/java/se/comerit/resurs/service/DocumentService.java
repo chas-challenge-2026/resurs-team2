@@ -38,7 +38,10 @@ public class DocumentService {
 
 
     public List<DocumentDto> getDocuments(
-            Long applicationId) {
+            Long applicationId,
+            UserPrincipal principal) {
+        Application application = getApplication(applicationId);
+        checkApplicationAccess(application, principal);
 
         if (!applicationRepository.existsById(applicationId)) {
             throw new ApplicationNotFoundException(applicationId);
@@ -96,16 +99,11 @@ public class DocumentService {
 
         checkDocumentAccess(document, principal);
 
-        File file = new File(
-                UPLOAD_DIR,
-                document.getFilename()
-        );
+        File file = new File(UPLOAD_DIR, document.getFilename());
 
         if (!file.exists()) {
-            throw new RuntimeException(
-                    "File not found: " +
-                            document.getFilename()
-            );
+            throw new DocumentNotFoundException(documentId);
+
         }
 
         return new FileSystemResource(file);
@@ -211,15 +209,13 @@ public class DocumentService {
             );
         }
     }
+
+
     //delete document
     public void deleteDocument(Long documentId, UserPrincipal principal) {
-
-        Document document = documentRepository
-                .findById(documentId)
-                .orElseThrow(() ->
-                        new ApplicationNotFoundException(documentId)
-                );
-
+        Document document = documentRepository.findById(documentId)
+                .orElseThrow(() -> new DocumentNotFoundException(documentId));
+        checkDocumentAccess(document, principal);
         documentRepository.delete(document);
     }
 
@@ -240,6 +236,7 @@ public class DocumentService {
                 throw new DocumentNotFoundException(document.getId());
             }
         }
-    }
 
+
+    }
 }
