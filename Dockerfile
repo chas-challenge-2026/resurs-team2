@@ -13,7 +13,7 @@ FROM node:22-trixie AS build
 
 # Add JDK 21 and the C++ toolchain needed by the native module.
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        openjdk-21-jdk \
+        openjdk-25-jdk \
         make \
         gcc \
         g++ \
@@ -25,7 +25,7 @@ COPY . .
 RUN make package
 
 # --- Runtime: Spring serves static frontend + API (+ native module) ---
-FROM eclipse-temurin:21-jre-jammy
+FROM eclipse-temurin:25-jre-jammy
 WORKDIR /app
 RUN mkdir -p /tmp/uploads
 
