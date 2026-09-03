@@ -9,12 +9,22 @@ export interface User {
   role: Role;
 }
 
+export interface CompanyCredentials {
+  orgNumber: string;
+}
+
+export interface CaseWorkerCredentials {
+  email: string;
+  password: string;
+}
+
 export interface AuthContextType {
   user: User | null;
   token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (userData: User) => void;
+  loginCompany: (credentials: CompanyCredentials) => Promise<void>;
+  loginCaseWorker: (credentials: CaseWorkerCredentials) => Promise<void>;
   logout: () => void;
 }
 
