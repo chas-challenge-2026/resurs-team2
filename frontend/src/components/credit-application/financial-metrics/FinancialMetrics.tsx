@@ -141,16 +141,16 @@ export function FinancialMetrics({
 
           <div className={styles.column}>
             <div className={styles.formGroup}>
-              <label htmlFor="operatingResult">Rörelseresultat (SEK)</label>
+              <label htmlFor="operatingIncome">Rörelseresultat (SEK)</label>
 
               <input
                 className={styles.formControl}
-                id="operatingResult"
-                name="operatingResult"
+                id="operatingIncome"
+                name="operatingIncome"
                 type="number"
                 step="1"
                 placeholder="450000"
-                value={data.operatingResult}
+                value={data.operatingIncome}
                 onChange={handleInputChange}
               />
 
@@ -160,16 +160,16 @@ export function FinancialMetrics({
         </div>
 
         <div className={styles.formGroup}>
-          <label htmlFor="netSales">Nettoomsättning (SEK)</label>
+          <label htmlFor="netRevenue">Nettoomsättning (SEK)</label>
 
           <input
             className={styles.formControl}
-            id="netSales"
-            name="netSales"
+            id="netRevenue"
+            name="netRevenue"
             type="number"
             step="1"
             placeholder="9500000"
-            value={data.netSales}
+            value={data.netRevenue}
             onChange={handleInputChange}
           />
         </div>
