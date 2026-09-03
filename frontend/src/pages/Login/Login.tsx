@@ -20,19 +20,10 @@ export const Login: React.FC = () => {
     setLoading(true);
 
     try {
-      await login({
-        id: orgNumber,
-        name: "Företag",
-        email: email || "foretag@example.com",
-        role: "COMPANY",
-      });
-      navigate("/status");
-    } catch (err: unknown) {
-      if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError("Inloggning misslyckades. Kontrollera organisationsnumret.");
-      }
+      await loginCompany({ orgNumber, email });
+      navigate("/application");
+    } catch (err: any) {
+      setError(err.message || "Inloggning misslyckades. Kontrollera organisationsnumret.");
     } finally {
       setLoading(false);
     }
