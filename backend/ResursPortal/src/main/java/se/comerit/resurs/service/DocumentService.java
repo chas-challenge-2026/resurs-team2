@@ -14,6 +14,7 @@ import se.comerit.resurs.exception.EmptyFileException;
 import se.comerit.resurs.exception.FileUploadException;
 import se.comerit.resurs.repository.ApplicationRepository;
 import se.comerit.resurs.repository.DocumentRepository;
+import se.comerit.resurs.security.CaseWorkerPrincipal;
 import se.comerit.resurs.security.CompanyPrincipal;
 import se.comerit.resurs.security.UserPrincipal;
 
@@ -226,7 +227,12 @@ public class DocumentService {
             if (!appCompanyOrgNumber.equals(companyPrincipal.orgNumber())) {
                 throw new ApplicationNotFoundException(application.getId());
             }
+            return;
         }
+        if (principal instanceof CaseWorkerPrincipal) {
+            return;
+        }
+        throw new ApplicationNotFoundException(application.getId());
     }
 
     private void checkDocumentAccess(Document document, UserPrincipal principal) {
@@ -235,8 +241,12 @@ public class DocumentService {
             if (!documentCompanyOrgNumber.equals(companyPrincipal.orgNumber())) {
                 throw new DocumentNotFoundException(document.getId());
             }
+            return;
         }
-
+        if (principal instanceof CaseWorkerPrincipal) {
+            return;
+        }
+        throw new DocumentNotFoundException(document.getId());
 
     }
 }
