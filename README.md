@@ -28,6 +28,10 @@ mvn test
 
 Öppna [http://localhost:8083](http://localhost:8083)
 
+### Swagger (endast lokalt)
+
+När appen körs med `-Plocal` finns Swagger UI tillgängligt på [http://localhost:8083/swagger-ui.html](http://localhost:8083/swagger-ui.html). Swagger är endast inkluderat i lokala byggen och exkluderas från paketade artifact (`mvnw package`).
+
 ### Testinloggningar
 
 | Roll | Uppgifter |
