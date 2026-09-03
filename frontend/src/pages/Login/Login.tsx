@@ -1,11 +1,11 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../../context/AuthContext";
+import { useAuth } from "../../components/hooks/useAuth";
 import "./Login.css";
 
 export const Login: React.FC = () => {
   const navigate = useNavigate();
-  const { loginCompany, loginCaseWorker } = useAuth();
+  const { login } = useAuth();
 
   const [activeTab, setActiveTab] = useState<"company" | "caseWorker">("company");
   const [orgNumber, setOrgNumber] = useState<string>("");
@@ -35,10 +35,19 @@ export const Login: React.FC = () => {
     setLoading(true);
 
     try {
-      await loginCaseWorker({ username: email, password });
+      await login({
+        id: "cw-1",
+        name: "Handläggare",
+        email: email,
+        role: "CASEWORKER",
+      });
       navigate("/backoffice");
-    } catch (err: any) {
-      setError(err.message || "Felaktig e-post eller lösenord.");
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError("Felaktig e-post eller lösenord.");
+      }
     } finally {
       setLoading(false);
     }

@@ -24,7 +24,7 @@ export const Backofficedetail: React.FC<BackofficeProps> = ({
     }
   };
 
-  const getScoringBadgeClass = (score?: string) => {
+  const getScoringBadgeClass = (score?: string | null) => {
     if (!score) return "label-default";
     const uppercaseScore = score.toUpperCase();
     if (uppercaseScore.includes("GREEN")) return "label-success";
@@ -38,7 +38,6 @@ export const Backofficedetail: React.FC<BackofficeProps> = ({
       <h2>Ansökan #{application.id || "0"} – Detaljvy</h2>
 
       <div className="backoffice-layout">
-        {/* VÄNSTERKOLUMN */}
         <div className="col-left">
           <div className="panel">
             <div className="panel-heading">Företagsuppgifter</div>
@@ -75,7 +74,6 @@ export const Backofficedetail: React.FC<BackofficeProps> = ({
           </div>
         </div>
 
-        {/* HÖGERKOLUMN */}
         <div className="col-right">
           <div className="panel panel-warning">
             <div className="panel-heading">Fatta beslut</div>

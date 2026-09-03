@@ -1,6 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
-
-export type Role = "company" | "caseWorker";
+import { createContext } from "react";
 
 export interface User {
   id?: string;
@@ -15,7 +13,7 @@ interface AuthTokens {
   refreshToken?: string;
 }
 
-interface AuthContextType {
+export interface AuthContextType {
   user: User | null;
   token: string | null;
   isLoggedIn: boolean;
