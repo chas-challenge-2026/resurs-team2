@@ -16,13 +16,16 @@ BACKEND_DIR  := backend/ResursPortal
 TARGET_DIR   := target
 
 .PHONY: clean build test dev \
-        build-frontend build-backend
+        build-frontend build-backend package
         # build-native
 
 # ── Aggregate targets ─────────────────────────────────────────────
 
 build: build-frontend build-backend
 # build: build-native build-frontend build-backend
+
+# Alias used by the Dockerfile - same as `build`.
+package: build
 
 # Run Vite dev server (HMR on :5173) with Spring Boot (local profile on :8083) concurrently.
 # Vite proxies /api -> :8083, so no CORS config is needed.
@@ -36,7 +39,9 @@ dev-run:
 	@echo "  Spring:   http://localhost:8083"
 	@trap 'kill 0' INT TERM; \
 	(cd $(FRONTEND_DIR) && npm run dev) & \
-	(cd $(BACKEND_DIR) && ./mvnw spring-boot:run -Dspring-boot.run.profiles=local) & \
+	(cd $(BACKEND_DIR) && ./mvnw spring-boot:run \
+		-Dspring-boot.run.profiles=local \
+		-Dspring-boot.run.workingDirectory=$(ROOT)) & \
 	wait
 
 test: build-frontend
