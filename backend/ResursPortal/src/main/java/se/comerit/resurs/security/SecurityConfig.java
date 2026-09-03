@@ -7,6 +7,7 @@ import java.nio.charset.StandardCharsets;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
+import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -40,6 +41,7 @@ public class SecurityConfig {
     }
 
     @Bean
+    @Order(2)
     public SecurityFilterChain apiChain(HttpSecurity http,
             SessionTokenAuthenticationFilter filter) throws Exception {
         http
@@ -62,6 +64,7 @@ public class SecurityConfig {
 
     // TODO: Temporary to keep old version working
     @Bean
+    @Order(3)
     public SecurityFilterChain webChain(HttpSecurity http) throws Exception {
         // Non-breaking: keep the old Thymeleaf/session app working as before.
         http
@@ -75,10 +78,13 @@ public class SecurityConfig {
     /**
      * Permits unauthenticated access to Swagger UI and OpenAPI spec endpoints.
      * Only active on the "local" profile — never included in packaged builds.
-     * The matcher ({@code /v3/api-docs/**}, {@code /swagger-ui/**}) does not
-     * overlap with {@code /api/**}, so no API endpoints are affected.
+     * Registered before {@link #webChain} (which matches any request) so it can
+     * intercept swagger URLs first. Its matcher ({@code /v3/api-docs/**},
+     * {@code /swagger-ui/**}) does not overlap {@code /api/**}, so API endpoints
+     * are unaffected.
      */
     @Bean
+    @Order(1)
     @Profile("local")
     public SecurityFilterChain swaggerChain(HttpSecurity http) throws Exception {
         http
