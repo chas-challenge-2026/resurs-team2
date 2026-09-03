@@ -44,7 +44,7 @@ public class DocumentController {
             @PathVariable Long id,
             @AuthenticationPrincipal UserPrincipal principal) {
 
-        List<DocumentDto> documents =documentService.getDocuments(id);
+        List<DocumentDto> documents =documentService.getDocuments(id,principal);
         return ResponseEntity.ok(documents);
     }
 
