@@ -1,36 +1,42 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import styles from "./dashboard.module.css";
 import type { Application } from "../../types/application";
-import { mockApplications } from "../../mockdata/applications";
+import styles from "./dashboard.module.css";
 
-interface DashboardProps {
-  applications?: Application[];
-  companyName?: string;
-}
-
-export const Dashboard: React.FC<DashboardProps> = ({
-  applications = mockApplications,
-  companyName = "Nordic Tech Solutions AB",
-}) => {
+export function Dashboard() {
   const navigate = useNavigate();
 
-  const getStatusClass = (status: string) => {
+  const companyName = "Företag AB";
+
+  const applications: Application[] = [
+    {
+      id: 0,
+      companyName: "Företag AB",
+      orgNumber: "",
+      requestedAmount: 0,
+      purpose: "",
+      createdAt: "-",
+      status: "PENDING_DOCS",
+      decision: null,
+      decisionReason: null,
+      scoringResult: null,
+    },
+  ];
+
+  const getStatusClass = (status: Application["status"]) => {
     switch (status) {
       case "APPROVED":
         return styles.labelSuccess;
+
       case "REJECTED":
         return styles.labelDanger;
+
       case "UNDER_REVIEW":
         return styles.labelWarning;
+
       default:
         return styles.labelDefault;
     }
-  };
-
-  const formatCurrency = (amount?: number) => {
-    if (!amount) return "0 kr";
-    return new Intl.NumberFormat("sv-SE").format(amount) + " kr";
   };
 
   return (
@@ -38,9 +44,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
       <div className={styles.container}>
         <section className={styles.jumbotron}>
           <h1>Välkommen, {companyName}!</h1>
-          <p>
-            Ansök om företagskredit hos Resurs Bank via denna portal.
-          </p>
+
+          <p>Ansök om företagskredit hos Resurs Bank via denna portal.</p>
 
           <div className={styles.actions}>
             <button
@@ -79,8 +84,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
               <tbody>
                 {applications.map((application) => (
                   <tr key={application.id}>
-                    <td>#{application.id}</td>
-                    <td>{formatCurrency(application.requestedAmount)}</td>
+                    <td>{application.id}</td>
+
+                    <td>{application.requestedAmount}</td>
+
                     <td>
                       {application.status && (
                         <span className={getStatusClass(application.status)}>
@@ -88,12 +95,14 @@ export const Dashboard: React.FC<DashboardProps> = ({
                         </span>
                       )}
                     </td>
-                    <td>{application.createdAt || "-"}</td>
+
+                    <td>{application.createdAt}</td>
+
                     <td>
                       <button
                         type="button"
                         className={styles.viewButton}
-                        onClick={() => navigate(`/status`)}
+                        onClick={() => navigate(`/status/${application.id}`)}
                       >
                         Visa
                       </button>
@@ -107,6 +116,4 @@ export const Dashboard: React.FC<DashboardProps> = ({
       </div>
     </main>
   );
-};
-
-export default Dashboard;
+}
