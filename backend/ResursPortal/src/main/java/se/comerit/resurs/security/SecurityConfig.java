@@ -6,6 +6,7 @@ import java.nio.charset.StandardCharsets;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -68,6 +69,23 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .formLogin(form -> form.disable())
                 .httpBasic(basic -> basic.disable());
+        return http.build();
+    }
+
+    /**
+     * Permits unauthenticated access to Swagger UI and OpenAPI spec endpoints.
+     * Only active on the "local" profile — never included in packaged builds.
+     * The matcher ({@code /v3/api-docs/**}, {@code /swagger-ui/**}) does not
+     * overlap with {@code /api/**}, so no API endpoints are affected.
+     */
+    @Bean
+    @Profile("local")
+    public SecurityFilterChain swaggerChain(HttpSecurity http) throws Exception {
+        http
+                .securityMatcher("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html")
+                .csrf(csrf -> csrf.disable())
+                .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests(auth -> auth.anyRequest().permitAll());
         return http.build();
     }
 
