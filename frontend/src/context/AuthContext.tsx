@@ -4,126 +4,113 @@ export type Role = "company" | "caseWorker";
 
 export interface User {
   id?: string;
-  name: string;
-  role: Role;
+  name?: string;
+  orgNumber?: string;
   email?: string;
+  role: Role;
+}
+
+interface AuthTokens {
+  accessToken: string;
+  refreshToken?: string;
 }
 
 interface AuthContextType {
   user: User | null;
+  token: string | null;
   isLoggedIn: boolean;
   isLoading: boolean;
-  loginCompany: (credentials: { orgNumber: string; email: string }) => Promise<void>;
+  loginCompany: (credentials: { orgNumber: string }) => Promise<void>;
   loginCaseWorker: (credentials: { username: string; password: string }) => Promise<void>;
-  logout: () => Promise<void>;
+  logout: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [token, setToken] = useState<string | null>(localStorage.getItem("accessToken"));
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  const fetchCompanyProfile = async (): Promise<User | null> => {
-    try {
-      const res = await fetch("/api/v1/companies/me", {
-        method: "GET",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        return {
-          id: data.id,
-          name: data.companyName || data.name || data.orgName || data.email || "Företag",
-          role: "company",
-          email: data.email,
-        };
-      }
-    } catch (err) {
-      console.error("Kunde inte hämta företagsprofil:", err);
-    }
-    return null;
-  };
-
   useEffect(() => {
-    const checkAuthStatus = async () => {
+    const storedToken = localStorage.getItem("accessToken");
+    const storedUser = localStorage.getItem("authUser");
+
+    if (storedToken && storedUser) {
+      setToken(storedToken);
       try {
-        const currentUser = await fetchCompanyProfile();
-        setUser(currentUser);
+        setUser(JSON.parse(storedUser));
       } catch {
         setUser(null);
-      } finally {
-        setIsLoading(false);
       }
-    };
-
-    checkAuthStatus();
+    }
+    setIsLoading(false);
   }, []);
 
-  const loginCompany = async (credentials: { orgNumber: string; email: string }) => {
+  const saveSession = (tokens: AuthTokens, userData: User) => {
+    localStorage.setItem("accessToken", tokens.accessToken);
+    localStorage.setItem("authUser", JSON.stringify(userData));
+    setToken(tokens.accessToken);
+    setUser(userData);
+  };
+
+  const loginCompany = async (credentials: { orgNumber: string }) => {
     const res = await fetch("/api/v1/auth/login/company", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify(credentials),
+      body: JSON.stringify({ orgNumber: credentials.orgNumber }),
     });
 
     if (!res.ok) {
-      throw new Error("Inloggningen misslyckades. Kontrollera dina uppgifter.");
+      throw new Error("Inloggning misslyckades. Kontrollera organisationsnumret.");
     }
 
-    const companyUser = await fetchCompanyProfile();
+    const tokens: AuthTokens = await res.json();
 
-    if (companyUser) {
-      setUser(companyUser);
-    } else {
-      setUser({
-        name: credentials.email || credentials.orgNumber,
-        role: "company",
-        email: credentials.email,
-      });
-    }
+    const userData: User = {
+      orgNumber: credentials.orgNumber,
+      role: "company",
+    };
+
+    saveSession(tokens, userData);
   };
 
   const loginCaseWorker = async (credentials: { username: string; password: string }) => {
-    const res = await fetch("/api/v1/auth/login/case-worker", {
+    const res = await fetch("/api/v1/auth/login/caseWorker", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify(credentials),
+      body: JSON.stringify({
+        email: credentials.username,
+        password: credentials.password,
+      }),
     });
 
     if (!res.ok) {
-      throw new Error("Handläggarinloggning misslyckades.");
+      throw new Error("Felaktig e-post eller lösenord.");
     }
 
-    const data = await res.json().catch(() => ({}));
+    const tokens: AuthTokens = await res.json();
 
-    setUser({
-      name: data.name || credentials.username,
+    const userData: User = {
+      email: credentials.username,
       role: "caseWorker",
-    });
+    };
+
+    saveSession(tokens, userData);
   };
 
-  const logout = async () => {
-    try {
-      await fetch("/api/v1/auth/logout", {
-        method: "POST",
-        credentials: "include",
-      });
-    } catch (err) {
-      console.error("Fel vid utloggningsanrop:", err);
-    } finally {
-      setUser(null);
-    }
+  const logout = () => {
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("authUser");
+    setToken(null);
+    setUser(null);
   };
 
   return (
     <AuthContext.Provider
       value={{
         user,
+        token,
         isLoggedIn: !!user,
         isLoading,
         loginCompany,

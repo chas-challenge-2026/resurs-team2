@@ -21,7 +21,7 @@ export const Login: React.FC = () => {
 
     try {
       await loginCompany({ orgNumber, email });
-      navigate("/status");
+      navigate("/application");
     } catch (err: any) {
       setError(err.message || "Inloggning misslyckades. Kontrollera organisationsnumret.");
     } finally {
