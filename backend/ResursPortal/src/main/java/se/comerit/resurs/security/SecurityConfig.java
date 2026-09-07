@@ -40,15 +40,14 @@ public class SecurityConfig {
 
     @Bean
     public Argon2PasswordEncoder argon2PasswordEncoder() {
-       // saltLength, hasLength, parallelism, memory, iterations
-        return new Argon2PasswordEncoder(16, 32, 1, 65536, 3);
+           return new Argon2PasswordEncoder(16, 32, 1, 65536, 3);
     }
 
 
     @Bean
     @Order(2)
     public SecurityFilterChain apiChain(HttpSecurity http,
-                                        SessionTokenAuthenticationFilter filter) throws Exception {
+           SessionTokenAuthenticationFilter filter) throws Exception {
         http
                 .securityMatcher("/api/**")
                 .csrf(AbstractHttpConfigurer::disable)
