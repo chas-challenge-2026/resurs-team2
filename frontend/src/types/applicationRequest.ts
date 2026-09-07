@@ -1,7 +1,4 @@
 export interface ApplicationRequest {
-  orgNumber: string;
-  companyName: string;
-  authorizedSignature: string;
   equity: number;
   totalCapital: number;
   currentAssets: number;
