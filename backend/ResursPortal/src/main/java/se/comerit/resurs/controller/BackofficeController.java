@@ -2,6 +2,7 @@ package se.comerit.resurs.controller;
 
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.context.annotation.Profile;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -9,8 +10,11 @@ import org.springframework.web.bind.annotation.RequestParam;
 import jakarta.servlet.http.HttpSession;
 import se.comerit.resurs.entity.Application;
 import se.comerit.resurs.entity.ApplicationStatus;
+import se.comerit.resurs.entity.Decision;
 import se.comerit.resurs.entity.Document;
 import se.comerit.resurs.repository.ApplicationRepository;
+
+import org.springframework.data.domain.PageRequest;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -25,7 +29,8 @@ import java.util.List;
  * - Session check copy-pasteat
  * - Ingen pagination — hämtar ALLA ansökningar i REVIEW
  */
-@Controller
+@Controller("legacyBackofficeController")
+@Profile("!v2")
 public class BackofficeController {
 
     private final ApplicationRepository applicationRepository;
@@ -48,8 +53,9 @@ public class BackofficeController {
         List<Application> reviewApplications = applicationRepository
                 .findByStatusOrderByCreatedAtAsc(ApplicationStatus.UNDER_REVIEW);
         // Also get approved/rejected for history — same query pattern, no reuse
-        List<Application> devidedApplications = applicationRepository.findTop20ByStatusInOrderByUpdatedAtDesc(
-                List.of(ApplicationStatus.APPROVED, ApplicationStatus.REJECTED));
+        List<Application> devidedApplications = applicationRepository.findByStatusInOrderByUpdatedAtDesc(
+                List.of(ApplicationStatus.APPROVED, ApplicationStatus.REJECTED),
+                PageRequest.of(0, 20)).toList();
 
         model.addAttribute("reviewApplications", reviewApplications);
         model.addAttribute("decidedApplications", devidedApplications);
@@ -80,7 +86,7 @@ public class BackofficeController {
 
         applicationRepository.findById(applicationId).ifPresent(application -> {
             application.setStatus(newStatus);
-            application.setDecision(decision);
+            application.setDecision(Decision.valueOf(decision));
             applicationRepository.save(application);
         });
 

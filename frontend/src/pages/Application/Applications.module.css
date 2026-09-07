@@ -1,0 +1,171 @@
+.page {
+  min-height: 100vh;
+  padding-top: 70px;
+  background-color: var(--color-background);
+}
+
+.container {
+  max-width: 1170px;
+  margin: 0 auto;
+  padding: 0 var(--spacing-md);
+}
+
+.pageHeader {
+  padding-bottom: 9px;
+  margin: 40px 0 20px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.pageHeader h1 {
+  margin: 0;
+  font-size: 36px;
+  font-weight: 300;
+  line-height: 1.1;
+  color: var(--color-text);
+}
+
+.infoAlert {
+  padding: var(--spacing-md);
+  margin-bottom: 20px;
+  color: var(--color-info-text);
+  background-color: var(--color-info-bg);
+  border: 1px solid var(--color-info-border);
+  border-radius: var(--radius);
+}
+
+.infoAlert p {
+  margin: 0;
+}
+
+.createLink {
+  padding: 0;
+  color: var(--color-primary);
+  font: inherit;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.createLink:hover {
+  text-decoration: underline;
+}
+
+.primaryButton {
+  display: inline-block;
+  margin-bottom: var(--spacing-md);
+  padding: 6px 12px;
+  color: var(--color-white);
+  font-size: var(--font-size-base);
+  font-family: inherit;
+  line-height: var(--line-height-base);
+  background-color: var(--color-primary);
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+.primaryButton:hover {
+  background-color: var(--color-primary-hover);
+  border-color: var(--color-primary-hover);
+}
+
+.plusIcon {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.applicationTable {
+  width: 100%;
+  margin-bottom: 20px;
+  border-spacing: 0;
+  border-collapse: collapse;
+  background-color: var(--color-white);
+}
+
+.applicationTable th {
+  padding: 8px;
+  color: var(--color-white);
+  font-weight: 700;
+  line-height: var(--line-height-base);
+  text-align: left;
+  vertical-align: bottom;
+  background-color: var(--color-primary);
+  border: 1px solid var(--color-border);
+}
+
+.applicationTable td {
+  padding: 8px;
+  line-height: var(--line-height-base);
+  vertical-align: top;
+  border: 1px solid var(--color-border);
+}
+
+.applicationTable tbody tr:hover {
+  background-color: var(--color-background);
+}
+
+.labelSuccess,
+.labelDanger,
+.labelWarning,
+.labelDefault {
+  display: inline-block;
+  padding: 3px 7px;
+  color: var(--color-white);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  border-radius: 3px;
+}
+
+.labelSuccess {
+  background-color: var(--color-success);
+}
+
+.labelDanger {
+  background-color: var(--color-danger);
+}
+
+.labelWarning {
+  background-color: var(--color-warning);
+}
+
+.labelDefault {
+  background-color: var(--color-muted);
+}
+
+.actionCell {
+  white-space: nowrap;
+}
+
+.viewButton,
+.documentButton {
+  display: inline-block;
+  margin-right: 5px;
+  padding: 3px 6px;
+  font-family: inherit;
+  font-size: 12px;
+  line-height: 1.5;
+  cursor: pointer;
+  border-radius: 3px;
+}
+
+.viewButton {
+  color: var(--color-white);
+  background-color: var(--color-info-text);
+  border: 1px solid var(--color-info-text);
+}
+
+.viewButton:hover {
+  opacity: 0.9;
+}
+
+.documentButton {
+  color: var(--color-text);
+  background-color: var(--color-white);
+  border: 1px solid var(--color-input-border);
+}
+
+.documentButton:hover {
+  background-color: var(--color-background);
+}

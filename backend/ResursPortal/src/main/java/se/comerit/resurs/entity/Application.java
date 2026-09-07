@@ -24,7 +24,6 @@ import jakarta.persistence.Table;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Size;
 
 @Entity
 @Table(name = "applications")
@@ -47,9 +46,9 @@ public class Application {
     @Nonnull
     private ApplicationStatus status = ApplicationStatus.PENDING_DOCS;
     @Column(length = 20)
+    @Enumerated(EnumType.STRING)
     @Nullable
-    @Size(max = 20)
-    private String decision;
+    private Decision decision;
     @Column(name = "decision_reason", columnDefinition = "TEXT")
     @Nullable
     private String decisionReason;
@@ -84,6 +83,20 @@ public class Application {
         this.company = company;
         this.requestedAmount = requestedAmount;
         this.purpose = purpose;
+    }
+
+    public Application(Company company, BigDecimal requestedAmount,
+            String purpose, ApplicationStatus statusValue, Decision decision,
+            String decisionReason, String scoringResult, String auditLog) {
+        this.company = company;
+        this.requestedAmount = requestedAmount;
+        this.purpose = purpose;
+        this.status = statusValue;
+        this.decision = decision;
+        this.decisionReason = decisionReason;
+        this.scoringResult = scoringResult;
+        this.auditLog = auditLog;
+
     }
 
     protected Application() {
@@ -132,11 +145,11 @@ public class Application {
     }
 
     @Nullable
-    public String getDecision() {
+    public Decision getDecision() {
         return decision;
     }
 
-    public void setDecision(@Nullable String decision) {
+    public void setDecision(@Nullable Decision decision) {
         this.decision = decision;
     }
 

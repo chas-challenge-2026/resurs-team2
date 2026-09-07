@@ -1,17 +1,16 @@
 import { useState } from "react";
 import styles from "./CreditApplication.module.css";
 
-import { CompanyInformation } from "./company-information/CompanyInformation";
-import { companyInformationSchema,type CompanyInformationData, } from "./company-information/CompanyInformation.schema";
+import { CompanyInformation } from "../../components/credit-application/company-information/CompanyInformation";
+import { companyInformationSchema,type CompanyInformationData, } from "../../components/credit-application/company-information/CompanyInformation.schema";
+import { FinancialMetrics } from "../../components/credit-application/financial-metrics/FinancialMetrics";
+import { financialMetricsSchema,type FinancialMetricsData, } from "../../components/credit-application/financial-metrics/FinancialMetrics.schema";
 
-import { FinancialMetrics } from "./financial-metrics/FinancialMetrics";
-import { financialMetricsSchema,type FinancialMetricsData, } from "./financial-metrics/FinancialMetrics.schema";
+import { CreditAmount } from "../../components/credit-application/credit-amount/CreditAmount";
+import { creditAmountSchema,type CreditAmountData, } from "../../components/credit-application/credit-amount/CreditAmount.schema";
 
-import { CreditAmount } from "./credit-amount/CreditAmount";
-import { creditAmountSchema,type CreditAmountData, } from "./credit-amount/CreditAmount.schema";
-
-import { Confirmation } from "./confirmation/Confirmation";
-import { confirmationSchema,type ConfirmationFormData, } from "./confirmation/Confirmation.schema";
+import { Confirmation } from "../../components/credit-application/confirmation/Confirmation";
+import { confirmationSchema,type ConfirmationFormData, } from "../../components/credit-application/confirmation/Confirmation.schema";
 
 export function CreditApplication() {
   const [currentStep, setCurrentStep] = useState(1);
@@ -30,8 +29,8 @@ export function CreditApplication() {
       currentAssets: 0,
       currentLiabilities: 0,
       totalLiabilities: 0,
-      operatingResult: 0,
-      netSales: 0,
+      operatingIncome: 0,
+      netRevenue: 0,
     });
 
   const [creditAmount, setCreditAmount] = useState<CreditAmountData>({
@@ -121,6 +120,8 @@ export function CreditApplication() {
 
   return (
     <main className={styles.container}>
+      <h2 className={styles.h2} >Ny kreditansökan</h2>
+      <div className={`${styles.alert} ${styles.alertDanger}`}></div>
       <nav className={styles.stepIndicator} aria-label="Ansökans steg">
         {steps.map((step, index) => {
           const stepNumber = index + 1;

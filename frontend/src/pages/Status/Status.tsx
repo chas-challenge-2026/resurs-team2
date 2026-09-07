@@ -1,57 +1,89 @@
 import React from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import "./Status.css";
 import type { Application } from "../../types/application";
 import type { ApplicationStep } from "../../types/timeline";
 import type { ApplicationDocument } from "../../types/document";
+import { mockApplications } from "../../mockdata/applications";
 
 interface StatusProps {
-  application: Application;
-  steps: ApplicationStep[];
-  documents: ApplicationDocument[];
+  application?: Application;
+  steps?: ApplicationStep[];
+  documents?: ApplicationDocument[];
   auditLogRaw?: string;
 }
 
 export const Status: React.FC<StatusProps> = ({
-  application,
-  steps,
-  documents,
+  application: initialApplication,
+  steps = [],
+  documents = [],
   auditLogRaw = "[]",
 }) => {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+
+  const currentApplication =
+    initialApplication ||
+    mockApplications.find((app) => String(app.id) === String(id)) ||
+    mockApplications[0];
+
+  if (!currentApplication) {
+    return (
+      <div className="status-page">
+        <p className="text-muted">Ingen ansökan hittades.</p>
+        <button
+          className="btn btn-default"
+          onClick={() => navigate("/application")}
+        >
+          Tillbaka till ansökningar
+        </button>
+      </div>
+    );
+  }
+
+  const formatCurrency = (amount?: number) => {
+    if (!amount) return "0 kr";
+    return new Intl.NumberFormat("sv-SE").format(amount) + " kr";
+  };
+
   return (
     <div className="status-page">
-      <h2>Ansökan #{application.id || "000"}</h2>
+      <h2>Ansökan #{currentApplication.id || "000"}</h2>
 
       <p className="status-header">
         Status:{" "}
-        <span className={`badge badge-${application.status}`} role="status">
-          {application.status}
+        <span
+          className={`badge badge-${currentApplication.status}`}
+          role="status"
+        >
+          {currentApplication.status}
         </span>
       </p>
 
-      {application.decision && (
+      {currentApplication.decision && (
         <div
           className={`alert ${
-            application.decision === "APPROVED"
+            currentApplication.decision === "APPROVED"
               ? "alert-success"
               : "alert-danger"
           }`}
         >
           <h4>
-            {application.decision === "APPROVED"
+            {currentApplication.decision === "APPROVED"
               ? "Ansökan godkänd"
               : "Ansökan avslagen"}
           </h4>
-          <p>{application.decisionReason}</p>
+          <p>{currentApplication.decisionReason}</p>
         </div>
       )}
 
       <div className="status-layout">
         <div className="left-column">
-          {application.scoringResult && (
+          {currentApplication.scoringResult && (
             <div className="panel">
               <div className="panel-heading">Scoringresultat</div>
               <div className="panel-body">
-                {application.scoringResult}
+                {currentApplication.scoringResult}
               </div>
             </div>
           )}
@@ -63,7 +95,6 @@ export const Status: React.FC<StatusProps> = ({
                 <div className={`dot dot-${step.status}`} />
                 <div className="content">
                   <strong>{step.name}</strong>{" "}
-
                   {step.status === "DONE" && (
                     <span className="label label-success">Klart</span>
                   )}
@@ -73,10 +104,8 @@ export const Status: React.FC<StatusProps> = ({
                   {step.status === "PENDING" && (
                     <span className="label label-default">Väntar</span>
                   )}
-
                   <br />
                   <small>{step.description}</small>
-
                   {step.eta && step.eta !== "—" && (
                     <>
                       <br />
@@ -98,29 +127,27 @@ export const Status: React.FC<StatusProps> = ({
               <p>
                 <strong>Företag:</strong>
                 <br />
-                {application.companyName || "-"}
+                {currentApplication.companyName || "-"}
               </p>
               <p>
                 <strong>Org.nummer:</strong>
                 <br />
-                {application.orgNumber || "-"}
+                {currentApplication.orgNumber || "-"}
               </p>
               <p>
                 <strong>Kreditbelopp:</strong>
                 <br />
-                {application.requestedAmount
-                  ? `${application.requestedAmount} kr`
-                  : "0 kr"}
+                {formatCurrency(currentApplication.requestedAmount)}
               </p>
               <p>
                 <strong>Syfte:</strong>
                 <br />
-                {application.purpose || "-"}
+                {currentApplication.purpose || "-"}
               </p>
               <p>
                 <strong>Inlämnad:</strong>
                 <br />
-                {application.createdAt || "-"}
+                {currentApplication.createdAt || "-"}
               </p>
             </div>
           </div>
@@ -128,7 +155,12 @@ export const Status: React.FC<StatusProps> = ({
           <div className="panel">
             <div className="panel-heading">
               Dokument
-              <button className="btn btn-sm btn-primary pull-right">
+              <button
+                className="btn btn-sm btn-primary pull-right"
+                onClick={() =>
+                  navigate(`/documents/${currentApplication.id}`)
+                }
+              >
                 Ladda upp
               </button>
             </div>
@@ -157,8 +189,20 @@ export const Status: React.FC<StatusProps> = ({
       </div>
 
       <div className="actions">
-        <button className="btn btn-default">Tillbaka</button>
-        <button className="btn btn-primary">Redigera ansökan</button>
+        <button
+          type="button"
+          className="btn btn-default"
+          onClick={() => navigate("/application")}
+        >
+          Tillbaka
+        </button>
+        <button
+          type="button"
+          className="btn btn-primary"
+          onClick={() => navigate("/apply")}
+        >
+          Redigera ansökan
+        </button>
       </div>
     </div>
   );

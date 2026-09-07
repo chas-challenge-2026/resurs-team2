@@ -1,0 +1,16 @@
+.git
+.gitignore
+.vscode
+.idea
+node_modules
+dist
+target
+build
+*.log
+backend/ResursPortal/target
+frontend/node_modules
+native/build
+plan
+docs
+DRIFT.md
+README.md

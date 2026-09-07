@@ -11,8 +11,8 @@ export const financialMetricsSchema = z.object({
   currentAssets: numberField("Omsättningstillgångar"),
   currentLiabilities: numberField("Kortfristiga skulder"),
   totalLiabilities: numberField("Totala skulder"),
-  operatingResult: numberField("Rörelseresultat"),
-  netSales: numberField("Nettoomsättning"),
+  operatingIncome: numberField("Rörelseresultat"),
+  netRevenue: numberField("Nettoomsättning"),
 });
 
 export type FinancialMetricsData = z.infer<typeof financialMetricsSchema>;
