@@ -1,9 +1,7 @@
 import type { Application, ApplicationStatus } from "../types/application";
-
 import type { ApplicationDetails } from "../types/applicationDetails";
-
+import type { ApplicationRequest } from "../types/applicationRequest";
 import { apiFetch } from "./apiFetch";
-
 export type Decision = "APPROVED" | "REJECTED";
 
 export interface DecisionRequest {
@@ -72,6 +70,24 @@ export const applicationApi = {
 
     if (!response.ok) {
       throw new Error("Kunde inte registrera beslutet.");
+    }
+
+    return response.json();
+  },
+
+  async create(request: ApplicationRequest): Promise<number> {
+    const response = await apiFetch("/api/v1/applications", {
+      method: "POST",
+
+      headers: {
+        "Content-Type": "application/json",
+      },
+
+      body: JSON.stringify(request),
+    });
+
+    if (!response.ok) {
+      throw new Error("Kunde inte skapa ansökan.");
     }
 
     return response.json();
