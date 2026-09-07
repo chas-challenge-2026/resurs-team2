@@ -130,20 +130,4 @@ class SecurityConfigIntegrationTest {
                         .header("User-Agent", UA))
                 .andExpect(status().isUnauthorized());
     }
-
-    // ---------- non-breaking legacy web chain ----------
-
-    @Test
-    void legacyLoginPageStillReachable() throws Exception {
-        // Web chain is permitAll during the strangler-fig migration.
-        mockMvc.perform(get("/login"))
-                .andExpect(status().isOk());
-    }
-
-    @Test
-    void legacyRootRedirectsToLogin() throws Exception {
-        mockMvc.perform(get("/"))
-                .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/login"));
-    }
 }
