@@ -114,3 +114,17 @@ textarea.formControl {
     background-color: #e6e6e6;
     border-color: #adadad;
 }
+
+.purposeInfo {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 0.5rem;
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+.errorText {
+  margin-top: 0.5rem;
+  color: #b91c1c;
+  font-size: 0.875rem;
+}

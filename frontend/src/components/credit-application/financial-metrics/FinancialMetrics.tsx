@@ -22,7 +22,7 @@ export function FinancialMetrics({
 
     onChange({
       ...data,
-      [name]: value === "" ? "" : Number(value),
+      [name]: value === "" ? 0 : Number(value),
     });
   };
 
@@ -54,8 +54,8 @@ export function FinancialMetrics({
                 name="equity"
                 type="number"
                 step="1"
-                placeholder="2500000"
-                value={data.equity}
+                placeholder="0"
+                value={data.equity === 0 ? "" : data.equity}
                 onChange={handleInputChange}
               />
 
@@ -73,8 +73,8 @@ export function FinancialMetrics({
                 name="totalCapital"
                 type="number"
                 step="1"
-                placeholder="8000000"
-                value={data.totalCapital}
+                placeholder="0"
+                value={data.equity === 0 ? "" : data.totalCapital}
                 onChange={handleInputChange}
               />
 
@@ -94,8 +94,8 @@ export function FinancialMetrics({
                 name="currentAssets"
                 type="number"
                 step="1"
-                placeholder="3000000"
-                value={data.currentAssets}
+                placeholder="0"
+                value={data.equity === 0 ? "" : data.currentAssets}
                 onChange={handleInputChange}
               />
             </div>
@@ -113,8 +113,8 @@ export function FinancialMetrics({
                 name="currentLiabilities"
                 type="number"
                 step="1"
-                placeholder="2000000"
-                value={data.currentLiabilities}
+                placeholder="0"
+                value={data.equity === 0 ? "" : data.currentLiabilities}
                 onChange={handleInputChange}
               />
             </div>
@@ -132,8 +132,8 @@ export function FinancialMetrics({
                 name="totalLiabilities"
                 type="number"
                 step="1"
-                placeholder="5500000"
-                value={data.totalLiabilities}
+                placeholder="0"
+                value={data.equity === 0 ? "" : data.totalLiabilities}
                 onChange={handleInputChange}
               />
             </div>
@@ -149,8 +149,8 @@ export function FinancialMetrics({
                 name="operatingIncome"
                 type="number"
                 step="1"
-                placeholder="450000"
-                value={data.operatingIncome}
+                placeholder="0"
+                value={data.equity === 0 ? "" : data.operatingIncome}
                 onChange={handleInputChange}
               />
 
@@ -168,8 +168,8 @@ export function FinancialMetrics({
             name="netRevenue"
             type="number"
             step="1"
-            placeholder="9500000"
-            value={data.netRevenue}
+            placeholder="0"
+            value={data.equity === 0 ? "" : data.netRevenue}
             onChange={handleInputChange}
           />
         </div>
