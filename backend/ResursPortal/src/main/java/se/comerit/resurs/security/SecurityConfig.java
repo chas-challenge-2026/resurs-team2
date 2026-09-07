@@ -12,11 +12,11 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.crypto.argon2.Argon2PasswordEncoder;
 import tools.jackson.databind.ObjectMapper;
 
 
@@ -36,10 +36,14 @@ public class SecurityConfig {
         this.objectMapper = objectMapper;
     }
 
+
+
     @Bean
-    public BCryptPasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
+    public Argon2PasswordEncoder argon2PasswordEncoder() {
+       // saltLength, hasLength, parallelism, memory, iterations
+        return new Argon2PasswordEncoder(16, 32, 1, 65536, 3);
     }
+
 
     @Bean
     @Order(2)
