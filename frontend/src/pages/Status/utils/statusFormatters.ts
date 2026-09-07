@@ -1,5 +1,6 @@
 import type { Application } from "../../../types/application";
 
+/*
 export const formatCurrency = (
   amount?: number,
 ) => {
@@ -9,6 +10,13 @@ export const formatCurrency = (
   ) {
     return "0 kr";
   }
+*/
+
+  export const formatCurrency = (amount?: number) => {
+  amount ??= 0;
+
+  return new Intl.NumberFormat("sv-SE").format(amount) + " kr";
+};
 
   return (
     new Intl.NumberFormat(
