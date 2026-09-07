@@ -1,6 +1,6 @@
 export interface ApplicationDocument {
-    id: string;
-    filename: string;
-    docType: string;
-    createdAt: string;
+  id: number;
+  filename: string;
+  docType: string;
+  uploadedAt: string;
 }

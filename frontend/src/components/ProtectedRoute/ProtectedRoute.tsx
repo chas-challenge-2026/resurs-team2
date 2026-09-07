@@ -8,14 +8,17 @@ interface ProtectedRouteProps {
   allowedRole?: Role;
 }
 
-export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowedRole }) => {
-  const { isAuthenticated, isLoading, user } = useAuth();
+export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
+  children,
+  allowedRole,
+}) => {
+  const { isLoggedIn, isLoading, user } = useAuth();
 
   if (isLoading) {
     return <div className="loading-screen">Laddar...</div>;
   }
 
-  if (!isAuthenticated) {
+  if (!isLoggedIn) {
     return <Navigate to="/login" replace />;
   }
 

@@ -1,37 +1,129 @@
-import React from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import React, { useEffect, useState } from "react";
+
+import { useNavigate, useParams } from "react-router-dom";
+
 import "./Status.css";
+
 import type { Application } from "../../types/application";
-import type { ApplicationStep } from "../../types/timeline";
 import type { ApplicationDocument } from "../../types/document";
-import { mockApplications } from "../../mockdata/applications";
 
-interface StatusProps {
-  application?: Application;
-  steps?: ApplicationStep[];
-  documents?: ApplicationDocument[];
-  auditLogRaw?: string;
-}
+import { applicationApi } from "../../api/applicationApi";
 
-export const Status: React.FC<StatusProps> = ({
-  application: initialApplication,
-  steps = [],
-  documents = [],
-  auditLogRaw = "[]",
-}) => {
+export const Status: React.FC = () => {
   const { id } = useParams<{ id: string }>();
+
   const navigate = useNavigate();
 
-  const currentApplication =
-    initialApplication ||
-    mockApplications.find((app) => String(app.id) === String(id)) ||
-    mockApplications[0];
+  const [currentApplication, setCurrentApplication] =
+    useState<Application | null>(null);
 
-  if (!currentApplication) {
+  const [documents, setDocuments] = useState<ApplicationDocument[]>([]);
+
+  const [auditLogRaw, setAuditLogRaw] = useState<string>("[]");
+
+  const [workerName, setWorkerName] = useState<string>("");
+
+  const [loading, setLoading] = useState<boolean>(true);
+
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadApplication = async () => {
+      if (!id) {
+        setError("Ansöknings-ID saknas.");
+
+        setLoading(false);
+
+        return;
+      }
+
+      try {
+        setLoading(true);
+
+        setError(null);
+
+        const details = await applicationApi.getById(id);
+
+        setCurrentApplication(details.application);
+
+        setDocuments(details.documents);
+
+        setAuditLogRaw(details.auditLogRaw);
+
+        setWorkerName(details.workerName);
+      } catch (err: unknown) {
+        if (err instanceof Error) {
+          setError(err.message);
+        } else {
+          setError("Kunde inte hämta ansökan.");
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadApplication();
+  }, [id]);
+
+  const formatCurrency = (amount?: number) => {
+    if (amount === undefined || amount === null) {
+      return "0 kr";
+    }
+
+    return new Intl.NumberFormat("sv-SE").format(amount) + " kr";
+  };
+
+  const formatDateTime = (value?: string) => {
+    if (!value) {
+      return "-";
+    }
+
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+      return value;
+    }
+
+    return new Intl.DateTimeFormat("sv-SE", {
+      dateStyle: "short",
+      timeStyle: "short",
+    }).format(date);
+  };
+
+  const formatStatus = (status: Application["status"]) => {
+    switch (status) {
+      case "PENDING_DOCS":
+        return "Väntar på dokument";
+
+      case "UNDER_REVIEW":
+        return "Under granskning";
+
+      case "APPROVED":
+        return "Godkänd";
+
+      case "REJECTED":
+        return "Avslagen";
+
+      default:
+        return status;
+    }
+  };
+
+  if (loading) {
     return (
       <div className="status-page">
-        <p className="text-muted">Ingen ansökan hittades.</p>
+        <p>Laddar ansökan...</p>
+      </div>
+    );
+  }
+
+  if (error || !currentApplication) {
+    return (
+      <div className="status-page">
+        <p className="text-muted">{error ?? "Ingen ansökan hittades."}</p>
+
         <button
+          type="button"
           className="btn btn-default"
           onClick={() => navigate("/application")}
         >
@@ -41,14 +133,9 @@ export const Status: React.FC<StatusProps> = ({
     );
   }
 
-  const formatCurrency = (amount?: number) => {
-    if (!amount) return "0 kr";
-    return new Intl.NumberFormat("sv-SE").format(amount) + " kr";
-  };
-
   return (
     <div className="status-page">
-      <h2>Ansökan #{currentApplication.id || "000"}</h2>
+      <h2>Ansökan #{currentApplication.id}</h2>
 
       <p className="status-header">
         Status:{" "}
@@ -56,7 +143,7 @@ export const Status: React.FC<StatusProps> = ({
           className={`badge badge-${currentApplication.status}`}
           role="status"
         >
-          {currentApplication.status}
+          {formatStatus(currentApplication.status)}
         </span>
       </p>
 
@@ -73,6 +160,7 @@ export const Status: React.FC<StatusProps> = ({
               ? "Ansökan godkänd"
               : "Ansökan avslagen"}
           </h4>
+
           <p>{currentApplication.decisionReason}</p>
         </div>
       )}
@@ -82,72 +170,71 @@ export const Status: React.FC<StatusProps> = ({
           {currentApplication.scoringResult && (
             <div className="panel">
               <div className="panel-heading">Scoringresultat</div>
+
               <div className="panel-body">
                 {currentApplication.scoringResult}
               </div>
             </div>
           )}
 
-          <h3>Statusflöde</h3>
-          <div className="timeline">
-            {steps.map((step, index) => (
-              <div key={index} className="timeline-item">
-                <div className={`dot dot-${step.status}`} />
-                <div className="content">
-                  <strong>{step.name}</strong>{" "}
-                  {step.status === "DONE" && (
-                    <span className="label label-success">Klart</span>
-                  )}
-                  {step.status === "CURRENT" && (
-                    <span className="label label-warning">Pågår</span>
-                  )}
-                  {step.status === "PENDING" && (
-                    <span className="label label-default">Väntar</span>
-                  )}
-                  <br />
-                  <small>{step.description}</small>
-                  {step.eta && step.eta !== "—" && (
-                    <>
-                      <br />
-                      <small className="text-muted">
-                        Beräknad handläggningstid: <strong>{step.eta}</strong>
-                      </small>
-                    </>
-                  )}
-                </div>
-              </div>
-            ))}
+          <div className="panel">
+            <div className="panel-heading">Handläggare</div>
+
+            <div className="panel-body">{workerName || "Ej tilldelad"}</div>
           </div>
         </div>
 
         <div className="right-column">
           <div className="panel">
             <div className="panel-heading">Ansökningsdetaljer</div>
+
             <div className="panel-body">
               <p>
                 <strong>Företag:</strong>
+
                 <br />
-                {currentApplication.companyName || "-"}
+
+                {currentApplication.companyName}
               </p>
+
               <p>
                 <strong>Org.nummer:</strong>
+
                 <br />
-                {currentApplication.orgNumber || "-"}
+
+                {currentApplication.orgNumber}
               </p>
+
               <p>
                 <strong>Kreditbelopp:</strong>
+
                 <br />
+
                 {formatCurrency(currentApplication.requestedAmount)}
               </p>
+
               <p>
                 <strong>Syfte:</strong>
+
                 <br />
-                {currentApplication.purpose || "-"}
+
+                {currentApplication.purpose}
               </p>
+
               <p>
                 <strong>Inlämnad:</strong>
+
                 <br />
-                {currentApplication.createdAt || "-"}
+
+                {formatDateTime(currentApplication.createdAt)}
+              </p>
+
+              <p>
+                <strong>Senast uppdaterad:</strong>
+
+                <br />
+
+                {formatDateTime(currentApplication.updatedAt)}
               </p>
             </div>
           </div>
@@ -156,14 +243,14 @@ export const Status: React.FC<StatusProps> = ({
             <div className="panel-heading">
               Dokument
               <button
+                type="button"
                 className="btn btn-sm btn-primary pull-right"
-                onClick={() =>
-                  navigate(`/documents/${currentApplication.id}`)
-                }
+                onClick={() => navigate(`/documents/${currentApplication.id}`)}
               >
                 Ladda upp
               </button>
             </div>
+
             <div className="panel-body">
               {documents.length === 0 ? (
                 <p className="text-muted">Inga dokument uppladdade ännu.</p>
@@ -181,6 +268,7 @@ export const Status: React.FC<StatusProps> = ({
 
           <div className="panel">
             <div className="panel-heading">Händelselogg</div>
+
             <div className="panel-body">
               <pre>{auditLogRaw}</pre>
             </div>
@@ -196,6 +284,7 @@ export const Status: React.FC<StatusProps> = ({
         >
           Tillbaka
         </button>
+
         <button
           type="button"
           className="btn btn-primary"
