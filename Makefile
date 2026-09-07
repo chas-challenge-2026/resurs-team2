@@ -46,7 +46,7 @@ dev-run:
 test: test_frontend test_backend test_native
 
 test_frontend:
-	cd $(FRONTEND_DIR) && npm ci && npm run lint
+	cd $(FRONTEND_DIR) && npm ci && npm run lint && npm run build
 
 test_backend:
 	cd $(BACKEND_DIR) && ./mvnw test
