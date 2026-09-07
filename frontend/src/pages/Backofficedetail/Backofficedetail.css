@@ -15,6 +15,7 @@
 }
 
 /* Tvåkolumnslayout */
+
 .backoffice-layout {
   display: flex;
   gap: var(--spacing-lg);
@@ -28,36 +29,8 @@
   flex: 5;
 }
 
-/* Paneler */
-.panel {
-  background-color: var(--color-white);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-  margin-bottom: var(--spacing-md);
-  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.05);
-}
+/* Beslutspanel */
 
-.panel-heading {
-  padding: 10px var(--spacing-md);
-  background-color: var(--color-background);
-  border-bottom: 1px solid var(--color-border);
-  font-weight: 700;
-  color: var(--color-text);
-}
-
-.panel-body {
-  padding: var(--spacing-md);
-}
-
-.panel-body p {
-  margin: 0 0 var(--spacing-xs) 0;
-}
-
-.panel-body p:last-child {
-  margin-bottom: 0;
-}
-
-/* Beslutspanel (panel-warning) */
 .panel-warning {
   border-color: #faebcc;
 }
@@ -68,7 +41,8 @@
   border-bottom-color: #faebcc;
 }
 
-/* Knappar i beslutsrutan */
+/* Beslutsknappar */
+
 .button-group {
   display: flex;
   gap: var(--spacing-sm);
@@ -89,7 +63,8 @@
   background-color: var(--color-danger-hover);
 }
 
-/* Status Badges / Labels */
+/* Status */
+
 .label {
   display: inline-block;
   padding: 3px 7px;
@@ -116,7 +91,8 @@
   background-color: var(--color-muted);
 }
 
-/* Dokumentlista & Logg */
+/* Dokumentlista */
+
 .document-list {
   list-style: none;
   padding: 0;
@@ -136,6 +112,8 @@
   text-decoration: underline;
 }
 
+/* Händelselogg */
+
 .audit-pre {
   font-family: monospace;
   font-size: 12px;
@@ -146,4 +124,19 @@
   border: 1px solid var(--color-border);
   border-radius: var(--radius);
   margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* Mobil */
+
+@media (max-width: 768px) {
+  .backoffice-layout {
+    flex-direction: column;
+  }
+
+  .col-left,
+  .col-right {
+    width: 100%;
+  }
 }
