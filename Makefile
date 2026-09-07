@@ -15,7 +15,7 @@ FRONTEND_DIR := frontend
 BACKEND_DIR  := backend/ResursPortal
 TARGET_DIR   := target
 
-.PHONY: clean build test dev \
+.PHONY: clean build test test_frontend test_backend test_native dev \
         build-frontend build-backend package
         # build-native
 
@@ -44,9 +44,16 @@ dev-run:
 		-Dspring-boot.run.workingDirectory=$(ROOT)) & \
 	wait
 
-test: build-frontend
-	cd $(FRONTEND_DIR) && npm run lint
+test: test_frontend test_backend test_native
+
+test_frontend:
+	cd $(FRONTEND_DIR) && npm ci && npm run lint
+
+test_backend:
 	cd $(BACKEND_DIR) && ./mvnw test
+
+test_native:
+	@echo "No native tests yet – passing by default."
 
 clean:
 	rm -rf $(TARGET_DIR)

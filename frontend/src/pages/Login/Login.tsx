@@ -5,7 +5,7 @@ import "./Login.css";
 
 export const Login: React.FC = () => {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { loginCompany, loginCaseWorker } = useAuth();
 
   const [activeTab, setActiveTab] = useState<"company" | "caseWorker">("company");
   const [orgNumber, setOrgNumber] = useState<string>("");
@@ -20,12 +20,7 @@ export const Login: React.FC = () => {
     setLoading(true);
 
     try {
-      await login({
-        id: orgNumber,
-        name: "Företag",
-        email: email,
-        role: "COMPANY",
-      });
+      await loginCompany({ orgNumber });
       navigate("/application");
     } catch (err: unknown) {
       if (err instanceof Error) {
@@ -44,12 +39,7 @@ export const Login: React.FC = () => {
     setLoading(true);
 
     try {
-      await login({
-        id: "cw-1",
-        name: "Handläggare",
-        email: email,
-        role: "CASEWORKER",
-      });
+      await loginCaseWorker({ email, password });
       navigate("/backoffice");
     } catch (err: unknown) {
       if (err instanceof Error) {
