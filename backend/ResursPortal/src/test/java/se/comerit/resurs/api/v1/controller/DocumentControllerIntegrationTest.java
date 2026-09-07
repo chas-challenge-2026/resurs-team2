@@ -31,6 +31,7 @@ import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
+import se.comerit.resurs.api.v1.service.DocumentService;
 import se.comerit.resurs.entity.Application;
 import se.comerit.resurs.entity.Company;
 import se.comerit.resurs.entity.Document;
@@ -42,7 +43,6 @@ import se.comerit.resurs.repository.DocumentRepository;
 import se.comerit.resurs.security.CompanyPrincipal;
 import se.comerit.resurs.security.WithCaseWorker;
 import se.comerit.resurs.security.WithCompany;
-import se.comerit.resurs.service.DocumentService;
 
 @SpringBootTest(properties = {
         "spring.datasource.url=jdbc:h2:mem:document_api;MODE=PostgreSQL"
