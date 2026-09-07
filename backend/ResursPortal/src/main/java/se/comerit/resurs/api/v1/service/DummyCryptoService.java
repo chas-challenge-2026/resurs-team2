@@ -1,31 +1,43 @@
 package se.comerit.resurs.api.v1.service;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
+
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
-
-import se.comerit.resurs.exception.CryptoException;
 
 @Service
 @Profile("test")
 public class DummyCryptoService implements ResursCryptoService {
 
+    private final SecureRandom secureRandom = new SecureRandom();
+
     @Override
     public byte[] encryptPii(String plaintext) {
-        throw new CryptoException("Native crypto not initialised (test mode)");
+        return plaintext.getBytes(StandardCharsets.UTF_8);
     }
 
     @Override
     public String decryptPii(byte[] ciphertext, byte[] nonce) {
-        throw new CryptoException("Native crypto not initialised (test mode)");
+        return new String(ciphertext, StandardCharsets.UTF_8);
     }
 
     @Override
     public byte[] blindIndex(String value) {
-        throw new CryptoException("Native crypto not initialised (test mode)");
+        try {
+            return MessageDigest.getInstance("SHA-256")
+                    .digest(value.getBytes(StandardCharsets.UTF_8));
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @Override
     public byte[] generateNonce() {
-        throw new CryptoException("Native crypto not initialised (test mode)");
+        byte[] nonce = new byte[12];
+        secureRandom.nextBytes(nonce);
+        return nonce;
     }
 }
