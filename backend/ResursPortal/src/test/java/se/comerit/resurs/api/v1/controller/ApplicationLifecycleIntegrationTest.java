@@ -6,6 +6,10 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import org.junit.jupiter.api.BeforeEach;
+import org.springframework.security.crypto.argon2.Argon2PasswordEncoder;
+
+import se.comerit.resurs.repository.CaseWorkerRepository;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.DisplayName;
@@ -78,6 +82,20 @@ class ApplicationLifecycleIntegrationTest {
 
     @Autowired
     private ApplicationRepository applicationRepository;
+
+    @Autowired
+    private CaseWorkerRepository caseWorkerRepository;
+
+    @Autowired
+    private Argon2PasswordEncoder argon2;
+
+    @BeforeEach
+    void ensureCaseWorkerPasswordIsArgon2() {
+        caseWorkerRepository.findByEmail(CASE_WORKER_EMAIL).ifPresent(cw -> {
+            cw.setPassword(argon2.encode(CASE_WORKER_PASSWORD));
+            caseWorkerRepository.save(cw);
+        });
+    }
 
     @Test
     @DisplayName("Full lifecycle: manual-review -> case worker approval -> company confirms")
