@@ -16,7 +16,7 @@ BACKEND_DIR  := backend/ResursPortal
 TARGET_DIR   := target
 
 .PHONY: clean build test test_frontend test_backend test_native dev \
-        build-frontend build-backend package
+        build-frontend build-backend package dev-vite dev-spring
         # build-native
 
 # ── Aggregate targets ─────────────────────────────────────────────
@@ -29,19 +29,21 @@ package: build
 
 # Run Vite dev server (HMR on :5173) with Spring Boot (local profile on :8083) concurrently.
 # Vite proxies /api -> :8083, so no CORS config is needed.
+# Parallel make (-j2) lets make handle Ctrl-C: it forwards the signal to both
+# children and waits for them to exit cleanly (no shell trap / kill 0 hacks).
 dev:
 	cd $(FRONTEND_DIR) && test -d node_modules || npm ci
-	$(MAKE) dev-run
-
-dev-run:
 	@echo "Starting Vite dev server (:5173) and Spring Boot (:8083)..."
 	@echo "  Frontend: http://localhost:5173"
 	@echo "  Spring:   http://localhost:8083"
-	@trap 'kill 0' INT TERM; \
-	(cd $(FRONTEND_DIR) && npm run dev) & \
-	(cd $(BACKEND_DIR) && ./mvnw -Plocal spring-boot:run \
-		-Dspring-boot.run.profiles=local) & \
-	wait
+	$(MAKE) -j2 dev-vite dev-spring
+
+dev-vite:
+	cd $(FRONTEND_DIR) && npm run dev
+
+dev-spring:
+	cd $(BACKEND_DIR) && ./mvnw -Plocal spring-boot:run \
+		-Dspring-boot.run.profiles=local
 
 test: test_frontend test_backend test_native
 
