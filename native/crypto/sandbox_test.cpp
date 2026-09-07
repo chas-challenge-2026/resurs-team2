@@ -1,5 +1,6 @@
 #include "key_manager.hpp"
 #include "aes_gcm_cipher.hpp"
+#include "hmac_sha256.hpp"
 
 #include <cstring>
 #include <cstdint>
@@ -77,6 +78,66 @@ namespace
         return false;
     }
 
+    // Runs the AES-GCM + HMAC checks against one (aes, lookup) key pair.
+    // Called once with random keys and once with the real generated key file,
+    // so both paths exercise the same behaviour.
+    void crypto_demo(const char *label,
+                     const resurs::Key &aes,
+                     const resurs::Key &lookup,
+                     bool dump_keys)
+    {
+        std::printf("\n--- AesGcmCipher demo: %s ---\n", label);
+
+        resurs::Nonce nonce{};
+        RAND_bytes(nonce.data(), static_cast<int>(nonce.size()));
+
+        const std::string plain = "556000-1234";
+        const auto ct = resurs::AesGcmCipher::encrypt(plain, aes, nonce);
+
+        check(ct.size() == plain.size() + resurs::kTagLen,
+              "ciphertext length == plaintext + tag");
+        check(std::memcmp(ct.data(), plain.data(), plain.size()) != 0,
+              "ciphertext bytes differ from plaintext");
+        const std::string back = resurs::AesGcmCipher::decrypt(ct, aes, nonce);
+        check(back == plain, "encrypt -> decrypt round-trip");
+
+        auto tampered = ct;
+        tampered[0] ^= 0x01;
+        check(throws_as<resurs::AuthError>([&]
+                                           { resurs::AesGcmCipher::decrypt(tampered, aes, nonce); }),
+              "tampered ciphertext -> AuthError");
+
+        resurs::Key wrong_key = aes;
+        wrong_key[0] ^= 0x01;
+        check(throws_as<resurs::AuthError>([&]
+                                           { resurs::AesGcmCipher::decrypt(ct, wrong_key, nonce); }),
+              "wrong key -> AuthError");
+
+        resurs::Nonce wrong_nonce = nonce;
+        wrong_nonce[0] ^= 0x01;
+        check(throws_as<resurs::AuthError>([&]
+                                           { resurs::AesGcmCipher::decrypt(ct, aes, wrong_nonce); }),
+              "wrong nonce -> AuthError");
+
+        const resurs::Hmac h1 = resurs::hmacSha256(plain, lookup);
+        const resurs::Hmac h2 = resurs::hmacSha256(plain, lookup);
+        check(h1 == h2, "hmacSha256 deterministic for the same input");
+        check(h1 != resurs::hmacSha256("556000-9999", lookup),
+              "hmacSha256 differs for different input");
+
+        // output
+        std::printf("  plaintext      : \"%s\"\n", plain.c_str());
+        if (dump_keys)
+        {
+            dump("aes key", aes.data(), aes.size());
+            dump("lookup key", lookup.data(), lookup.size());
+        }
+        dump("nonce", nonce.data(), nonce.size());
+        dump("ciphertext+tag", ct.data(), ct.size());
+        dump("hmac", h1.data(), h1.size());
+        std::printf("  decrypted      : \"%s\"\n", back.c_str());
+    }
+
     // Creates a temp file with `nbytes` random bytes on construction
     // removes it on destruction. Copy disabled
     class TempKeyFile
@@ -128,12 +189,15 @@ int main()
           "key() before load throws");
 
     resurs::Key k{};
+    resurs::Key lk{};
     for (std::size_t i = 0; i < k.size(); ++i)
     {
         k[i] = static_cast<std::uint8_t>(i + 1);
+        lk[i] = static_cast<std::uint8_t>(0x80 + i);
     }
-    km.loadFromBytes(k);
+    km.loadFromBytes(k, lk);
     check(km.key() == k, "loadFromBytes -> key() round-trip");
+    check(km.lookupKey() == lk, "loadFromBytes -> lookupKey() round-trip");
     check(km.isLoaded(), "isLoaded() true after loadFromBytes");
 
     km.cleanse();
@@ -141,10 +205,13 @@ int main()
     check(throws_runtime_error([&]
                                { (void)km.key(); }),
           "key() after cleanse throws");
+    check(throws_runtime_error([&]
+                               { (void)km.lookupKey(); }),
+          "lookupKey() after cleanse throws");
 
-    TempKeyFile good(32);
-    TempKeyFile too_short(31);
-    TempKeyFile too_long(33);
+    TempKeyFile good(64);
+    TempKeyFile too_short(63);
+    TempKeyFile too_long(65);
 
     bool loaded_ok = true;
     try
@@ -155,66 +222,89 @@ int main()
     {
         loaded_ok = false;
     }
-    check(loaded_ok, "loadFromFile(32 bytes) succeeds");
+    check(loaded_ok, "loadFromFile(64 bytes) succeeds");
 
     check(throws_runtime_error([&]
                                { km.loadFromFile(too_short.path()); }),
-          "loadFromFile(31 bytes) throws");
+          "loadFromFile(63 bytes) throws");
     check(throws_runtime_error([&]
                                { km.loadFromFile(too_long.path()); }),
-          "loadFromFile(33 bytes) throws");
+          "loadFromFile(65 bytes) throws");
     check(throws_runtime_error([&]
                                { km.loadFromFile("/nonexistent/resurs.key"); }),
           "loadFromFile(missing) throws");
 
     km.cleanse();
 
-    // --- AesGcmCipher demo ---
+    // --- hmacSha256 ---
     {
-        resurs::Key demo_key{};
-        resurs::Nonce demo_nonce{};
-        RAND_bytes(demo_key.data(), static_cast<int>(demo_key.size()));
-        RAND_bytes(demo_nonce.data(), static_cast<int>(demo_nonce.size()));
+        resurs::Key hk{};
+        RAND_bytes(hk.data(), static_cast<int>(hk.size()));
 
-        const std::string plain = "556000-1234";
-        const auto demo_ciphertext = resurs::AesGcmCipher::encrypt(plain, demo_key, demo_nonce);
+        const resurs::Hmac a1 = resurs::hmacSha256("556000-1234", hk);
+        const resurs::Hmac a2 = resurs::hmacSha256("556000-1234", hk);
+        const resurs::Hmac b = resurs::hmacSha256("556000-9999", hk);
 
-        check(demo_ciphertext.size() == plain.size() + resurs::kTagLen,
-              "ciphertext length == plaintext + tag");
-        check(std::memcmp(demo_ciphertext.data(), plain.data(), plain.size()) != 0,
-              "ciphertext bytes differ from plaintext");
-        const std::string back = resurs::AesGcmCipher::decrypt(demo_ciphertext, demo_key, demo_nonce);
-        check(back == plain, "encrypt -> decrypt round-trip");
+        check(a1 == a2, "hmacSha256 is deterministic for the same input");
+        check(a1 != b, "hmacSha256 differs for different input");
 
-        auto tampered = demo_ciphertext;
-        tampered[0] ^= 0x01;
-        check(throws_as<resurs::AuthError>([&]
-                                           { resurs::AesGcmCipher::decrypt(tampered, demo_key, demo_nonce); }),
-              "tampered ciphertext -> AuthError");
+        resurs::Key hk2 = hk;
+        hk2[0] ^= 0x01;
+        check(resurs::hmacSha256("556000-1234", hk2) != a1,
+              "hmacSha256 differs for a different key");
 
-        resurs::Key wrong_key = demo_key;
-        wrong_key[0] ^= 0x01;
-        check(throws_as<resurs::AuthError>([&]
-                                           { resurs::AesGcmCipher::decrypt(demo_ciphertext, wrong_key, demo_nonce); }),
-              "wrong key -> AuthError");
+        bool empty_ok = true;
+        try
+        {
+            (void)resurs::hmacSha256("", hk);
+        }
+        catch (...)
+        {
+            empty_ok = false;
+        }
+        check(empty_ok, "hmacSha256 accepts empty input");
 
-        resurs::Nonce wrong_nonce = demo_nonce;
-        wrong_nonce[0] ^= 0x01;
-        check(throws_as<resurs::AuthError>([&]
-                                           { resurs::AesGcmCipher::decrypt(demo_ciphertext, demo_key, wrong_nonce); }),
-              "wrong nonce -> AuthError");
+        dump("hmac(556000-1234)", a1.data(), a1.size());
+    }
 
-        // output
+    // --- AesGcmCipher demo, variation 1: random keys ---
+    {
+        resurs::Key rand_aes{};
+        resurs::Key rand_lookup{};
+        RAND_bytes(rand_aes.data(), static_cast<int>(rand_aes.size()));
+        RAND_bytes(rand_lookup.data(), static_cast<int>(rand_lookup.size()));
+        crypto_demo("random keys", rand_aes, rand_lookup, /*dump_keys=*/true);
+    }
 
-        std::printf("\n--- AesGcmCipher demo ---\n");
-        std::printf("  plaintext      : \"%s\"\n", plain.c_str());
-        dump("key", demo_key.data(), demo_key.size());
-        dump("nonce", demo_nonce.data(), demo_nonce.size());
-        dump("ciphertext", demo_ciphertext.data(), plain.size());
-        dump("tag", demo_ciphertext.data() + plain.size(), resurs::kTagLen);
-        dump("ciphertext+tag", demo_ciphertext.data(), demo_ciphertext.size());
-        std::printf("length   :  plaintext=%zu  ciphertext+tag=%zu  tag=%zu\n", plain.size(), demo_ciphertext.size(), resurs::kTagLen);
-        std::printf("decrypted:  \"%s\"\n", back.c_str());
+    // --- AesGcmCipher demo, variation 2: real generated key file ---
+    {
+#ifdef RESURS_REAL_KEY_FILE
+        const char *real_key = RESURS_REAL_KEY_FILE;
+        if (fs::exists(real_key))
+        {
+            bool loaded = true;
+            try
+            {
+                km.loadFromFile(real_key);
+            }
+            catch (...)
+            {
+                loaded = false;
+            }
+            check(loaded, "real key file loads (exactly 64 bytes)");
+            if (loaded)
+            {
+                crypto_demo("real key file", km.key(), km.lookupKey(), /*dump_keys=*/false);
+                km.cleanse();
+            }
+        }
+        else
+        {
+            std::printf("\n[SKIP] real key file not found: %s\n", real_key);
+        }
+#else
+        std::printf("\n[SKIP] RESURS_REAL_KEY_FILE not defined\n");
+#endif
     }
 
     std::printf("\n%d failure(s)\n", g_failures);

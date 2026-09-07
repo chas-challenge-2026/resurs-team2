@@ -16,8 +16,11 @@
 #define RESURS_KEY_LEN   32   // AES-256
 #define RESURS_NONCE_LEN 12   // GCM standard nonce
 #define RESURS_TAG_LEN   16   // GCM tag, full 128-bit
+#define RESURS_HMAC_LEN  32   // HMAC-SHA256 blind-index output
 #define RESURS_KEY_VERSION_LEN 1 // key version prefix size 1 byte
 #define RESURS_KEY_VERSION_CURRENT 1 // current key version for encryption
+
+// Key file layout: [ AES-256 key : 32 ][ HMAC lookup key : 32 ] — exactly 64 raw bytes.
 
 enum {
     RESURS_OK               =  0,
@@ -33,7 +36,8 @@ enum {
 #ifdef __cplusplus
 extern "C"{
 #endif
-    // Load the 32-byte key from key_file_path. Call once at startup.
+    // Load the 64-byte key file (32 AES + 32 HMAC lookup) from key_file_path.
+    // Call once at startup.
     // Returns RESURS_OK, RESURS_ERR_KEY_IO, RESURS_ERR_INVALID_ARG, RESURS_ERR_INTERNAL
     RESURS_API int resurs_crypto_init(const char* key_file_path);
 
@@ -56,9 +60,18 @@ extern "C"{
     RESURS_API int resurs_decrypt_pii(const unsigned char* nonce, const unsigned char* ciphertext,
                                   size_t ciphertext_len, char* plaintext_out, size_t* plaintext_len);
 
-    // wipes the key from memory (OPENSSL_cleanse)
-    // safe to call multiple times and before init 
-    // after it, encrypt/decrypt return RESURS_ERR_NOT_INIT
+    // Deterministic HMAC-SHA256 of `data` under the private lookup key, for use
+    // as a blind-index value in a WHERE clause. The same input always yields the
+    // same 32 bytes. The module owns the key; the caller never sees it.
+    // data may be empty (data_len == 0). data_len is the byte length of data.
+    // hmac_out must be at least RESURS_HMAC_LEN bytes; exactly that many are written.
+    // Returns RESURS_OK, RESURS_ERR_NOT_INIT, RESURS_ERR_INVALID_ARG, RESURS_ERR_INTERNAL
+    RESURS_API int resurs_hmac_sha256(const unsigned char* data, size_t data_len,
+                                  unsigned char* hmac_out);
+
+    // wipes the keys from memory (OPENSSL_cleanse)
+    // safe to call multiple times and before init
+    // after it, encrypt/decrypt/hmac return RESURS_ERR_NOT_INIT
     RESURS_API void resurs_crypto_shutdown(void);
        
 #ifdef __cplusplus

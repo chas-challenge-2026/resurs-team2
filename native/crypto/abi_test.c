@@ -26,19 +26,20 @@ static int write_file(const char *path, const unsigned char *data, size_t n)
 
 int main(void)
 {
-    unsigned char key32[32];
-    for (int i = 0; i < 32; i++)
+    /* Key file: 64 raw bytes = 32 AES + 32 HMAC lookup. Deterministic for the test. */
+    unsigned char key64[64];
+    for (int i = 0; i < 64; i++)
     {
-        key32[i] = (unsigned char)(i + 1);
+        key64[i] = (unsigned char)(i + 1);
     }
 
-    check(write_file("abi_key32.bin", key32, 32) == 0, "wrote 32-byte key file");
-    check(write_file("abi_key31.bin", key32, 31) == 0, "wrote 31-byte key file");
+    check(write_file("abi_key64.bin", key64, 64) == 0, "wrote 64-byte key file");
+    check(write_file("abi_key63.bin", key64, 63) == 0, "wrote 63-byte key file");
 
     check(resurs_crypto_init(NULL) == RESURS_ERR_INVALID_ARG, "init(NULL) -> INVALID_ARG");
     check(resurs_crypto_init("/nonexistent/resurs.key") == RESURS_ERR_KEY_IO, "init(missing) -> KEY_IO");
-    check(resurs_crypto_init("abi_key31.bin") == RESURS_ERR_KEY_IO, "init(31 bytes) -> KEY_IO");
-    check(resurs_crypto_init("abi_key32.bin") == RESURS_OK, "init(32 bytes) -> OK");
+    check(resurs_crypto_init("abi_key63.bin") == RESURS_ERR_KEY_IO, "init(63 bytes) -> KEY_IO");
+    check(resurs_crypto_init("abi_key64.bin") == RESURS_OK, "init(64 bytes) -> OK");
 
     /* --- round-trip (key is loaded) --- */
     {
@@ -89,17 +90,49 @@ int main(void)
               "wrong nonce -> AUTH");
     }
 
+    /* --- blind-index HMAC (key is loaded) --- */
+    {
+        const char *org = "556000-1234";
+        const size_t org_len = strlen(org);
+
+        unsigned char h1[RESURS_HMAC_LEN];
+        unsigned char h2[RESURS_HMAC_LEN];
+        unsigned char h3[RESURS_HMAC_LEN];
+
+        check(resurs_hmac_sha256((const unsigned char *)org, org_len, h1) == RESURS_OK,
+              "hmac -> OK");
+        check(resurs_hmac_sha256((const unsigned char *)org, org_len, h2) == RESURS_OK,
+              "hmac (again) -> OK");
+        check(memcmp(h1, h2, RESURS_HMAC_LEN) == 0,
+              "hmac is deterministic for the same input");
+
+        check(resurs_hmac_sha256((const unsigned char *)"556000-9999", 11, h3) == RESURS_OK,
+              "hmac (other input) -> OK");
+        check(memcmp(h1, h3, RESURS_HMAC_LEN) != 0,
+              "hmac differs for different input");
+
+        check(resurs_hmac_sha256(NULL, 0, h1) == RESURS_ERR_INVALID_ARG,
+              "hmac(NULL data) -> INVALID_ARG");
+        check(resurs_hmac_sha256((const unsigned char *)org, org_len, NULL) == RESURS_ERR_INVALID_ARG,
+              "hmac(NULL out) -> INVALID_ARG");
+    }
+
     resurs_crypto_shutdown();
     resurs_crypto_shutdown();
     check(1, "shutdown x2 no crash");
 
-    check(resurs_encrypt_pii("x", NULL, NULL, NULL) == RESURS_ERR_NOT_INIT,
-          "encrypt after shutdown -> NOT_INIT");
-    check(resurs_decrypt_pii(NULL, NULL, 0, NULL, NULL) == RESURS_ERR_NOT_INIT,
-          "decrypt after shutdown -> NOT_INIT");
+    {
+        unsigned char h[RESURS_HMAC_LEN];
+        check(resurs_encrypt_pii("x", NULL, NULL, NULL) == RESURS_ERR_NOT_INIT,
+              "encrypt after shutdown -> NOT_INIT");
+        check(resurs_decrypt_pii(NULL, NULL, 0, NULL, NULL) == RESURS_ERR_NOT_INIT,
+              "decrypt after shutdown -> NOT_INIT");
+        check(resurs_hmac_sha256((const unsigned char *)"x", 1, h) == RESURS_ERR_NOT_INIT,
+              "hmac after shutdown -> NOT_INIT");
+    }
 
-    remove("abi_key32.bin");
-    remove("abi_key31.bin");
+    remove("abi_key64.bin");
+    remove("abi_key63.bin");
 
     printf("\n%d failure(s)\n", g_failures);
     return g_failures == 0 ? 0 : 1;

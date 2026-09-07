@@ -1,6 +1,7 @@
 #include "resurs_crypto.h"
 #include "key_manager.hpp"
 #include "aes_gcm_cipher.hpp"
+#include "hmac_sha256.hpp"
 
 #include <stdexcept>
 #include <cstring>
@@ -111,6 +112,36 @@ extern "C"
         catch (const resurs::AuthError &)
         {
             return RESURS_ERR_AUTH;
+        }
+        catch (...)
+        {
+            return RESURS_ERR_INTERNAL;
+        }
+    }
+
+    int resurs_hmac_sha256(const unsigned char *data, size_t data_len,
+                           unsigned char *hmac_out)
+    {
+        if (!resurs::KeyManager::instance().isLoaded())
+        {
+            return RESURS_ERR_NOT_INIT;
+        }
+        // data may be empty, but the pointer must be valid; hmac_out is required.
+        if (data == nullptr || hmac_out == nullptr)
+        {
+            return RESURS_ERR_INVALID_ARG;
+        }
+
+        try
+        {
+            resurs::Key lookup_key = resurs::KeyManager::instance().lookupKey();
+
+            resurs::Hmac mac = resurs::hmacSha256(
+                {reinterpret_cast<const char *>(data), data_len}, lookup_key);
+
+            std::memcpy(hmac_out, mac.data(), RESURS_HMAC_LEN);
+
+            return RESURS_OK;
         }
         catch (...)
         {

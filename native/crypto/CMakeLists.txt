@@ -2,6 +2,7 @@
 add_library(resurs_crypto SHARED
     resurs_crypto.cpp
     aes_gcm_cipher.cpp
+    hmac_sha256.cpp
     key_manager.cpp
 )
 
@@ -30,9 +31,17 @@ add_executable(sandbox_test
     sandbox_test.cpp
     key_manager.cpp
     aes_gcm_cipher.cpp
+    hmac_sha256.cpp
 )
 
 target_link_libraries(sandbox_test PRIVATE OpenSSL::Crypto)
+
+# Absolute path to the committed 64-byte key file, so sandbox_test can also run
+# the crypto suite against the real generated key (skipped if the file is absent).
+target_compile_definitions(sandbox_test PRIVATE
+    RESURS_REAL_KEY_FILE="${CMAKE_CURRENT_SOURCE_DIR}/../../infra/secrets/resurs-crypto.key"
+)
+
 add_test(NAME sandbox_test COMMAND sandbox_test)
 
 # --- Local ABI test (links against libresurs_crypto.so) ---
