@@ -1,5 +1,7 @@
 package se.comerit.resurs.api.v1.service;
 
+import de.mkammerer.argon2.Argon2;
+import org.springframework.security.crypto.argon2.Argon2PasswordEncoder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -19,16 +21,16 @@ public class AuthService {
     private final CompanyRepository companyRepository;
     private final CaseWorkerRepository caseWorkerRepository;
     private final SessionTokenStore tokenStore;
-    private final BCryptPasswordEncoder passwordEncoder;
+    private final Argon2PasswordEncoder argon2;
 
     public AuthService(BankIdService bankIdService, CompanyRepository companyRepository,
-            CaseWorkerRepository caseWorkerRepository, SessionTokenStore tokenStore,
-            BCryptPasswordEncoder passwordEncoder) {
+            CaseWorkerRepository caseWorkerRepository, SessionTokenStore tokenStore,Argon2PasswordEncoder argon2
+            ) {
         this.bankIdService = bankIdService;
         this.companyRepository = companyRepository;
         this.caseWorkerRepository = caseWorkerRepository;
         this.tokenStore = tokenStore;
-        this.passwordEncoder = passwordEncoder;
+        this.argon2 = argon2;
     }
 
     public AuthTokens loginCompany(String orgNumber, String fingerprint) {
@@ -44,7 +46,8 @@ public class AuthService {
     public AuthTokens loginCaseWorker(String email, String password, String fingerprint) {
         return caseWorkerRepository.findByEmail(email)
                 .flatMap(cw -> {
-                    if (verifyCaseWorker(cw, password)) {
+                    String storedPassword = cw.getPassword();
+                    if (argon2.matches(password, storedPassword)) {
                         AuthTokens token = tokenStore.issue(
                                 new CaseWorkerPrincipal(cw.getId(), cw.getName(), email), fingerprint);
                         return java.util.Optional.of(token);
@@ -64,6 +67,6 @@ public class AuthService {
     }
 
     private boolean verifyCaseWorker(CaseWorker cw, String password) {
-        return passwordEncoder.matches(password, cw.getPassword());
+        return argon2.matches(password, cw.getPassword());
     }
 }
