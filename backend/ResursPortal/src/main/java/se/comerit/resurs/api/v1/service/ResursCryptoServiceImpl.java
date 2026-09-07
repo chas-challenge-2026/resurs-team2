@@ -4,12 +4,15 @@ import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.util.Locale;
 
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 
 import se.comerit.resurs.config.ResursCryptoLibrary;
 import se.comerit.resurs.exception.CryptoException;
 
 @Service
+@Profile("!test")
 public class ResursCryptoServiceImpl implements ResursCryptoService {
 
     private static final int NONCE_LEN = 12;
@@ -21,8 +24,8 @@ public class ResursCryptoServiceImpl implements ResursCryptoService {
     private final ResursCryptoLibrary library;
     private final SecureRandom secureRandom = new SecureRandom();
 
-    public ResursCryptoServiceImpl(ResursCryptoLibrary library) {
-        this.library = library;
+    public ResursCryptoServiceImpl(ObjectProvider<ResursCryptoLibrary> libraryProvider) {
+        this.library = libraryProvider.getIfAvailable();
     }
 
     @Override
@@ -33,7 +36,7 @@ public class ResursCryptoServiceImpl implements ResursCryptoService {
         byte[] nonce = generateNonce();
 
         long[] outLen = new long[]{ cipherLen };
-        int rc = library.resurs_encrypt_pii(plaintext, nonce, ciphertext, outLen);
+        int rc = library().resurs_encrypt_pii(plaintext, nonce, ciphertext, outLen);
         if (rc != 0) {
             throw new CryptoException(rc);
         }
@@ -55,7 +58,7 @@ public class ResursCryptoServiceImpl implements ResursCryptoService {
         byte[] plaintextBuf = new byte[plainLen];
         long[] outLen = new long[]{ plainLen };
 
-        int rc = library.resurs_decrypt_pii(nonce, ciphertext, ciphertext.length,
+        int rc = library().resurs_decrypt_pii(nonce, ciphertext, ciphertext.length,
                 plaintextBuf, outLen);
         if (rc != 0) {
             throw new CryptoException(rc);
@@ -71,7 +74,7 @@ public class ResursCryptoServiceImpl implements ResursCryptoService {
         byte[] data = canonical.getBytes(StandardCharsets.UTF_8);
         byte[] hmac = new byte[HMAC_LEN];
 
-        int rc = library.resurs_hmac_sha256(data, data.length, hmac);
+        int rc = library().resurs_hmac_sha256(data, data.length, hmac);
         if (rc != 0) {
             throw new CryptoException(rc);
         }
@@ -84,6 +87,13 @@ public class ResursCryptoServiceImpl implements ResursCryptoService {
         byte[] nonce = new byte[NONCE_LEN];
         secureRandom.nextBytes(nonce);
         return nonce;
+    }
+
+    private ResursCryptoLibrary library() {
+        if (library == null) {
+            throw new CryptoException("Native crypto not initialised");
+        }
+        return library;
     }
 
     private String canonicalize(String value) {
