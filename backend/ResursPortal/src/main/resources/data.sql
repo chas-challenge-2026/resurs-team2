@@ -3,7 +3,7 @@ INSERT INTO companies (org_number, company_name, authorized_signatory) VALUES
 ('556000-5678', 'Göteborg Handel AB', 'Maria Svensson');
 
 INSERT INTO case_workers (name, email, password) VALUES
-('Karin Handläggare', 'karin@resurs.se', 'password123');
+('Karin Handläggare', 'karin@resurs.se', '{argon2}$argon2id$v=19$');
 
 INSERT INTO applications (company_id, requested_amount, purpose, status, decision, scoring_result, audit_log) VALUES
 (1, 500000.00, 'Expansion av verksamheten', 'UNDER_REVIEW', null, 'FLAGGED: soliditet=0.28 (OK), likviditetsgrad=0.95 (FLAGGED), skuldsättningsgrad=2.1 (OK)', '[{"ts":"2026-01-15T10:00:00","action":"APPLICATION_CREATED"},{"ts":"2026-01-15T10:00:01","action":"SCORING_RUN","result":"REVIEW"}]');
