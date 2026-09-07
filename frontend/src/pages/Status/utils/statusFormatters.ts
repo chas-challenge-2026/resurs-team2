@@ -10,6 +10,13 @@ export const formatCurrency = (
   ) {
     return "0 kr";
   }
+
+    return (
+    new Intl.NumberFormat(
+      "sv-SE",
+    ).format(amount) + " kr"
+  );
+};
 */
 
   export const formatCurrency = (amount?: number) => {
@@ -18,12 +25,7 @@ export const formatCurrency = (
   return new Intl.NumberFormat("sv-SE").format(amount) + " kr";
 };
 
-  return (
-    new Intl.NumberFormat(
-      "sv-SE",
-    ).format(amount) + " kr"
-  );
-};
+
 
 export const formatDateTime = (
   value?: string,
