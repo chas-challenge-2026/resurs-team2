@@ -1,6 +1,6 @@
 import { createContext } from "react";
 
-export type Role = "COMPANY" | "CASEWORKER" | "ADMIN";
+export type Role = "COMPANY" | "CASEWORKER";
 
 export interface User {
   id: string;
@@ -20,12 +20,13 @@ export interface CaseWorkerCredentials {
 
 export interface AuthContextType {
   user: User | null;
-  token: string | null;
-  isAuthenticated: boolean;
+  isLoggedIn: boolean;
   isLoading: boolean;
   loginCompany: (credentials: CompanyCredentials) => Promise<void>;
   loginCaseWorker: (credentials: CaseWorkerCredentials) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
 }
 
-export const AuthContext = createContext<AuthContextType | undefined>(undefined);
+export const AuthContext = createContext<AuthContextType | undefined>(
+  undefined,
+);

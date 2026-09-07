@@ -7,14 +7,18 @@ export const Login: React.FC = () => {
   const navigate = useNavigate();
   const { loginCompany, loginCaseWorker } = useAuth();
 
-  const [activeTab, setActiveTab] = useState<"company" | "caseWorker">("company");
+  const [activeTab, setActiveTab] = useState<"company" | "caseWorker">(
+    "company",
+  );
   const [orgNumber, setOrgNumber] = useState<string>("");
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
 
-  const handleCompanyLogin = async (e: React.SyntheticEvent<HTMLFormElement>) => {
+  const handleCompanyLogin = async (
+    e: React.SyntheticEvent<HTMLFormElement>,
+  ) => {
     e.preventDefault();
     setError(null);
     setLoading(true);
@@ -33,7 +37,9 @@ export const Login: React.FC = () => {
     }
   };
 
-  const handleCaseWorkerLogin = async (e: React.SyntheticEvent<HTMLFormElement>) => {
+  const handleCaseWorkerLogin = async (
+    e: React.SyntheticEvent<HTMLFormElement>,
+  ) => {
     e.preventDefault();
     setError(null);
     setLoading(true);
