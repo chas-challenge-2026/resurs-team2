@@ -20,3 +20,5 @@ dist/
 # Native C++
 native/build/
 
+# C++ Crypto key: 
+/infra/secrets/*
