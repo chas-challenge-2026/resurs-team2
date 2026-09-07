@@ -18,7 +18,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockMultipartFile;
 
-import se.comerit.resurs.dto.DocumentDto;
+import se.comerit.resurs.api.v1.dto.DocumentDto;
 import se.comerit.resurs.entity.Application;
 import se.comerit.resurs.entity.ApplicationStatus;
 import se.comerit.resurs.entity.Company;
@@ -29,7 +29,6 @@ import se.comerit.resurs.exception.EmptyFileException;
 import se.comerit.resurs.repository.ApplicationRepository;
 import se.comerit.resurs.repository.DocumentRepository;
 import se.comerit.resurs.security.CompanyPrincipal;
-import se.comerit.resurs.service.DocumentService;
 
 class DocumentServiceTest {
 

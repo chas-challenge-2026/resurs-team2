@@ -1,4 +1,4 @@
-package se.comerit.resurs.dto;
+package se.comerit.resurs.api.v1.dto;
 
 import se.comerit.resurs.entity.Document;
 
