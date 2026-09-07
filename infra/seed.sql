@@ -9,7 +9,7 @@ CREATE TABLE case_workers (
     id SERIAL PRIMARY KEY,
     name VARCHAR(100),
     email VARCHAR(100) UNIQUE,
-    password VARCHAR(60)
+    password VARCHAR(255)
 );
 
 CREATE TABLE applications (

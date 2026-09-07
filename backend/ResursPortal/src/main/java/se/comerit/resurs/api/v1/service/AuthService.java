@@ -1,8 +1,8 @@
 package se.comerit.resurs.api.v1.service;
 
-import de.mkammerer.argon2.Argon2;
+
 import org.springframework.security.crypto.argon2.Argon2PasswordEncoder;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+
 import org.springframework.stereotype.Service;
 
 import se.comerit.resurs.entity.CaseWorker;
@@ -46,13 +46,12 @@ public class AuthService {
     public AuthTokens loginCaseWorker(String email, String password, String fingerprint) {
         return caseWorkerRepository.findByEmail(email)
                 .flatMap(cw -> {
-                    String storedPassword = cw.getPassword();
-                    if (argon2.matches(password, storedPassword)) {
+                    if (!argon2.matches(password, cw.getPassword())) {
+                        return java.util.Optional.empty();
+                    }
                         AuthTokens token = tokenStore.issue(
                                 new CaseWorkerPrincipal(cw.getId(), cw.getName(), email), fingerprint);
                         return java.util.Optional.of(token);
-                    }
-                    return java.util.Optional.empty();
                 })
                 .orElseThrow(() -> InvalidCredentialsException.unauthorized("Invalid email or password"));
     }
