@@ -1,7 +1,8 @@
 import React from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import "./Status.css";
-import { Panel } from "../../components/Panel/Panel";
+
+import { Panel } from "@/components/Panel/Panel";
 import { ApplicationDetailsPanel } from "./components/ApplicationDetailsPanel";
 import { DocumentsPanel } from "./components/DocumentsPanel";
 import { StatusHeader } from "./components/StatusHeader";

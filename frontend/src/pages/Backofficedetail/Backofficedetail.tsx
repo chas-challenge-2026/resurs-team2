@@ -1,7 +1,9 @@
 import React from "react";
 import { useNavigate, useParams } from "react-router-dom";
+
 import "./Backofficedetail.css";
-import "../../styles/components.css";
+import "@/styles/components.css";
+
 import { CompanyPanel } from "./components/CompanyPanel";
 import { CreditPanel } from "./components/CreditPanel";
 import { ScoringPanel } from "./components/ScoringPanel";
