@@ -1,8 +1,6 @@
 .status-page {
   max-width: 1170px;
-
   margin: 0 auto;
-
   padding: 32px var(--spacing-md);
 }
 
@@ -14,16 +12,13 @@
 .status-header {
   margin-top: 0;
   margin-bottom: var(--spacing-md);
-
   font-size: var(--font-size-lg);
   font-weight: bold;
 }
 
 .status-layout {
   display: flex;
-
   gap: var(--spacing-lg);
-
   align-items: flex-start;
 }
 
@@ -35,49 +30,13 @@
   flex: 8;
 }
 
-.panel {
-  margin-bottom: var(--spacing-md);
-
-  background-color: #ffffff;
-
-  border: 1px solid var(--color-border);
-  border-radius: 4px;
-}
-
-.panel-heading {
-  padding: 10px 15px;
-
-  font-weight: bold;
-
-  background-color: var(--color-background);
-
-  border-bottom: 1px solid var(--color-border);
-}
-
-.panel-body {
-  padding: var(--spacing-md);
-}
-
-.panel-body p:first-child {
-  margin-top: 0;
-}
-
-.panel-body p:last-child {
-  margin-bottom: 0;
-}
-
 .badge {
   display: inline-block;
-
   padding: 3px 7px;
-
   color: #ffffff;
-
   font-size: 12px;
   font-weight: bold;
-
   border-radius: 10px;
-
   background-color: var(--color-muted);
 }
 
@@ -100,9 +59,7 @@
 
 .document-list {
   margin: 0;
-
   padding-left: 0;
-
   list-style: none;
 }
 
@@ -116,9 +73,7 @@
 
 .btn-primary {
   color: #ffffff;
-
   background-color: var(--color-primary);
-
   border-color: var(--color-primary);
 }
 
@@ -129,9 +84,7 @@
 
 .btn-default {
   color: var(--color-text);
-
   background-color: #ffffff;
-
   border: 1px solid var(--color-border);
 }
 
@@ -141,17 +94,24 @@
 
 .actions {
   display: flex;
-
   gap: 10px;
-
   margin-top: var(--spacing-md);
 }
 
-.panel-body pre {
+.audit-log {
   max-width: 100%;
-
   margin: 0;
-
   white-space: pre-wrap;
   word-break: break-word;
+}
+
+@media (max-width: 768px) {
+  .status-layout {
+    flex-direction: column;
+  }
+
+  .left-column,
+  .right-column {
+    width: 100%;
+  }
 }
