@@ -1,4 +1,4 @@
-package se.comerit.resurs.controller;
+package se.comerit.resurs.api.v1.controller;
 
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
@@ -9,9 +9,10 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-import se.comerit.resurs.dto.DocumentDto;
+
+import se.comerit.resurs.api.v1.dto.DocumentDto;
+import se.comerit.resurs.api.v1.service.DocumentService;
 import se.comerit.resurs.security.UserPrincipal;
-import se.comerit.resurs.service.DocumentService;
 
 import java.util.List;
 

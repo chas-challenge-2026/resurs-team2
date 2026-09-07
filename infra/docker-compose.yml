@@ -38,9 +38,16 @@ services:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/resurs
       - SPRING_DATASOURCE_USERNAME=resurs
       - SPRING_DATASOURCE_PASSWORD=resurs123
+      - RESURS_CRYPTO_KEY_PATH=/run/secrets/resurs_crypto_key
+    secrets:
+      - resurs_crypto_key
     depends_on:
       db:
         condition: service_healthy
 
 volumes:
   postgres_data:
+
+secrets:
+  resurs_crypto_key:
+    file: ./secrets/resurs-crypto.key

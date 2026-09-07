@@ -1,10 +1,10 @@
-package se.comerit.resurs.service;
+package se.comerit.resurs.api.v1.service;
 
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
-import se.comerit.resurs.dto.DocumentDto;
+import se.comerit.resurs.api.v1.dto.DocumentDto;
 import se.comerit.resurs.entity.Application;
 import se.comerit.resurs.entity.ApplicationStatus;
 import se.comerit.resurs.entity.Document;
@@ -22,12 +22,10 @@ import java.io.File;
 import java.io.IOException;
 import java.util.List;
 
-
 @Service
 public class DocumentService {
 
     private static final String UPLOAD_DIR = "/tmp/uploads/";
-
 
     private final ApplicationRepository applicationRepository;
     private final DocumentRepository documentRepository;
@@ -36,7 +34,6 @@ public class DocumentService {
         this.applicationRepository = applicationRepository;
         this.documentRepository = documentRepository;
     }
-
 
     public List<DocumentDto> getDocuments(
             Long applicationId,
@@ -53,7 +50,6 @@ public class DocumentService {
                 .stream()
                 .map(DocumentDto::from)
                 .toList();
-
 
     }
 
@@ -80,8 +76,7 @@ public class DocumentService {
         Document document = saveDocument(
                 application,
                 storedFilename,
-                docType
-        );
+                docType);
 
         updateApplicationStatus(application, docType);
 
@@ -94,9 +89,7 @@ public class DocumentService {
 
         Document document = documentRepository
                 .findById(documentId)
-                .orElseThrow(() ->
-                        new DocumentNotFoundException(documentId)
-                );
+                .orElseThrow(() -> new DocumentNotFoundException(documentId));
 
         checkDocumentAccess(document, principal);
 
@@ -110,7 +103,6 @@ public class DocumentService {
         return new FileSystemResource(file);
     }
 
-
     private void validateFile(MultipartFile file) {
 
         if (file == null || file.isEmpty()) {
@@ -122,11 +114,8 @@ public class DocumentService {
 
         return applicationRepository
                 .findById(applicationId)
-                .orElseThrow(() ->
-                        new ApplicationNotFoundException(applicationId)
-                );
+                .orElseThrow(() -> new ApplicationNotFoundException(applicationId));
     }
-
 
     // Filename handling
     private File prepareDestination(String storedFilename) {
@@ -135,8 +124,7 @@ public class DocumentService {
 
         if (!uploadDir.exists() && !uploadDir.mkdirs()) {
             throw new FileUploadException(
-                    "Could not create upload directory."
-            );
+                    "Could not create upload directory.");
         }
 
         return new File(uploadDir, storedFilename);
@@ -155,7 +143,6 @@ public class DocumentService {
             );
         }
     }
-
 
     // File handling
     private String getOriginalFilename(MultipartFile file) {
@@ -179,7 +166,6 @@ public class DocumentService {
         return applicationId + "_" + safeFilename;
     }
 
-
     // Document
     private Document saveDocument(
             Application application,
@@ -189,12 +175,10 @@ public class DocumentService {
         Document document = new Document(
                 application,
                 storedFilename,
-                docType
-        );
+                docType);
 
         return documentRepository.save(document);
     }
-
 
     // Application status
     private void updateApplicationStatus(
@@ -202,17 +186,14 @@ public class DocumentService {
             String docType) {
 
         if ("AnnualReview".equals(docType)
-                && application.getStatus()
-                == ApplicationStatus.PENDING_DOCS) {
+                && application.getStatus() == ApplicationStatus.PENDING_DOCS) {
 
             application.setStatus(
-                    ApplicationStatus.UNDER_REVIEW
-            );
+                    ApplicationStatus.UNDER_REVIEW);
         }
     }
 
-
-    //delete document
+    // delete document
     public void deleteDocument(Long documentId, UserPrincipal principal) {
         Document document = documentRepository.findById(documentId)
                 .orElseThrow(() -> new DocumentNotFoundException(documentId));
@@ -224,7 +205,7 @@ public class DocumentService {
     private void checkApplicationAccess(Application application, UserPrincipal principal) {
         boolean hasAccess = switch (principal) {
             case CompanyPrincipal companyPrincipal ->
-                    application.getCompany().getOrgNumber().equals(companyPrincipal.orgNumber());
+                application.getCompany().getOrgNumber().equals(companyPrincipal.orgNumber());
             case CaseWorkerPrincipal ignored -> true;
         };
 
@@ -236,7 +217,7 @@ public class DocumentService {
     private void checkDocumentAccess(Document document, UserPrincipal principal) {
         boolean hasAccess = switch (principal) {
             case CompanyPrincipal companyPrincipal ->
-                    document.getApplication().getCompany().getOrgNumber().equals(companyPrincipal.orgNumber());
+                document.getApplication().getCompany().getOrgNumber().equals(companyPrincipal.orgNumber());
             case CaseWorkerPrincipal ignored -> true;
         };
         if (!hasAccess) {
