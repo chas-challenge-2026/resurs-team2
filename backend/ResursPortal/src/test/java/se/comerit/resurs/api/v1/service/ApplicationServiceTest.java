@@ -20,7 +20,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+
 
 import se.comerit.resurs.api.v1.dto.ApplicationRequest;
 import se.comerit.resurs.entity.Application;
@@ -34,6 +34,7 @@ import se.comerit.resurs.rating.Score;
 import se.comerit.resurs.rating.ScoringResult;
 import se.comerit.resurs.repository.ApplicationRepository;
 import se.comerit.resurs.repository.CompanyRepository;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * Unit tests for {@link ApplicationService#submitApplication}.

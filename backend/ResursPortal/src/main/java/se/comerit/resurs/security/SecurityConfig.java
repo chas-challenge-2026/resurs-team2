@@ -1,27 +1,28 @@
 package se.comerit.resurs.security;
 
-import java.io.IOException;
-import java.net.URI;
-import java.nio.charset.StandardCharsets;
-
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.http.ProblemDetail;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.security.web.AuthenticationEntryPoint;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.access.AccessDeniedHandler;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import tools.jackson.databind.ObjectMapper;
 
-import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.http.ProblemDetail;
+
+import java.io.IOException;
+import java.net.URI;
+import java.nio.charset.StandardCharsets;
 
 @Configuration
 @EnableMethodSecurity
@@ -43,10 +44,10 @@ public class SecurityConfig {
     @Bean
     @Order(2)
     public SecurityFilterChain apiChain(HttpSecurity http,
-            SessionTokenAuthenticationFilter filter) throws Exception {
+                                        SessionTokenAuthenticationFilter filter) throws Exception {
         http
                 .securityMatcher("/api/**")
-                .csrf(csrf -> csrf.disable())
+                .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/v1/auth/login/**", "/api/v1/auth/refresh").permitAll()

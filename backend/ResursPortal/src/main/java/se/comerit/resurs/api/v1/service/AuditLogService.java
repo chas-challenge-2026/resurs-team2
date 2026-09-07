@@ -1,17 +1,15 @@
 package se.comerit.resurs.api.v1.service;
 
+import jakarta.annotation.Nonnull;
+import org.springframework.stereotype.Service;
+import se.comerit.resurs.entity.Application;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
+
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.LinkedHashMap;
 import java.util.Map;
-
-import org.springframework.stereotype.Service;
-
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-
-import jakarta.annotation.Nonnull;
-import se.comerit.resurs.entity.Application;
 
 /**
  * Helper for appending tamper-evident audit entries to an {@link Application}'s
@@ -27,32 +25,6 @@ public class AuditLogService {
 
     public AuditLogService(ObjectMapper objectMapper) {
         this.objectMapper = objectMapper;
-    }
-
-    /**
-     * Appends a single audit entry to the given application's log, persists it
-     * on the application via {@link Application#setAuditLog}, and returns the
-     * resulting full log JSON. The entry always carries a timestamp and an
-     * {@code action}, plus any additional {@code details} supplied.
-     */
-    @Nonnull
-    public String append(Application application, @Nonnull String action,
-            @Nonnull Map<String, String> details) {
-        Map<String, String> fields = new LinkedHashMap<>();
-        fields.put("ts", LocalDateTime.now().format(TS_FORMAT));
-        fields.put("action", action);
-        fields.putAll(details);
-
-        String entry = toJson(fields);
-        String currentLog = application.getAuditLog();
-        String updatedLog;
-        if (isEmptyLog(currentLog)) {
-            updatedLog = newLog(entry);
-        } else {
-            updatedLog = appendEntry(currentLog, entry);
-        }
-        application.setAuditLog(updatedLog);
-        return updatedLog;
     }
 
     /**
@@ -81,11 +53,37 @@ public class AuditLogService {
         return currentLog.substring(0, currentLog.lastIndexOf("]")) + "," + entry + "]";
     }
 
+    /**
+     * Appends a single audit entry to the given application's log, persists it
+     * on the application via {@link Application#setAuditLog}, and returns the
+     * resulting full log JSON. The entry always carries a timestamp and an
+     * {@code action}, plus any additional {@code details} supplied.
+     */
+    @Nonnull
+    public String append(Application application, @Nonnull String action,
+                         @Nonnull Map<String, String> details) {
+        Map<String, String> fields = new LinkedHashMap<>();
+        fields.put("ts", LocalDateTime.now().format(TS_FORMAT));
+        fields.put("action", action);
+        fields.putAll(details);
+
+        String entry = toJson(fields);
+        String currentLog = application.getAuditLog();
+        String updatedLog;
+        if (isEmptyLog(currentLog)) {
+            updatedLog = newLog(entry);
+        } else {
+            updatedLog = appendEntry(currentLog, entry);
+        }
+        application.setAuditLog(updatedLog);
+        return updatedLog;
+    }
+
     @Nonnull
     private String toJson(Map<String, String> fields) {
         try {
             return objectMapper.writeValueAsString(fields);
-        } catch (JsonProcessingException e) {
+        } catch (JacksonException e) {
             throw new IllegalStateException("Failed to serialize audit entry", e);
         }
     }
