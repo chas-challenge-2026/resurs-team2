@@ -1,14 +1,44 @@
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import type { Application } from "../../types/application";
-import { mockApplications } from "../../mockdata/applications";
+
+import type { Application as ApplicationType } from "../../types/application";
+import { applicationApi } from "../../api/applicationApi";
+
 import styles from "./Applications.module.css";
 
 export function Application() {
   const navigate = useNavigate();
 
-  const applications: Application[] = mockApplications;
+  const [applications, setApplications] = useState<ApplicationType[]>([]);
 
-  const getStatusClass = (status: Application["status"]) => {
+  const [loading, setLoading] = useState<boolean>(true);
+
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadApplications = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const data = await applicationApi.getAll();
+
+        setApplications(data);
+      } catch (err: unknown) {
+        if (err instanceof Error) {
+          setError(err.message);
+        } else {
+          setError("Kunde inte hämta ansökningarna.");
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadApplications();
+  }, []);
+
+  const getStatusClass = (status: ApplicationType["status"]) => {
     switch (status) {
       case "APPROVED":
         return styles.labelSuccess;
@@ -19,10 +49,81 @@ export function Application() {
       case "UNDER_REVIEW":
         return styles.labelWarning;
 
+      case "PENDING_DOCS":
       default:
         return styles.labelDefault;
     }
   };
+
+  const formatStatus = (status: ApplicationType["status"]) => {
+    switch (status) {
+      case "PENDING_DOCS":
+        return "Väntar på dokument";
+
+      case "UNDER_REVIEW":
+        return "Under granskning";
+
+      case "APPROVED":
+        return "Godkänd";
+
+      case "REJECTED":
+        return "Avslagen";
+
+      default:
+        return status;
+    }
+  };
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat("sv-SE").format(amount) + " kr";
+  };
+
+  const formatDateTime = (value: string) => {
+    if (!value) {
+      return "-";
+    }
+
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+      return value;
+    }
+
+    return new Intl.DateTimeFormat("sv-SE", {
+      dateStyle: "short",
+      timeStyle: "short",
+    }).format(date);
+  };
+
+  if (loading) {
+    return (
+      <main className={styles.page}>
+        <div className={styles.container}>
+          <div className={styles.pageHeader}>
+            <h1>Mina kreditansökningar</h1>
+          </div>
+
+          <p>Laddar ansökningar...</p>
+        </div>
+      </main>
+    );
+  }
+
+  if (error) {
+    return (
+      <main className={styles.page}>
+        <div className={styles.container}>
+          <div className={styles.pageHeader}>
+            <h1>Mina kreditansökningar</h1>
+          </div>
+
+          <div className={styles.infoAlert}>
+            <p>{error}</p>
+          </div>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className={styles.page}>
@@ -71,21 +172,26 @@ export function Application() {
                 {applications.map((application) => (
                   <tr key={application.id}>
                     <td>{application.id}</td>
-                    <td>{application.requestedAmount} kr</td>
+
+                    <td>{formatCurrency(application.requestedAmount)}</td>
+
                     <td>{application.purpose}</td>
+
                     <td>
                       <span className={getStatusClass(application.status)}>
-                        {application.status}
+                        {formatStatus(application.status)}
                       </span>
                     </td>
-                    <td>{application.createdAt}</td>
+
+                    <td>{formatDateTime(application.createdAt)}</td>
+
                     <td className={styles.actionCell}>
                       <button
                         type="button"
                         className={styles.viewButton}
                         onClick={() => navigate(`/status/${application.id}`)}
                       >
-                         Visa
+                        Visa
                       </button>
 
                       <button
@@ -93,7 +199,7 @@ export function Application() {
                         className={styles.documentButton}
                         onClick={() => navigate(`/documents/${application.id}`)}
                       >
-                         Dokument
+                        Dokument
                       </button>
                     </td>
                   </tr>

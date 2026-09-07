@@ -1,23 +1,21 @@
+import React from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import "./Navbar.css";
 
-interface NavbarProps {
-  role?: string;
-  userName?: string;
-}
+export const Navbar: React.FC = () => {
+  const { user, isLoggedIn, logout } = useAuth();
 
-export const Navbar: React.FC<NavbarProps> = ({ role, userName }) => {
-  const { user, isAuthenticated, logout } = useAuth();
   const navigate = useNavigate();
 
-  const currentRole = (user?.role || role || "").toUpperCase();
-  const displayName = user?.name || userName || "";
+  console.log("NAVBAR AUTH:", {
+    user,
+    isLoggedIn,
+  });
 
-  const handleLogoutClick = async (e: React.MouseEvent) => {
-    e.preventDefault();
+  const handleLogoutClick = async () => {
     await logout();
-    navigate("/");
+    navigate("/login");
   };
 
   return (
@@ -28,9 +26,11 @@ export const Navbar: React.FC<NavbarProps> = ({ role, userName }) => {
             <Link to="/" className="nav-tab">
               Privat
             </Link>
+
             <Link to="/" className="nav-tab">
               Betallösningar
             </Link>
+
             <Link to="/" className="nav-tab active-pill">
               Företagsbanken
             </Link>
@@ -41,15 +41,20 @@ export const Navbar: React.FC<NavbarProps> = ({ role, userName }) => {
           </div>
 
           <div className="top-nav-right">
-            {isAuthenticated && (user || displayName) ? (
+            {isLoggedIn && user ? (
               <>
                 <span className="user-info">
                   👤{" "}
-                  {currentRole === "COMPANY"
-                    ? `Företag: ${displayName}`
-                    : `Handläggare: ${displayName}`}
+                  {user.role === "COMPANY"
+                    ? `Företag: ${user.name}`
+                    : `Handläggare: ${user.name}`}
                 </span>
-                <button onClick={handleLogoutClick} className="logout-btn">
+
+                <button
+                  type="button"
+                  onClick={handleLogoutClick}
+                  className="logout-btn"
+                >
                   Logga ut
                 </button>
               </>
@@ -66,22 +71,24 @@ export const Navbar: React.FC<NavbarProps> = ({ role, userName }) => {
         <div className="navbar-container">
           <Link className="navbar-brand" to="/">
             <span className="brand-logo-text">Resurs</span>
+
             <span className="brand-subtext">Kreditansökan</span>
           </Link>
 
           <ul className="navbar-nav">
-            {isAuthenticated && currentRole === "COMPANY" && (
+            {isLoggedIn && user?.role === "COMPANY" && (
               <>
                 <li>
                   <Link to="/apply">Ny ansökan</Link>
                 </li>
+
                 <li>
                   <Link to="/application">Mina ansökningar</Link>
                 </li>
               </>
             )}
 
-            {isAuthenticated && currentRole === "CASEWORKER" && (
+            {isLoggedIn && user?.role === "CASEWORKER" && (
               <li>
                 <Link to="/backoffice">💼 Backoffice</Link>
               </li>

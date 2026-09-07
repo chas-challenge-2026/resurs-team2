@@ -1,4 +1,4 @@
-import type { ChangeEvent, FormEvent } from "react";
+import type { ChangeEvent } from "react";
 import { useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 
@@ -18,19 +18,23 @@ export function Documents() {
 
   // Hanterar ändring av dokumenttyp
   const handleDocumentTypeChange = (
-    event: ChangeEvent<HTMLSelectElement>
+    event: ChangeEvent<HTMLSelectElement>,
   ) => {
     setDocType(event.target.value as DocumentType);
   };
 
   // Hanterar filval
-  const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = (
+    event: ChangeEvent<HTMLInputElement>,
+  ) => {
     const selectedFile = event.target.files?.[0] ?? null;
     setFile(selectedFile);
   };
 
   // Hanterar uppladdning
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = (
+    event: React.SyntheticEvent<HTMLFormElement>,
+  ) => {
     event.preventDefault();
 
     if (!file) return;
@@ -38,14 +42,17 @@ export function Documents() {
     const newDocument: DocumentData = {
       id: crypto.randomUUID(),
       filename: file.name,
-      docType: docType,
+      docType,
       uploadedAt: new Date().toLocaleString("sv-SE"),
     };
 
-    setDocuments((currentDocuments) => [...currentDocuments, newDocument]);
-    
-    // Återställ fil-state och rensa inputfältet
+    setDocuments((currentDocuments) => [
+      ...currentDocuments,
+      newDocument,
+    ]);
+
     setFile(null);
+
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -63,12 +70,14 @@ export function Documents() {
     <section className={styles.formSection}>
       <header>
         <h2>Dokument – Ansökan #{applicationId}</h2>
-        <div className={`${styles.alert} ${styles.alertDanger}`}></div>
+        <div className={`${styles.alert} ${styles.alertDanger}`} />
       </header>
 
       <div className={styles.documentGrid}>
         <div className={styles.panel}>
-          <div className={styles.panelHeading}>Ladda upp dokument</div>
+          <div className={styles.panelHeading}>
+            Ladda upp dokument
+          </div>
 
           <div className={styles.panelBody}>
             <p>
@@ -77,7 +86,10 @@ export function Documents() {
 
             <form onSubmit={handleSubmit}>
               <div className={styles.formGroup}>
-                <label htmlFor="docType">Dokumenttyp</label>
+                <label htmlFor="docType">
+                  Dokumenttyp
+                </label>
+
                 <select
                   id="docType"
                   name="docType"
@@ -85,15 +97,26 @@ export function Documents() {
                   value={docType}
                   onChange={handleDocumentTypeChange}
                 >
-                  <option value="arsredovisning">Årsredovisning</option>
-                  <option value="fskattebevis">F-skattebevis</option>
-                  <option value="bolagsordning">Bolagsordning</option>
-                  <option value="ovrigt">Övrigt</option>
+                  <option value="arsredovisning">
+                    Årsredovisning
+                  </option>
+                  <option value="fskattebevis">
+                    F-skattebevis
+                  </option>
+                  <option value="bolagsordning">
+                    Bolagsordning
+                  </option>
+                  <option value="ovrigt">
+                    Övrigt
+                  </option>
                 </select>
               </div>
 
               <div className={styles.formGroup}>
-                <label htmlFor="file">Fil (PDF)</label>
+                <label htmlFor="file">
+                  Fil (PDF)
+                </label>
+
                 <input
                   ref={fileInputRef}
                   id="file"
@@ -102,6 +125,7 @@ export function Documents() {
                   accept=".pdf,.PDF"
                   onChange={handleFileChange}
                 />
+
                 <p className={styles.helpText}>
                   Max 10 MB. Filen sparas men parsas inte automatiskt.
                 </p>
@@ -120,7 +144,9 @@ export function Documents() {
 
         <div>
           <div className={styles.panel}>
-            <div className={styles.panelHeading}>Uppladdade dokument</div>
+            <div className={styles.panelHeading}>
+              Uppladdade dokument
+            </div>
 
             <div className={styles.panelBody}>
               {documents.length === 0 ? (
@@ -137,17 +163,21 @@ export function Documents() {
                       <th scope="col">Åtgärd</th>
                     </tr>
                   </thead>
+
                   <tbody>
                     {documents.map((document) => (
                       <tr key={document.id}>
                         <td>{document.filename}</td>
                         <td>{document.docType}</td>
                         <td>{document.uploadedAt}</td>
+
                         <td>
                           <button
                             type="button"
                             className={styles.secondaryButton}
-                            onClick={() => handleDownload(document.id)}
+                            onClick={() =>
+                              handleDownload(document.id)
+                            }
                           >
                             ↓
                           </button>
@@ -161,8 +191,8 @@ export function Documents() {
           </div>
 
           <div className={styles.warningAlert}>
-            <strong>OBS:</strong> PDF-innehåll läses inte automatiskt i v1.
-            Handläggare granskar dokumenten manuellt.
+            <strong>OBS:</strong> PDF-innehåll läses inte automatiskt i
+            v1. Handläggare granskar dokumenten manuellt.
           </div>
         </div>
       </div>
