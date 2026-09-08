@@ -9,7 +9,7 @@ CREATE TABLE case_workers (
     id SERIAL PRIMARY KEY,
     name VARCHAR(100),
     email VARCHAR(100) UNIQUE,
-    password VARCHAR(60)
+    password VARCHAR(255)
 );
 
 CREATE TABLE applications (
@@ -41,7 +41,7 @@ INSERT INTO companies (org_number, company_name, authorized_signatory) VALUES
 
 -- Case worker (password = "password123")
 INSERT INTO case_workers (name, email, password) VALUES
-('Karin Handläggare', 'karin@resurs.se', '$2a$10$rUonBwDLz9IA0Ivwnor38.tjZevxSeIHzQx5b4u0RwHhHJ/sbao32');
+('Karin Handläggare', 'karin@resurs.se', '$argon2id$v=19$m=65536,t=3,p=1$DMdWvwusPFNcQXgjaqLWkA$8wxxrvV1aOBqi+Do+xG9dgVHou2N5Impq4ou3AidxS4');
 
 -- Pre-existing application in REVIEW
 INSERT INTO applications (company_id, requested_amount, purpose, status, decision, scoring_result, audit_log) VALUES
