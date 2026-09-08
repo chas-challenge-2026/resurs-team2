@@ -8,6 +8,7 @@ import java.util.List;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -38,8 +39,9 @@ public class Application {
     @NotNull
     @DecimalMin("0.01")
     private BigDecimal requestedAmount;
-    @Column(columnDefinition = "TEXT")
-    @NotBlank
+    @Convert(converter = PiiAttributeConverter.class)
+    @Column(name = "purpose", length = 512)
+    @Nonnull
     private String purpose;
     @Column(length = 30)
     @Enumerated(EnumType.STRING)
@@ -85,8 +87,8 @@ public class Application {
         this.purpose = purpose;
     }
 
-    public Application(Company company, BigDecimal requestedAmount,
-            String purpose, ApplicationStatus statusValue, Decision decision,
+    public Application(@Nonnull Company company, @Nonnull BigDecimal requestedAmount,
+            @Nonnull String purpose, ApplicationStatus statusValue, Decision decision,
             String decisionReason, String scoringResult, String auditLog) {
         this.company = company;
         this.requestedAmount = requestedAmount;

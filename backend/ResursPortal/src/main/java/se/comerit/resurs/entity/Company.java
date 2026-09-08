@@ -3,31 +3,42 @@ package se.comerit.resurs.entity;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EntityListeners;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
 
+/**
+ * Registered company. PII fields are stored at rest via
+ * {@link PiiAttributeConverter} (encrypted base64 in production, plain strings
+ * under the test profile). {@link #orgNumberIndex} is a blind index
+ * (HMAC-SHA256 of the canonicalized org number) derived on persist by
+ * {@link CompanyBlindIndexListener} and used for equality lookups without
+ * comparing the stored PII.
+ */
 @Entity
 @Table(name = "companies")
+@EntityListeners(CompanyBlindIndexListener.class)
 public class Company {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    @Column(name = "org_number", length = 20, unique = true)
-    @NotBlank
-    @Size(max = 20)
+    @Convert(converter = PiiAttributeConverter.class)
+    @Column(name = "org_number", length = 512)
+    @Nonnull
     private String orgNumber;
-    @Column(name = "company_name", length = 200)
-    @NotBlank
-    @Size(max = 200)
+    @Column(name = "org_number_index", columnDefinition = "BYTEA", unique = true, nullable = false)
+    private byte[] orgNumberIndex;
+    @Convert(converter = PiiAttributeConverter.class)
+    @Column(name = "company_name", length = 512)
+    @Nonnull
     private String name;
-    @Column(name = "authorized_signatory", length = 100)
-    @NotBlank
-    @Size(max = 100)
+    @Convert(converter = PiiAttributeConverter.class)
+    @Column(name = "authorized_signatory", length = 512)
+    @Nonnull
     private String authorizedSignatory;
 
     public Company(@Nonnull String orgNumber, @Nonnull String name, @Nonnull String authorizedSignatory) {
@@ -52,6 +63,15 @@ public class Company {
 
     public void setOrgNumber(@Nonnull String orgNumber) {
         this.orgNumber = orgNumber;
+    }
+
+    @Nonnull
+    public byte[] getOrgNumberIndex() {
+        return orgNumberIndex;
+    }
+
+    public void setOrgNumberIndex(@Nonnull byte[] orgNumberIndex) {
+        this.orgNumberIndex = orgNumberIndex;
     }
 
     @Nonnull

@@ -1,8 +1,9 @@
 CREATE TABLE companies (
     id SERIAL PRIMARY KEY,
-    org_number VARCHAR(20) UNIQUE,
-    company_name VARCHAR(200),
-    authorized_signatory VARCHAR(100)
+    org_number VARCHAR(512),
+    org_number_index BYTEA UNIQUE,
+    company_name VARCHAR(512),
+    authorized_signatory VARCHAR(512)
 );
 
 CREATE TABLE case_workers (
@@ -34,15 +35,10 @@ CREATE TABLE documents (
     uploaded_at TIMESTAMP DEFAULT NOW()
 );
 
--- Seed: two companies (matching BankID mock org numbers)
-INSERT INTO companies (org_number, company_name, authorized_signatory) VALUES
-('556000-1234', 'Malmö Fastigheter AB', 'Anders Karlsson'),
-('556000-5678', 'Göteborg Handel AB', 'Maria Svensson');
+-- NOTE: companies and applications contain PII. Production seeds them
+-- (encrypted) via PiiInitializer at application startup, not here.
 
 -- Case worker (password = "password123")
 INSERT INTO case_workers (name, email, password) VALUES
 ('Karin Handläggare', 'karin@resurs.se', '$argon2id$v=19$m=65536,t=3,p=1$DMdWvwusPFNcQXgjaqLWkA$8wxxrvV1aOBqi+Do+xG9dgVHou2N5Impq4ou3AidxS4');
 
--- Pre-existing application in REVIEW
-INSERT INTO applications (company_id, requested_amount, purpose, status, decision, scoring_result, audit_log) VALUES
-(1, 500000.00, 'Expansion av verksamheten', 'UNDER_REVIEW', null, 'FLAGGED: soliditet=0.28 (OK), likviditetsgrad=0.95 (FLAGGED), skuldsättningsgrad=2.1 (OK)', '[{"ts":"2026-01-15T10:00:00","action":"APPLICATION_CREATED"},{"ts":"2026-01-15T10:00:01","action":"SCORING_RUN","result":"REVIEW"}]');
