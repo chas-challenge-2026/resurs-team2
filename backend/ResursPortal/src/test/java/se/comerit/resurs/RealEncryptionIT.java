@@ -13,6 +13,7 @@ import java.util.Arrays;
 import java.util.Base64;
 import java.util.Locale;
 
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -59,6 +60,19 @@ class RealEncryptionIT {
     @DynamicPropertySource
     static void cryptoProperties(DynamicPropertyRegistry registry) {
         registry.add("resurs.jna.key.path", KEY_FILE::toString);
+    }
+
+    @AfterAll
+    static void cleanupKeyFile() {
+        try {
+            Files.deleteIfExists(KEY_FILE);
+            Path dir = KEY_FILE.getParent();
+            if (dir != null) {
+                Files.deleteIfExists(dir);
+            }
+        } catch (IOException _) {
+            // best-effort cleanup; leave it to the OS temp-manager if this fails
+        }
     }
 
     @Autowired
