@@ -1,7 +1,8 @@
-import React from "react";
 import { useNavigate, useParams } from "react-router-dom";
+
+import "@/styles/components.css";
 import "./Backofficedetail.css";
-import "../../styles/components.css";
+
 import { CompanyPanel } from "./components/CompanyPanel";
 import { CreditPanel } from "./components/CreditPanel";
 import { ScoringPanel } from "./components/ScoringPanel";
@@ -10,9 +11,8 @@ import { DocumentsPanel } from "./components/DocumentsPanel";
 import { AuditLogPanel } from "./components/AuditLogPanel";
 import { useBackofficeApplication } from "./hooks/useBackofficeApplication";
 
-export const Backofficedetail: React.FC = () => {
+export const Backofficedetail = () => {
   const { id } = useParams<{ id: string }>();
-
   const navigate = useNavigate();
 
   const {
@@ -66,7 +66,10 @@ export const Backofficedetail: React.FC = () => {
 
       <div className="backoffice-layout">
         <div className="col-left">
-          <CompanyPanel application={application} workerName={workerName} />
+          <CompanyPanel
+            application={application}
+            workerName={workerName}
+          />
 
           <CreditPanel application={application} />
 

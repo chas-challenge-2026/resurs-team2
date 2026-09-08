@@ -1,13 +1,15 @@
-import React from "react";
 import { useNavigate, useParams } from "react-router-dom";
+
+import { Panel } from "@/components/Panel/Panel";
+
 import "./Status.css";
-import { Panel } from "../../components/Panel/Panel";
+
 import { ApplicationDetailsPanel } from "./components/ApplicationDetailsPanel";
 import { DocumentsPanel } from "./components/DocumentsPanel";
 import { StatusHeader } from "./components/StatusHeader";
 import { useApplicationDetails } from "./hooks/useApplicationDetails";
 
-export const Status: React.FC = () => {
+export const Status = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
@@ -64,9 +66,7 @@ export const Status: React.FC = () => {
         </div>
 
         <div className="right-column">
-          <ApplicationDetailsPanel
-            application={application}
-          />
+          <ApplicationDetailsPanel application={application} />
 
           <DocumentsPanel
             applicationId={application.id}
@@ -74,9 +74,7 @@ export const Status: React.FC = () => {
           />
 
           <Panel title="Händelselogg">
-            <pre className="audit-log">
-              {auditLogRaw}
-            </pre>
+            <pre className="audit-log">{auditLogRaw}</pre>
           </Panel>
         </div>
       </div>
