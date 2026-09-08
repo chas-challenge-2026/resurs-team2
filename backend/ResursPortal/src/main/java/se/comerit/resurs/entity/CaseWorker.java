@@ -18,15 +18,18 @@ public class CaseWorker {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
     @Column(length = 100)
     @NotBlank
     @Size(max = 100)
     private String name;
+
     @Column(length = 100, unique = true)
     @NotBlank
     @Email
     @Size(max = 100)
     private String email;
+    
     @Column(length = 255)
     @NotBlank
     @Size(max = 255)

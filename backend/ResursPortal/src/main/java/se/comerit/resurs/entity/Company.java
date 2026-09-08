@@ -26,16 +26,20 @@ public class Company {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
     @Convert(converter = PiiAttributeConverter.class)
     @Column(name = "org_number", length = 512)
     @Nonnull
     private String orgNumber;
+
     @Column(name = "org_number_index", columnDefinition = "BYTEA", unique = true, nullable = false)
     private byte[] orgNumberIndex;
+
     @Convert(converter = PiiAttributeConverter.class)
     @Column(name = "company_name", length = 512)
     @Nonnull
     private String name;
+    
     @Convert(converter = PiiAttributeConverter.class)
     @Column(name = "authorized_signatory", length = 512)
     @Nonnull

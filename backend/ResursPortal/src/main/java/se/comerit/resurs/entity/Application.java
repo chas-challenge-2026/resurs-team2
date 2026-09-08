@@ -32,40 +32,51 @@ public class Application {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
     @ManyToOne
     @NotNull
     private Company company;
+
     @Column(name = "requested_amount")
     @NotNull
     @DecimalMin("0.01")
     private BigDecimal requestedAmount;
+
     @Convert(converter = PiiAttributeConverter.class)
     @Column(name = "purpose", length = 512)
     @Nonnull
     private String purpose;
+
     @Column(length = 30)
     @Enumerated(EnumType.STRING)
     @Nonnull
     private ApplicationStatus status = ApplicationStatus.PENDING_DOCS;
+
     @Column(length = 20)
     @Enumerated(EnumType.STRING)
     @Nullable
     private Decision decision;
+
     @Column(name = "decision_reason", columnDefinition = "TEXT")
     @Nullable
     private String decisionReason;
+
     @Column(name = "scoring_result", columnDefinition = "TEXT")
     @Nullable
     private String scoringResult;
+
     @Column(name = "audit_log", columnDefinition = "TEXT")
     @NotBlank
     private String auditLog = "[]";
+
     @OneToMany(fetch = FetchType.LAZY, mappedBy = "application")
     @OrderBy("uploadedAt DESC")
     private List<Document> documents;
+
     @Column(name = "created_at")
     @Nullable
     private LocalDateTime createdAt;
+    
     @Column(name = "updated_at")
     @Nullable
     private LocalDateTime updatedAt;
