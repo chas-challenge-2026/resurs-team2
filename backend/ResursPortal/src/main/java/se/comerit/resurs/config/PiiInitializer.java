@@ -7,16 +7,21 @@ import org.slf4j.LoggerFactory;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.annotation.Profile;
+import org.springframework.security.crypto.argon2.Argon2PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import se.comerit.resurs.entity.Application;
 import se.comerit.resurs.entity.ApplicationStatus;
+import se.comerit.resurs.entity.CaseWorker;
 import se.comerit.resurs.entity.Company;
 import se.comerit.resurs.repository.ApplicationRepository;
+import se.comerit.resurs.repository.CaseWorkerRepository;
 import se.comerit.resurs.repository.CompanyRepository;
 
 /**
+ * TODO: This is just a test initalizer until actual account creation is up and running
+ * 
  * Seeds the mock companies (matching the BankID whitelist) and a demo
  * application as encrypted rows. Runs in production/local profiles only
  * ({@code "!test"}) so tests keep seeding via {@code data.sql}.
@@ -35,13 +40,22 @@ public class PiiInitializer implements ApplicationRunner {
             new SeedCompany("556000-5678", "Göteborg Handel AB", "Maria Svensson")
     };
 
+    private static final String SEED_CASE_WORKER_EMAIL = "karin@resurs.se";
+    private static final String SEED_CASE_WORKER_PASSWORD = "password123";
+
     private final CompanyRepository companyRepository;
     private final ApplicationRepository applicationRepository;
+    private final CaseWorkerRepository caseWorkerRepository;
+    private final Argon2PasswordEncoder argon2;
 
     public PiiInitializer(CompanyRepository companyRepository,
-            ApplicationRepository applicationRepository) {
+            ApplicationRepository applicationRepository,
+            CaseWorkerRepository caseWorkerRepository,
+            Argon2PasswordEncoder argon2) {
         this.companyRepository = companyRepository;
         this.applicationRepository = applicationRepository;
+        this.caseWorkerRepository = caseWorkerRepository;
+        this.argon2 = argon2;
     }
 
     @Override
@@ -62,6 +76,14 @@ public class PiiInitializer implements ApplicationRunner {
                     applicationRepository.save(encryptDemoApplication(company));
                     log.info("Seeded demo application for {}", first.orgNumber());
                 });
+
+        if (caseWorkerRepository.findByEmail(SEED_CASE_WORKER_EMAIL).isEmpty()) {
+            caseWorkerRepository.save(new CaseWorker(
+                    "Karin Handläggare",
+                    SEED_CASE_WORKER_EMAIL,
+                    argon2.encode(SEED_CASE_WORKER_PASSWORD)));
+            log.info("Seeded case worker {}", SEED_CASE_WORKER_EMAIL);
+        }
     }
 
     private Company encryptCompany(SeedCompany seed) {

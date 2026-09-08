@@ -8,8 +8,9 @@ CREATE TABLE companies (
 
 CREATE TABLE case_workers (
     id SERIAL PRIMARY KEY,
-    name VARCHAR(100),
-    email VARCHAR(100) UNIQUE,
+    name VARCHAR(512),
+    email VARCHAR(512),
+    email_index BYTEA UNIQUE,
     password VARCHAR(255)
 );
 
@@ -35,10 +36,6 @@ CREATE TABLE documents (
     uploaded_at TIMESTAMP DEFAULT NOW()
 );
 
--- NOTE: companies and applications contain PII. Production seeds them
--- (encrypted) via PiiInitializer at application startup, not here.
-
--- Case worker (password = "password123")
-INSERT INTO case_workers (name, email, password) VALUES
-('Karin Handläggare', 'karin@resurs.se', '$argon2id$v=19$m=65536,t=3,p=1$DMdWvwusPFNcQXgjaqLWkA$8wxxrvV1aOBqi+Do+xG9dgVHou2N5Impq4ou3AidxS4');
+-- NOTE: companies, applications and case workers contain PII. Production seeds
+-- them (encrypted) via PiiInitializer at application startup, not here.
 

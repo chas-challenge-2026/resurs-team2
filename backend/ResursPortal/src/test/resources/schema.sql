@@ -8,8 +8,9 @@ CREATE TABLE companies (
 
 CREATE TABLE case_workers (
     id SERIAL PRIMARY KEY,
-    name VARCHAR(100),
-    email VARCHAR(100) UNIQUE,
+    name VARCHAR(512),
+    email VARCHAR(512),
+    email_index BYTEA UNIQUE,
     password VARCHAR(255)
 );
 

@@ -15,12 +15,13 @@ import org.springframework.test.context.ActiveProfiles;
 import se.comerit.resurs.config.PlainPiiCodec;
 import se.comerit.resurs.api.v1.service.DummyCryptoService;
 import se.comerit.resurs.entity.CaseWorker;
+import se.comerit.resurs.entity.CaseWorkerBlindIndexListener;
 import se.comerit.resurs.entity.CompanyBlindIndexListener;
 import se.comerit.resurs.entity.PiiAttributeConverter;
 
 @DataJpaTest
 @ActiveProfiles("test")
-@Import({PiiAttributeConverter.class, PlainPiiCodec.class, CompanyBlindIndexListener.class, DummyCryptoService.class})
+@Import({PiiAttributeConverter.class, PlainPiiCodec.class, CaseWorkerBlindIndexListener.class, CompanyBlindIndexListener.class, DummyCryptoService.class})
 class CaseWorkerRepositoryTest {
 
     @Autowired
