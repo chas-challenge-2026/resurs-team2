@@ -15,7 +15,7 @@ NATIVE_DIR   := native
 BACKEND_DIR  := backend/ResursPortal
 TARGET_DIR   := target
 
-.PHONY: clean build test test_frontend test_backend test_native dev \
+.PHONY: clean build test test_frontend test_backend test_native test-encryption dev \
         build-frontend build-backend build-native package dev-vite dev-spring
         # build-native
 
@@ -54,6 +54,9 @@ test_backend:
 
 test_native:
 	cd $(NATIVE_DIR) && $(MAKE) test
+
+test-encryption: build-native
+	cd $(BACKEND_DIR) && ./mvnw -Dtest=RealEncryptionIT test
 
 clean:
 	rm -rf $(TARGET_DIR)
