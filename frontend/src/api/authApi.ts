@@ -1,24 +1,28 @@
-import {
-  type CompanyCredentials,
-  type CaseWorkerCredentials,
-  type Role,
-} from "../context/AuthContext";
+import type {
+  AuthTokens,
+  CaseWorkerCredentials,
+  CompanyCredentials,
+  CurrentCompanyResponse,
+} from "../context/auth.types";
 
-export interface AuthTokens {
-  accessToken: string;
-  refreshToken: string;
-  role: Role;
-  name: string;
-}
+const API_BASE = "/api/v1";
 
-export interface CurrentCompanyResponse {
-  name: string;
-  orgNumber: string;
-}
+const parseResponse = async <T>(
+  response: Response,
+  errorMessage: string,
+): Promise<T> => {
+  if (!response.ok) {
+    throw new Error(errorMessage);
+  }
+
+  return response.json() as Promise<T>;
+};
 
 export const authApi = {
-  async loginCompany(credentials: CompanyCredentials): Promise<AuthTokens> {
-    const response = await fetch("/api/v1/auth/login/company", {
+  async loginCompany(
+    credentials: CompanyCredentials,
+  ): Promise<AuthTokens> {
+    const response = await fetch(`${API_BASE}/auth/login/company`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -26,19 +30,16 @@ export const authApi = {
       body: JSON.stringify(credentials),
     });
 
-    if (!response.ok) {
-      throw new Error(
-        "Inloggning misslyckades. Kontrollera organisationsnumret.",
-      );
-    }
-
-    return response.json();
+    return parseResponse<AuthTokens>(
+      response,
+      "Inloggning misslyckades. Kontrollera organisationsnumret.",
+    );
   },
 
   async loginCaseWorker(
     credentials: CaseWorkerCredentials,
   ): Promise<AuthTokens> {
-    const response = await fetch("/api/v1/auth/login/caseWorker", {
+    const response = await fetch(`${API_BASE}/auth/login/caseWorker`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -46,50 +47,44 @@ export const authApi = {
       body: JSON.stringify(credentials),
     });
 
-    if (!response.ok) {
-      throw new Error("Felaktig e-postadress eller lösenord.");
-    }
-
-    return response.json();
+    return parseResponse<AuthTokens>(
+      response,
+      "Felaktig e-postadress eller lösenord.",
+    );
   },
 
   async refresh(refreshToken: string): Promise<AuthTokens> {
-    const response = await fetch("/api/v1/auth/refresh", {
+    const response = await fetch(`${API_BASE}/auth/refresh`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        refreshToken,
-      }),
+      body: JSON.stringify({ refreshToken }),
     });
 
-    if (!response.ok) {
-      throw new Error("Sessionen har gått ut.");
-    }
-
-    return response.json();
+    return parseResponse<AuthTokens>(
+      response,
+      "Sessionen har gått ut.",
+    );
   },
 
   async getCurrentCompany(
     accessToken: string,
   ): Promise<CurrentCompanyResponse> {
-    const response = await fetch("/api/v1/companies/me", {
-      method: "GET",
+    const response = await fetch(`${API_BASE}/companies/me`, {
       headers: {
         Authorization: `Bearer ${accessToken}`,
       },
     });
 
-    if (!response.ok) {
-      throw new Error("Kunde inte hämta företagsinformationen.");
-    }
-
-    return response.json();
+    return parseResponse<CurrentCompanyResponse>(
+      response,
+      "Kunde inte hämta företagsinformationen.",
+    );
   },
 
   async logout(accessToken: string): Promise<void> {
-    const response = await fetch("/api/v1/auth/logout", {
+    const response = await fetch(`${API_BASE}/auth/logout`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${accessToken}`,
