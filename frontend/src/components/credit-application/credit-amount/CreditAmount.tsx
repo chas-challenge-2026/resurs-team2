@@ -1,4 +1,5 @@
 import type { ChangeEvent, SubmitEvent } from "react";
+import { useState } from "react";
 import type { CreditAmountData } from "./CreditAmount.schema";
 import styles from "./CreditAmount.module.css";
 
@@ -15,7 +16,12 @@ export function CreditAmount({
   onNext,
   onPrevious,
 }: CreditAmountProps) {
-  // Handles changes to the requested credit amount.
+  const [purposeError, setPurposeError] = useState<string | null>(null);
+
+  const MIN_PURPOSE_LENGTH = 10;
+  const MAX_PURPOSE_LENGTH = 500;
+
+  // *Handles changes to the requested credit amount.*
   const handleAmountChange = (event: ChangeEvent<HTMLInputElement>) => {
     const value = event.target.value;
 
@@ -27,15 +33,30 @@ export function CreditAmount({
 
   // Handles changes to the credit purpose.
   const handlePurposeChange = (event: ChangeEvent<HTMLTextAreaElement>) => {
+    const value = event.target.value;
+
     onChange({
       ...data,
-      purpose: event.target.value,
+      purpose: value,
     });
+
+    if (purposeError && value.trim().length >= MIN_PURPOSE_LENGTH) {
+      setPurposeError(null);
+    }
   };
 
   // Prevents the default form submission and proceeds to the confirmation step.
   const handleSubmit = (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
+
+    if (data.purpose.trim().length < MIN_PURPOSE_LENGTH) {
+      setPurposeError(
+        `Beskrivningen måste innehålla minst ${MIN_PURPOSE_LENGTH} tecken.`,
+      );
+
+      return;
+    }
+
     onNext();
   };
 
@@ -75,10 +96,25 @@ export function CreditAmount({
             id="purpose"
             name="purpose"
             rows={4}
+            minLength={MIN_PURPOSE_LENGTH}
+            maxLength={MAX_PURPOSE_LENGTH}
             placeholder="Beskriv kortfattat vad krediten ska användas till (expansion, rörelsekapital, investering, etc.)"
             value={data.purpose}
             onChange={handlePurposeChange}
           />
+          <div className={styles.purposeInfo}>
+  <span>
+    {data.purpose.trim().length < MIN_PURPOSE_LENGTH
+      ? `Minst ${MIN_PURPOSE_LENGTH} tecken (${MIN_PURPOSE_LENGTH - data.purpose.trim().length} kvar)`
+      : "Minimilängd uppnådd"}
+  </span>
+
+  <span>
+    {data.purpose.length} / {MAX_PURPOSE_LENGTH} tecken
+  </span>
+</div>
+
+          {purposeError && <p className={styles.errorText}>{purposeError}</p>}
         </div>
 
         <div className={styles.buttonGroup}>

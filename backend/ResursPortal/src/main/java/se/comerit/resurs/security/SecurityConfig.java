@@ -12,11 +12,11 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.crypto.argon2.Argon2PasswordEncoder;
 import tools.jackson.databind.ObjectMapper;
 
 
@@ -36,15 +36,18 @@ public class SecurityConfig {
         this.objectMapper = objectMapper;
     }
 
+
+
     @Bean
-    public BCryptPasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
+    public Argon2PasswordEncoder argon2PasswordEncoder() {
+           return new Argon2PasswordEncoder(16, 32, 1, 65536, 3);
     }
+
 
     @Bean
     @Order(2)
     public SecurityFilterChain apiChain(HttpSecurity http,
-                                        SessionTokenAuthenticationFilter filter) throws Exception {
+           SessionTokenAuthenticationFilter filter) throws Exception {
         http
                 .securityMatcher("/api/**")
                 .csrf(AbstractHttpConfigurer::disable)
@@ -63,33 +66,21 @@ public class SecurityConfig {
         return http.build();
     }
 
-    // TODO: Temporary to keep old version working
-    @Bean
-    @Order(3)
-    public SecurityFilterChain webChain(HttpSecurity http) throws Exception {
-        // Non-breaking: keep the old Thymeleaf/session app working as before.
-        http
-                .authorizeHttpRequests(auth -> auth.anyRequest().permitAll())
-                .csrf(csrf -> csrf.disable())
-                .formLogin(form -> form.disable())
-                .httpBasic(basic -> basic.disable());
-        return http.build();
-    }
-
     /**
-     * Permits unauthenticated access to Swagger UI and OpenAPI spec endpoints.
-     * Only active on the "local" profile — never included in packaged builds.
-     * Registered before {@link #webChain} (which matches any request) so it can
-     * intercept swagger URLs first. Its matcher ({@code /v3/api-docs/**},
-     * {@code /swagger-ui/**}) does not overlap {@code /api/**}, so API endpoints
-     * are unaffected.
+     * Allows the local Swagger UI to load without being intercepted by the SPA
+     * fallback or by the API security chain.
      */
     @Bean
     @Order(1)
     @Profile("local")
     public SecurityFilterChain swaggerChain(HttpSecurity http) throws Exception {
         http
-                .securityMatcher("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html")
+                .securityMatcher(
+                        "/v3/api-docs/**",
+                        "/swagger-ui/**",
+                        "/swagger-ui.html",
+                        "/swagger-resources/**",
+                        "/webjars/**")
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth.anyRequest().permitAll());

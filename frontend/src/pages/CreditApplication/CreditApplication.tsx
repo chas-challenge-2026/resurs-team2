@@ -1,25 +1,43 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import styles from "./CreditApplication.module.css";
 
 import { CompanyInformation } from "../../components/credit-application/company-information/CompanyInformation";
-import { companyInformationSchema,type CompanyInformationData, } from "../../components/credit-application/company-information/CompanyInformation.schema";
+import {
+  companyInformationSchema,
+  type CompanyInformationData,
+} from "../../components/credit-application/company-information/CompanyInformation.schema";
 import { FinancialMetrics } from "../../components/credit-application/financial-metrics/FinancialMetrics";
-import { financialMetricsSchema,type FinancialMetricsData, } from "../../components/credit-application/financial-metrics/FinancialMetrics.schema";
+import {
+  financialMetricsSchema,
+  type FinancialMetricsData,
+} from "../../components/credit-application/financial-metrics/FinancialMetrics.schema";
 
 import { CreditAmount } from "../../components/credit-application/credit-amount/CreditAmount";
-import { creditAmountSchema,type CreditAmountData, } from "../../components/credit-application/credit-amount/CreditAmount.schema";
+import {
+  creditAmountSchema,
+  type CreditAmountData,
+} from "../../components/credit-application/credit-amount/CreditAmount.schema";
 
 import { Confirmation } from "../../components/credit-application/confirmation/Confirmation";
-import { confirmationSchema,type ConfirmationFormData, } from "../../components/credit-application/confirmation/Confirmation.schema";
+import {
+  confirmationSchema,
+  type ConfirmationFormData,
+} from "../../components/credit-application/confirmation/Confirmation.schema";
+import type { ApplicationRequest } from "../../types/applicationRequest";
+import { applicationApi } from "../../api/applicationApi";
+import { companyApi } from "../../api/companyApi";
 
 export function CreditApplication() {
   const [currentStep, setCurrentStep] = useState(1);
+  const navigate = useNavigate();
+  const [loadingCompany, setLoadingCompany] = useState(true);
+  const [companyError, setCompanyError] = useState<string | null>(null);
 
   const [companyInformation, setCompanyInformation] =
     useState<CompanyInformationData>({
-      orgNumber: "556123-4567",
-      companyName: "Exempel AB",
-      authorizedSignature: "",
+      orgNumber: "",
+      companyName: "",
     });
 
   const [financialMetrics, setFinancialMetrics] =
@@ -41,6 +59,30 @@ export function CreditApplication() {
   const [confirmation, setConfirmation] = useState<ConfirmationFormData>({
     financialConfirmation: false,
   });
+
+  useEffect(() => {
+    async function fetchCompany() {
+      try {
+        setLoadingCompany(true);
+        setCompanyError(null);
+
+        const company = await companyApi.getCurrentCompany();
+
+        setCompanyInformation({
+          orgNumber: company.orgNumber,
+          companyName: company.companyName,
+        });
+      } catch (error) {
+        console.error("Kunde inte hämta företagsinformation:", error);
+
+        setCompanyError("Kunde inte hämta företagsinformationen.");
+      } finally {
+        setLoadingCompany(false);
+      }
+    }
+
+    fetchCompany();
+  }, []);
 
   // Function that show which step you are on
   const handleStepChange = (step: number) => {
@@ -84,7 +126,7 @@ export function CreditApplication() {
   };
 
   // Validates step 4 before the user proceeds.
-  const handleConfirmationSubmit = () => {
+  const handleConfirmationSubmit = async () => {
     const result = confirmationSchema.safeParse(confirmation);
 
     if (!result.success) {
@@ -92,23 +134,28 @@ export function CreditApplication() {
       return;
     }
 
-    console.log("Kreditansökan är redo att skickas:", {
-      companyInformation,
-      financialMetrics,
-      creditAmount: resultCreditAmount(),
-      confirmation: result.data,
-    });
-  };
+    const applicationData: ApplicationRequest = {
+      equity: financialMetrics.equity,
+      totalCapital: financialMetrics.totalCapital,
+      currentAssets: financialMetrics.currentAssets,
+      currentLiabilities: financialMetrics.currentLiabilities,
+      totalLiabilities: financialMetrics.totalLiabilities,
+      operatingIncome: financialMetrics.operatingIncome,
+      netRevenue: financialMetrics.netRevenue,
 
-  // Validates and parses the credit amount.
-  const resultCreditAmount = () => {
-    const result = creditAmountSchema.safeParse(creditAmount);
+      requestedAmount: creditAmount.requestedAmount,
+      purpose: creditAmount.purpose,
+    };
 
-    if (!result.success) {
-      return null;
+    try {
+      const applicationId = await applicationApi.create(applicationData);
+
+      console.log("Kreditansökan skapad:", applicationId);
+
+      navigate(`/status/${applicationId}`);
+    } catch (error) {
+      console.error("Kunde inte skapa kreditansökan:", error);
     }
-
-    return result.data;
   };
 
   const steps = [
@@ -118,9 +165,25 @@ export function CreditApplication() {
     "4. Bekräftelse",
   ];
 
+  if (loadingCompany) {
+    return (
+      <main className={styles.container}>
+        <p>Laddar företagsinformation...</p>
+      </main>
+    );
+  }
+
+  if (companyError) {
+    return (
+      <main className={styles.container}>
+        <p>{companyError}</p>
+      </main>
+    );
+  }
+
   return (
     <main className={styles.container}>
-      <h2 className={styles.h2} >Ny kreditansökan</h2>
+      <h2 className={styles.h2}>Ny kreditansökan</h2>
       <div className={`${styles.alert} ${styles.alertDanger}`}></div>
       <nav className={styles.stepIndicator} aria-label="Ansökans steg">
         {steps.map((step, index) => {

@@ -1,12 +1,12 @@
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
-import './StartPage.css'; 
+import React from "react";
+import { useNavigate } from "react-router-dom";
+import "./StartPage.css";
 
 export const StartPage: React.FC = () => {
   const navigate = useNavigate();
 
   const handleStartClick = () => {
-    navigate('/login');
+    navigate("/login");
   };
 
   return (
@@ -15,7 +15,7 @@ export const StartPage: React.FC = () => {
         <span className="hero-badge">Hej företagare!</span>
         <h1>Vi är inte som alla andra banker</h1>
         <p>Inte för dyr eller krånglig.</p>
-        
+
         <ul className="hero-features">
           <li>✓ Finansiering upp till 300 miljoner kronor</li>
           <li>✓ Spara tryggt med ränta</li>
