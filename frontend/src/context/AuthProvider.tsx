@@ -173,7 +173,13 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       loginCaseWorker,
       logout,
     }),
-    [user, isLoading, loginCompany, loginCaseWorker, logout],
+    [
+      user,
+      isLoading,
+      loginCompany,
+      loginCaseWorker,
+      logout,
+    ],
   );
 
   return (
