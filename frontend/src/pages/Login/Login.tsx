@@ -25,7 +25,7 @@ export const Login: React.FC = () => {
 
     try {
       await loginCompany({ orgNumber });
-      navigate("/application");
+      navigate("/dashboard");
     } catch (err: unknown) {
       if (err instanceof Error) {
         setError(err.message);
