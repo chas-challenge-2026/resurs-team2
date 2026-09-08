@@ -31,7 +31,7 @@ CREATE TABLE applications (
 CREATE TABLE documents (
     id SERIAL PRIMARY KEY,
     application_id INT REFERENCES applications(id),
-    filename VARCHAR(255),
+    filename VARCHAR(512),
     doc_type VARCHAR(50),
     uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
