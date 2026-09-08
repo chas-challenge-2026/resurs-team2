@@ -37,7 +37,8 @@ public class Application {
     @NotNull
     private Company company;
 
-    @Column(name = "requested_amount")
+    @Convert(converter = AmountAttributeConverter.class)
+    @Column(name = "requested_amount", length = 512)
     @NotNull
     @DecimalMin("0.01")
     private BigDecimal requestedAmount;
@@ -57,10 +58,12 @@ public class Application {
     @Nullable
     private Decision decision;
 
+    @Convert(converter = PiiAttributeConverter.class)
     @Column(name = "decision_reason", columnDefinition = "TEXT")
     @Nullable
     private String decisionReason;
 
+    @Convert(converter = PiiAttributeConverter.class)
     @Column(name = "scoring_result", columnDefinition = "TEXT")
     @Nullable
     private String scoringResult;

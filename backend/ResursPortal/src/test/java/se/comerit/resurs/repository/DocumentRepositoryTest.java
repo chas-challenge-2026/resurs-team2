@@ -16,13 +16,14 @@ import se.comerit.resurs.config.PlainPiiCodec;
 import se.comerit.resurs.api.v1.service.DummyCryptoService;
 import se.comerit.resurs.entity.CompanyBlindIndexListener;
 import se.comerit.resurs.entity.PiiAttributeConverter;
+import se.comerit.resurs.entity.AmountAttributeConverter;
 import se.comerit.resurs.entity.Application;
 import se.comerit.resurs.entity.Company;
 import se.comerit.resurs.entity.Document;
 
 @DataJpaTest
 @ActiveProfiles("test")
-@Import({PiiAttributeConverter.class, PlainPiiCodec.class, CompanyBlindIndexListener.class, DummyCryptoService.class})
+@Import({PiiAttributeConverter.class, AmountAttributeConverter.class, PlainPiiCodec.class, CompanyBlindIndexListener.class, DummyCryptoService.class})
 class DocumentRepositoryTest {
 
     @Autowired
