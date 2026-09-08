@@ -2,6 +2,7 @@ package se.comerit.resurs.api.v1.service;
 
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
+import java.util.Arrays;
 import java.util.Locale;
 
 import se.comerit.resurs.config.ResursCryptoLibrary;
@@ -43,7 +44,9 @@ public class ResursCryptoServiceImpl implements ResursCryptoService {
     }
 
     @Override
-    public String decryptPii(byte[] ciphertext, byte[] nonce) {
+    public String decryptPii(byte[] blob) {
+        byte[] nonce = Arrays.copyOfRange(blob, 0, NONCE_LEN);
+        byte[] ciphertext = Arrays.copyOfRange(blob, NONCE_LEN, blob.length);
         if (ciphertext.length < MIN_CIPHERTEXT_LEN) {
             throw new CryptoException("Ciphertext too short: " + ciphertext.length);
         }
