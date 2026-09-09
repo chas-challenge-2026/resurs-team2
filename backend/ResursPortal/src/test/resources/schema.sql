@@ -37,11 +37,11 @@ CREATE TABLE documents (
 );
 
 CREATE TABLE audit_log (
-    id UUID PRIMARY KEY,
-    application_id INT REFERENCES applications(id),
+    id UUID DEFAULT RANDOM_UUID() PRIMARY KEY,
+    application_id INT NOT NULL REFERENCES applications(id),
     sequence_number BIGINT NOT NULL,
     hash VARCHAR(512) NOT NULL,
     previous_hash VARCHAR(512) NOT NULL,
     entry TEXT NOT NULL,
-    timestamp TIMESTAMP NOT NULL
+    timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
