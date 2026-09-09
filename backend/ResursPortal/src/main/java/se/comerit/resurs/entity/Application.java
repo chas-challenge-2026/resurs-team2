@@ -76,6 +76,10 @@ public class Application {
     @OrderBy("uploadedAt DESC")
     private List<Document> documents;
 
+    @OneToMany(fetch = FetchType.LAZY, mappedBy = "application")
+    @OrderBy("timestamp DESC")
+    private List<AuditLog> auditLogs;
+
     @Column(name = "created_at")
     @Nullable
     private LocalDateTime createdAt;
@@ -199,6 +203,11 @@ public class Application {
     @Nonnull
     public List<Document> getDocuments() {
         return documents;
+    }
+
+    @Nonnull
+    public List<AuditLog> getAuditLogs() {
+        return auditLogs;
     }
 
     @Nullable
