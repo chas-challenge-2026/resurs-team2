@@ -2,9 +2,9 @@ package se.comerit.resurs.api.v1.service;
 
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
-import java.util.Arrays;
 import java.util.Locale;
 
+import com.sun.jna.Memory;
 import com.sun.jna.ptr.LongByReference;
 
 import se.comerit.resurs.config.ResursCryptoLibrary;
@@ -27,63 +27,70 @@ public class ResursCryptoServiceImpl implements ResursCryptoService {
 
     @Override
     public byte[] encryptPii(String plaintext) {
-        // Note: Could be optimized by having the native module write into an offset result struct directly.
+        // NOTE: Allocation could possibly be removed if a non allocating size function
+        // is used to determine the byte length of the text
         byte[] plaintextBytes = plaintext.getBytes(StandardCharsets.UTF_8);
         int cipherLen = KEY_VERSION_LEN + plaintextBytes.length + TAG_LEN;
-
-        byte[] ciphertext = new byte[cipherLen];
-
+        int totalLen = NONCE_LEN + cipherLen;
+        Memory buf = new Memory(totalLen);
         byte[] nonce = generateNonce();
-        long nonceLen = nonce.length;
-        LongByReference bufferLen = new LongByReference(ciphertext.length);
-        int rc = library.resurs_encrypt_pii(plaintext, nonce, nonceLen, ciphertext, bufferLen);
+        buf.write(0, nonce, 0, NONCE_LEN);
+
+        LongByReference bufferLen = new LongByReference(cipherLen);
+        int rc = library.resurs_encrypt_pii(plaintext, buf, NONCE_LEN,
+                buf.share(NONCE_LEN), bufferLen);
         if (rc != 0) {
             throw new CryptoException(rc);
         }
 
-        int written = (int)bufferLen.getValue();
-        byte[] result = new byte[nonce.length + written];
-        System.arraycopy(nonce, 0, result, 0, nonce.length);
-        System.arraycopy(ciphertext, 0, result, nonce.length, written);
-        return result;
+        int written = (int) bufferLen.getValue();
+        return buf.getByteArray(0, NONCE_LEN + written);
     }
 
     @Override
     public String decryptPii(byte[] blob) {
-        byte[] nonce = Arrays.copyOfRange(blob, 0, NONCE_LEN);
-        long nonceLen = NONCE_LEN;
-        byte[] ciphertext = Arrays.copyOfRange(blob, NONCE_LEN, blob.length);
-        if (ciphertext.length < MIN_CIPHERTEXT_LEN) {
-            throw new CryptoException("Ciphertext too short: " + ciphertext.length);
+        if (blob.length < NONCE_LEN + MIN_CIPHERTEXT_LEN) {
+            throw new CryptoException("Blob too short: " + blob.length);
         }
 
-        int plainLen = ciphertext.length - KEY_VERSION_LEN - TAG_LEN;
-        byte[] plaintextBuf = new byte[plainLen];
+        Memory blobMem = new Memory(blob.length);
+        blobMem.write(0, blob, 0, blob.length);
+
+        int ciphertextLen = blob.length - NONCE_LEN;
+        int plainLen = ciphertextLen - KEY_VERSION_LEN - TAG_LEN;
         LongByReference outLen = new LongByReference(plainLen);
 
-        int rc = library.resurs_decrypt_pii(nonce, nonceLen, ciphertext, ciphertext.length,
-                plaintextBuf, outLen);
+        Memory plainBuf = new Memory(plainLen);
+
+        int rc = library.resurs_decrypt_pii(blobMem, NONCE_LEN,
+                blobMem.share(NONCE_LEN), ciphertextLen,
+                plainBuf, outLen);
         if (rc != 0) {
             throw new CryptoException(rc);
         }
 
         int written = (int) outLen.getValue();
-        return new String(plaintextBuf, 0, written, StandardCharsets.UTF_8);
+        byte[] plaintextBytes = plainBuf.getByteArray(0, written);
+        return new String(plaintextBytes, 0, written, StandardCharsets.UTF_8);
     }
 
     @Override
     public byte[] blindIndex(String value) {
         String canonical = canonicalize(value);
         byte[] data = canonical.getBytes(StandardCharsets.UTF_8);
-        byte[] hmac = new byte[HMAC_LEN];
+
+        Memory dataMem = new Memory(data.length);
+        dataMem.write(0, data, 0, data.length);
+
+        Memory hmacBuf = new Memory(HMAC_LEN);
         LongByReference hmacLen = new LongByReference(HMAC_LEN);
 
-        int rc = library.resurs_hmac_sha256(data, data.length, hmac, hmacLen);
+        int rc = library.resurs_hmac_sha256(dataMem, data.length, hmacBuf, hmacLen);
         if (rc != 0) {
             throw new CryptoException(rc);
         }
 
-        return hmac;
+        return hmacBuf.getByteArray(0, HMAC_LEN);
     }
 
     @Override
