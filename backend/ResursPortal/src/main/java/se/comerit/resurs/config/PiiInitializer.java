@@ -103,7 +103,6 @@ public class PiiInitializer implements ApplicationRunner {
                 ApplicationStatus.UNDER_REVIEW,
                 null,
                 null,
-                null,
-                "[{\"action\":\"APPLICATION_CREATED\"}]");
+                null);
     }
 }
