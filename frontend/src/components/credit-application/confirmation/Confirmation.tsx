@@ -1,5 +1,5 @@
 import type { SubmitEvent } from "react";
-import type { ConfirmationFormData } from "./Confirmation.schema";
+import type { ConfirmationFormData } from "../../../schemas/credit-application-schemas/Confirmation.schema";
 import styles from "./Confirmation.module.css";
 
 type ConfirmationProps = {

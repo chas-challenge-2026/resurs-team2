@@ -1,5 +1,5 @@
 import type { SubmitEvent } from "react";
-import type { CompanyInformationData } from "./CompanyInformation.schema";
+import type { CompanyInformationData } from "../../../schemas/credit-application-schemas/CompanyInformation.schema";
 import styles from "./CompanyInformation.module.css";
 
 type CompanyInformationProps = {

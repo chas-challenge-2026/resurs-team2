@@ -1,10 +1,10 @@
-import type { ChangeEvent, SubmitEvent } from "react";
-import type { FinancialMetricsData } from "./FinancialMetrics.schema";
+import { useState, type ChangeEvent, type SubmitEvent } from "react";
+import { financialMetricsSchema, type FinancialMetricsFormData } from "../../../schemas/credit-application-schemas/FinancialMetrics.schema";
 import styles from "./FinancialMetrics.module.css";
 
 type FinancialMetricsProps = {
-  data: FinancialMetricsData;
-  onChange: (data: FinancialMetricsData) => void;
+  data: FinancialMetricsFormData;
+  onChange: (data: FinancialMetricsFormData) => void;
   onNext: () => void;
   onPrevious: () => void;
 };
@@ -15,20 +15,46 @@ export function FinancialMetrics({
   onNext,
   onPrevious,
 }: FinancialMetricsProps) {
-    
+  
+  const [errors, setErrors] = useState<
+    Partial<Record<keyof FinancialMetricsFormData, string>>
+  >({});
+
   // Handles changes to the financial metric fields.
   const handleInputChange = (event: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = event.target;
 
     onChange({
       ...data,
-      [name]: value === "" ? 0 : Number(value),
+      [name]: value === "" ? undefined : Number(value),
     });
   };
 
   // Prevents the default form submission and proceeds to the next step.
   const handleSubmit = (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
+
+    const result = financialMetricsSchema.safeParse(data);
+
+    if (!result.success) {
+      const fieldErrors: Partial<
+        Record<keyof FinancialMetricsFormData, string>
+      > = {};
+
+      result.error.issues.forEach((issue) => {
+        const fieldName = issue.path[0];
+
+        if (typeof fieldName === "string") {
+          fieldErrors[fieldName as keyof FinancialMetricsFormData] =
+            issue.message;
+        }
+      });
+
+      setErrors(fieldErrors);
+      return;
+    }
+
+    setErrors({});
     onNext();
   };
 
@@ -55,9 +81,13 @@ export function FinancialMetrics({
                 type="number"
                 step="1"
                 placeholder="0"
-                value={data.equity === 0 ? "" : data.equity}
+                value={data.equity ?? ""}
                 onChange={handleInputChange}
               />
+
+              {errors.equity && (
+                <p className={styles.errorText}>{errors.equity}</p>
+              )}
 
               <p className={styles.helpText}>Summa eget kapital</p>
             </div>
@@ -74,9 +104,12 @@ export function FinancialMetrics({
                 type="number"
                 step="1"
                 placeholder="0"
-                value={data.equity === 0 ? "" : data.totalCapital}
+                value={data.totalCapital ?? ""}
                 onChange={handleInputChange}
               />
+              {errors.totalCapital && (
+                <p className={styles.errorText}>{errors.totalCapital}</p>
+              )}
 
               <p className={styles.helpText}>Balansomslutning</p>
             </div>
@@ -95,9 +128,12 @@ export function FinancialMetrics({
                 type="number"
                 step="1"
                 placeholder="0"
-                value={data.equity === 0 ? "" : data.currentAssets}
+                value={data.currentAssets ?? ""}
                 onChange={handleInputChange}
               />
+              {errors.currentAssets && (
+                <p className={styles.errorText}>{errors.currentAssets}</p>
+              )}
             </div>
           </div>
 
@@ -114,9 +150,12 @@ export function FinancialMetrics({
                 type="number"
                 step="1"
                 placeholder="0"
-                value={data.equity === 0 ? "" : data.currentLiabilities}
+                value={data.currentLiabilities ?? ""}
                 onChange={handleInputChange}
               />
+              {errors.currentLiabilities && (
+                <p className={styles.errorText}>{errors.currentLiabilities}</p>
+              )}
             </div>
           </div>
         </div>
@@ -133,9 +172,12 @@ export function FinancialMetrics({
                 type="number"
                 step="1"
                 placeholder="0"
-                value={data.equity === 0 ? "" : data.totalLiabilities}
+                value={data.totalLiabilities ?? ""}
                 onChange={handleInputChange}
               />
+              {errors.totalLiabilities && (
+                <p className={styles.errorText}>{errors.totalLiabilities}</p>
+              )}
             </div>
           </div>
 
@@ -150,9 +192,13 @@ export function FinancialMetrics({
                 type="number"
                 step="1"
                 placeholder="0"
-                value={data.equity === 0 ? "" : data.operatingIncome}
+                value={data.operatingIncome ?? ""}
                 onChange={handleInputChange}
               />
+
+              {errors.operatingIncome && (
+                <p className={styles.errorText}>{errors.operatingIncome}</p>
+              )}
 
               <p className={styles.helpText}>EBIT</p>
             </div>
@@ -169,9 +215,12 @@ export function FinancialMetrics({
             type="number"
             step="1"
             placeholder="0"
-            value={data.equity === 0 ? "" : data.netRevenue}
+            value={data.netRevenue ?? ""}
             onChange={handleInputChange}
           />
+          {errors.netRevenue && (
+            <p className={styles.errorText}>{errors.netRevenue}</p>
+          )}
         </div>
 
         <button
