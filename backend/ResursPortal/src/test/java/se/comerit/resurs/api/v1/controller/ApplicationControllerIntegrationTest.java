@@ -6,6 +6,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.util.List;
+
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -24,7 +26,9 @@ import org.springframework.test.context.jdbc.Sql;
 
 import org.springframework.test.web.servlet.MockMvc;
 import se.comerit.resurs.entity.Application;
+import se.comerit.resurs.entity.AuditLog;
 import se.comerit.resurs.repository.ApplicationRepository;
+import se.comerit.resurs.repository.AuditLogRepository;
 import se.comerit.resurs.security.WithCaseWorker;
 import se.comerit.resurs.security.WithCompany;
 
@@ -43,6 +47,9 @@ class ApplicationControllerIntegrationTest {
 
     @Autowired
     private ApplicationRepository applicationRepository;
+
+    @Autowired
+    private AuditLogRepository auditLogRepository;
 
     private static final String COMPANY_ORG = "556000-1234";
 
@@ -113,6 +120,7 @@ class ApplicationControllerIntegrationTest {
         @WithCompany
         @Sql(statements = {
                 "DELETE FROM documents",
+                "DELETE FROM audit_log",
                 "DELETE FROM applications",
                 "DELETE FROM companies",
                 "INSERT INTO companies (id, org_number, org_number_index, company_name, authorized_signatory) VALUES (600, '556000-1234', X'dedd7d2467a47aac7cc703665899fded7d8013ddecbbbf69e0ff366fd4812ed7', 'Malmö Fastigheter AB', 'Test Person')"
@@ -129,15 +137,16 @@ class ApplicationControllerIntegrationTest {
             assertThat(app.getPurpose()).isEqualTo("Rörelsekapital");
             assertThat(app.getRequestedAmount()).isEqualByComparingTo("300000");
 
-            // Audit log must contain both expected entries, created before scoring.
-            String log = app.getAuditLog();
-            assertThat(log)
+            // Audit log table must contain both expected entries, created before scoring.
+            assertThat(auditLogRepository.findAll()).hasSize(2);
+            List<String> entries = auditLogRepository.findAll().stream()
+                    .sorted((a, b) -> Long.compare(a.getSequenceNumber(), b.getSequenceNumber()))
+                    .map(AuditLog::getEntry)
+                    .toList();
+            assertThat(entries.get(0))
                     .contains("\"action\":\"APPLICATION_CREATED\"")
-                    .contains("\"orgNumber\":\"556000-1234\"")
-                    .contains("\"action\":\"SCORING_RUN\"");
-            int created = log.indexOf("APPLICATION_CREATED");
-            int scoring = log.indexOf("SCORING_RUN");
-            assertThat(scoring).isGreaterThan(created);
+                    .contains("\"orgNumber\":\"556000-1234\"");
+            assertThat(entries.get(1)).contains("\"action\":\"SCORING_RUN\"");
 
             // A decision/reason should be produced by scoring.
             assertThat(app.getDecisionReason()).isNotBlank();
@@ -156,6 +165,7 @@ class ApplicationControllerIntegrationTest {
         @WithCompany
         @Sql(statements = {
                 "DELETE FROM documents",
+                "DELETE FROM audit_log",
                 "DELETE FROM applications",
                 "DELETE FROM companies",
                 "INSERT INTO companies (id, org_number, org_number_index, company_name, authorized_signatory) VALUES (601, '556000-1234', X'dedd7d2467a47aac7cc703665899fded7d8013ddecbbbf69e0ff366fd4812ed7', 'Malmö Fastigheter AB', 'Test Person')"
@@ -173,6 +183,7 @@ class ApplicationControllerIntegrationTest {
         @WithCompany
         @Sql(statements = {
                 "DELETE FROM documents",
+                "DELETE FROM audit_log",
                 "DELETE FROM applications",
                 "DELETE FROM companies",
                 "INSERT INTO companies (id, org_number, org_number_index, company_name, authorized_signatory) VALUES (602, '556000-1234', X'dedd7d2467a47aac7cc703665899fded7d8013ddecbbbf69e0ff366fd4812ed7', 'Malmö Fastigheter AB', 'Test Person')"
@@ -190,6 +201,7 @@ class ApplicationControllerIntegrationTest {
         @WithCompany
         @Sql(statements = {
                 "DELETE FROM documents",
+                "DELETE FROM audit_log",
                 "DELETE FROM applications",
                 "DELETE FROM companies",
                 "INSERT INTO companies (id, org_number, org_number_index, company_name, authorized_signatory) VALUES (603, '556000-1234', X'dedd7d2467a47aac7cc703665899fded7d8013ddecbbbf69e0ff366fd4812ed7', 'Malmö Fastigheter AB', 'Test Person')"
@@ -207,6 +219,7 @@ class ApplicationControllerIntegrationTest {
         @WithCompany
         @Sql(statements = {
                 "DELETE FROM documents",
+                "DELETE FROM audit_log",
                 "DELETE FROM applications",
                 "DELETE FROM companies",
                 "INSERT INTO companies (id, org_number, org_number_index, company_name, authorized_signatory) VALUES (604, '556000-1234', X'dedd7d2467a47aac7cc703665899fded7d8013ddecbbbf69e0ff366fd4812ed7', 'Malmö Fastigheter AB', 'Test Person')"
@@ -246,6 +259,7 @@ class ApplicationControllerIntegrationTest {
         @WithCompany(orgNumber = "556000-1234")
         @Sql(statements = {
                 "DELETE FROM documents",
+                "DELETE FROM audit_log",
                 "DELETE FROM applications",
                 "DELETE FROM companies",
                 "INSERT INTO companies (id, org_number, org_number_index, company_name, authorized_signatory) VALUES (700, '556000-1234', X'dedd7d2467a47aac7cc703665899fded7d8013ddecbbbf69e0ff366fd4812ed7', 'Malmö Fastigheter AB', 'Test Person')",
@@ -269,6 +283,7 @@ class ApplicationControllerIntegrationTest {
         @WithCompany(orgNumber = "556000-9999")
         @Sql(statements = {
                 "DELETE FROM documents",
+                "DELETE FROM audit_log",
                 "DELETE FROM applications",
                 "DELETE FROM companies",
                 "INSERT INTO companies (id, org_number, org_number_index, company_name, authorized_signatory) VALUES (701, '556000-1234', X'dedd7d2467a47aac7cc703665899fded7d8013ddecbbbf69e0ff366fd4812ed7', 'Ägarens Bolag AB', 'Test Person')",
@@ -288,6 +303,7 @@ class ApplicationControllerIntegrationTest {
         @WithCaseWorker(name = "Karin Handläggare")
         @Sql(statements = {
                 "DELETE FROM documents",
+                "DELETE FROM audit_log",
                 "DELETE FROM applications",
                 "DELETE FROM companies",
                 "INSERT INTO companies (id, org_number, org_number_index, company_name, authorized_signatory) VALUES (702, '556000-1234', X'dedd7d2467a47aac7cc703665899fded7d8013ddecbbbf69e0ff366fd4812ed7', 'Malmö Fastigheter AB', 'Test Person')",
@@ -331,6 +347,7 @@ class ApplicationControllerIntegrationTest {
         @WithCaseWorker
         @Sql(statements = {
                 "DELETE FROM documents",
+                "DELETE FROM audit_log",
                 "DELETE FROM applications",
                 "DELETE FROM companies",
                 "INSERT INTO companies (id, org_number, org_number_index, company_name, authorized_signatory) VALUES (800, '556000-1234', X'dedd7d2467a47aac7cc703665899fded7d8013ddecbbbf69e0ff366fd4812ed7', 'Company A', 'Test')",
@@ -353,6 +370,7 @@ class ApplicationControllerIntegrationTest {
         @WithCaseWorker
         @Sql(statements = {
                 "DELETE FROM documents",
+                "DELETE FROM audit_log",
                 "DELETE FROM applications",
                 "DELETE FROM companies",
                 "INSERT INTO companies (id, org_number, org_number_index, company_name, authorized_signatory) VALUES (820, '556000-1234', X'dedd7d2467a47aac7cc703665899fded7d8013ddecbbbf69e0ff366fd4812ed7', 'Company A', 'Test')",
@@ -369,6 +387,7 @@ class ApplicationControllerIntegrationTest {
         @WithCompany(orgNumber = "556000-1234")
         @Sql(statements = {
                 "DELETE FROM documents",
+                "DELETE FROM audit_log",
                 "DELETE FROM applications",
                 "DELETE FROM companies",
                 "INSERT INTO companies (id, org_number, org_number_index, company_name, authorized_signatory) VALUES (840, '556000-1234', X'dedd7d2467a47aac7cc703665899fded7d8013ddecbbbf69e0ff366fd4812ed7', 'Company A', 'Test')",
@@ -389,6 +408,7 @@ class ApplicationControllerIntegrationTest {
         @WithCompany(orgNumber = "556000-1234")
         @Sql(statements = {
                 "DELETE FROM documents",
+                "DELETE FROM audit_log",
                 "DELETE FROM applications",
                 "DELETE FROM companies",
                 "INSERT INTO companies (id, org_number, org_number_index, company_name, authorized_signatory) VALUES (860, '556000-1234', X'dedd7d2467a47aac7cc703665899fded7d8013ddecbbbf69e0ff366fd4812ed7', 'Company A', 'Test')",
@@ -408,6 +428,7 @@ class ApplicationControllerIntegrationTest {
         @WithCompany(orgNumber = "556000-9999")
         @Sql(statements = {
                 "DELETE FROM documents",
+                "DELETE FROM audit_log",
                 "DELETE FROM applications",
                 "DELETE FROM companies",
                 "INSERT INTO companies (id, org_number, org_number_index, company_name, authorized_signatory) VALUES (880, '556000-1234', X'dedd7d2467a47aac7cc703665899fded7d8013ddecbbbf69e0ff366fd4812ed7', 'Company A', 'Test')",
@@ -424,6 +445,7 @@ class ApplicationControllerIntegrationTest {
         @WithCaseWorker
         @Sql(statements = {
                 "DELETE FROM documents",
+                "DELETE FROM audit_log",
                 "DELETE FROM applications",
                 "DELETE FROM companies",
                 "INSERT INTO companies (id, org_number, org_number_index, company_name, authorized_signatory) VALUES (900, '556000-1234', X'dedd7d2467a47aac7cc703665899fded7d8013ddecbbbf69e0ff366fd4812ed7', 'Company A', 'Test')",
@@ -443,6 +465,7 @@ class ApplicationControllerIntegrationTest {
         @WithCaseWorker
         @Sql(statements = {
                 "DELETE FROM documents",
+                "DELETE FROM audit_log",
                 "DELETE FROM applications",
                 "DELETE FROM companies",
                 "INSERT INTO companies (id, org_number, org_number_index, company_name, authorized_signatory) VALUES (920, '556000-1234', X'dedd7d2467a47aac7cc703665899fded7d8013ddecbbbf69e0ff366fd4812ed7', 'Company A', 'Test')",
@@ -460,6 +483,7 @@ class ApplicationControllerIntegrationTest {
         @WithCompany(orgNumber = "556000-1234")
         @Sql(statements = {
                 "DELETE FROM documents",
+                "DELETE FROM audit_log",
                 "DELETE FROM applications",
                 "DELETE FROM companies",
                 "INSERT INTO companies (id, org_number, org_number_index, company_name, authorized_signatory) VALUES (940, '556000-1234', X'dedd7d2467a47aac7cc703665899fded7d8013ddecbbbf69e0ff366fd4812ed7', 'Company A', 'Test')",
@@ -479,6 +503,7 @@ class ApplicationControllerIntegrationTest {
         @WithCompany(orgNumber = "556000-1234")
         @Sql(statements = {
                 "DELETE FROM documents",
+                "DELETE FROM audit_log",
                 "DELETE FROM applications",
                 "DELETE FROM companies",
                 "INSERT INTO companies (id, org_number, org_number_index, company_name, authorized_signatory) VALUES (960, '556000-1234', X'dedd7d2467a47aac7cc703665899fded7d8013ddecbbbf69e0ff366fd4812ed7', 'Company A', 'Test')",
