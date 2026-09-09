@@ -21,11 +21,14 @@ import se.comerit.resurs.security.UserPrincipal;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
+import java.util.Locale;
+import java.util.UUID;
 
 @Service
 public class DocumentService {
 
-    private static final String UPLOAD_DIR = "/tmp/uploads/";
+    private static final String UPLOAD_DIR = "data";
+
 
     private final ApplicationRepository applicationRepository;
     private final DocumentRepository documentRepository;
@@ -70,34 +73,31 @@ public class DocumentService {
 
         String storedFilename = createStoredFilename(applicationId, originalFilename);
 
+        String uuidFilename = createUuidFilename();
+
         File destinationFile = prepareDestination(storedFilename);
+        File uuidFile = prepareDestination(uuidFilename);
+
         saveFile(file, destinationFile);
+        saveFile(file, uuidFile);
 
-        Document document = saveDocument(
-                application,
-                storedFilename,
-                docType);
-
+        Document document = saveDocument(application, storedFilename, docType);
         updateApplicationStatus(application, docType);
-
         applicationRepository.save(application);
         return DocumentDto.from(document);
 
     }
 
     public Resource downloadDocument(Long documentId, UserPrincipal principal) {
-
         Document document = documentRepository
                 .findById(documentId)
                 .orElseThrow(() -> new DocumentNotFoundException(documentId));
-
         checkDocumentAccess(document, principal);
 
-        File file = new File(UPLOAD_DIR, document.getFilename());
+        File file = new File( document.getFilename());
 
         if (!file.exists()) {
             throw new DocumentNotFoundException(documentId);
-
         }
 
         return new FileSystemResource(file);
@@ -108,88 +108,91 @@ public class DocumentService {
         if (file == null || file.isEmpty()) {
             throw new EmptyFileException();
         }
+        try {
+            byte[] checkBytes = file.getBytes();
+
+            if (checkBytes.length <= 4) {
+                throw new FileUploadException("Only PDF files are allowed. File must be larger than 4 bytes.");
+            }
+            if (!isPdf(checkBytes)) {
+                throw new FileUploadException("Only PDF files are allowed.");
+            }
+        } catch (IOException e) {
+            throw new FileUploadException("Upload failed.");
+        }
     }
-
-    private Application getApplication(Long applicationId) {
-
-        return applicationRepository
+        private Application getApplication(Long applicationId) {
+           return applicationRepository
                 .findById(applicationId)
                 .orElseThrow(() -> new ApplicationNotFoundException(applicationId));
     }
 
-    // Filename handling
+    // Prepare destination file, create upload directory if it does not exist
     private File prepareDestination(String storedFilename) {
-
         File uploadDir = new File(UPLOAD_DIR);
 
         if (!uploadDir.exists() && !uploadDir.mkdirs()) {
             throw new FileUploadException(
                     "Could not create upload directory.");
         }
-
         return new File(uploadDir, storedFilename);
     }
 
-    private void saveFile(
-            MultipartFile file,
-            File destination) {
-
+    private void saveFile(MultipartFile file, File destination) {
         try {
             file.transferTo(destination);
         } catch (IOException e) {
-            throw new FileUploadException(
-                    "Upload failed."
-
-            );
+            throw new FileUploadException("Upload failed.");
         }
     }
 
-    // File handling
+    // Get original filename, if null or blank return default "upload.pdf"
     private String getOriginalFilename(MultipartFile file) {
 
         String filename = file.getOriginalFilename();
 
         if (filename == null || filename.isBlank()) {
-            return "upload.bin";
+            return "upload.pdf";
         }
-
         return filename;
     }
 
-    private String createStoredFilename(
-            Long applicationId,
-            String originalFilename) {
 
-        String safeFilename = originalFilename
-                .replaceAll("[/\\\\]", "_");
+    private String createStoredFilename(Long applicationId,String originalFilename) {
+        String safe = (originalFilename == null || originalFilename.isBlank())
+                ? "document.pdf"
+                : originalFilename.replace('\\', '/');
 
-        return applicationId + "_" + safeFilename;
+        safe = safe.substring(safe.lastIndexOf('/') + 1);
+        safe = safe.replaceAll("[^a-zA-Z0-9._-]", "_");
+
+        if (safe.isBlank() || safe.equals(".") || safe.equals("..")) {
+            safe = "document.pdf";
+        }
+        if (!safe.toLowerCase(Locale.ROOT).endsWith(".pdf")) {
+            safe += ".pdf";
+        }
+
+        return applicationId + "_" + UUID.randomUUID() + "_" + safe;
     }
 
-    // Document
-    private Document saveDocument(
-            Application application,
-            String storedFilename,
-            String docType) {
+    private String createUuidFilename() {
+        return UUID.randomUUID() + ".pdf";
+    }
 
-        Document document = new Document(
-                application,
-                storedFilename,
-                docType);
 
+
+    // Save document to database
+    private Document saveDocument(Application application, String storedFilename, String docType) {
+        Document document = new Document(application, storedFilename, docType);
         return documentRepository.save(document);
     }
 
-    // Application status
-    private void updateApplicationStatus(
-            Application application,
-            String docType) {
-
+    // Update application status based on document type
+    private void updateApplicationStatus(Application application, String docType) {
         if ("AnnualReview".equals(docType)
                 && application.getStatus() == ApplicationStatus.PENDING_DOCS) {
-
-            application.setStatus(
-                    ApplicationStatus.UNDER_REVIEW);
+            application.setStatus(ApplicationStatus.UNDER_REVIEW);
         }
     }
 
@@ -221,8 +224,15 @@ public class DocumentService {
             case CaseWorkerPrincipal ignored -> true;
         };
         if (!hasAccess) {
-            throw new DocumentNotFoundException(document.getId());
+            throw new DocumentNotFoundException(document.getUuid());
         }
 
+    }
+    private boolean isPdf(byte[] bytes) {
+        return bytes.length >= 4
+                && bytes[0] == '%'
+                && bytes[1] == 'P'
+                && bytes[2] == 'D'
+                && bytes[3] == 'F';
     }
 }
