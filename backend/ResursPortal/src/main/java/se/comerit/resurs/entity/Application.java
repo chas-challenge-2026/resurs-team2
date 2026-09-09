@@ -8,6 +8,7 @@ import java.util.List;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -31,39 +32,54 @@ public class Application {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
     @ManyToOne
     @NotNull
     private Company company;
-    @Column(name = "requested_amount")
+
+    @Convert(converter = AmountAttributeConverter.class)
+    @Column(name = "requested_amount", length = 512)
     @NotNull
     @DecimalMin("0.01")
     private BigDecimal requestedAmount;
-    @Column(columnDefinition = "TEXT")
-    @NotBlank
+
+    @Convert(converter = PiiAttributeConverter.class)
+    @Column(name = "purpose", length = 512)
+    @Nonnull
     private String purpose;
+
     @Column(length = 30)
     @Enumerated(EnumType.STRING)
     @Nonnull
     private ApplicationStatus status = ApplicationStatus.PENDING_DOCS;
+
     @Column(length = 20)
     @Enumerated(EnumType.STRING)
     @Nullable
     private Decision decision;
+
+    @Convert(converter = PiiAttributeConverter.class)
     @Column(name = "decision_reason", columnDefinition = "TEXT")
     @Nullable
     private String decisionReason;
+
+    @Convert(converter = PiiAttributeConverter.class)
     @Column(name = "scoring_result", columnDefinition = "TEXT")
     @Nullable
     private String scoringResult;
+
     @Column(name = "audit_log", columnDefinition = "TEXT")
     @NotBlank
     private String auditLog = "[]";
+
     @OneToMany(fetch = FetchType.LAZY, mappedBy = "application")
     @OrderBy("uploadedAt DESC")
     private List<Document> documents;
+
     @Column(name = "created_at")
     @Nullable
     private LocalDateTime createdAt;
+    
     @Column(name = "updated_at")
     @Nullable
     private LocalDateTime updatedAt;
@@ -85,8 +101,8 @@ public class Application {
         this.purpose = purpose;
     }
 
-    public Application(Company company, BigDecimal requestedAmount,
-            String purpose, ApplicationStatus statusValue, Decision decision,
+    public Application(@Nonnull Company company, @Nonnull BigDecimal requestedAmount,
+            @Nonnull String purpose, ApplicationStatus statusValue, Decision decision,
             String decisionReason, String scoringResult, String auditLog) {
         this.company = company;
         this.requestedAmount = requestedAmount;

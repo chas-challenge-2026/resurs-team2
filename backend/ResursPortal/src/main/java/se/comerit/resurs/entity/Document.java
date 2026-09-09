@@ -5,7 +5,15 @@ import java.time.ZoneId;
 
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -22,14 +30,18 @@ public class Document {
     @ManyToOne
     @NotNull
     private Application application;
-    @Column(length = 255)
+
+    @Convert(converter = PiiAttributeConverter.class)
+    @Column(length = 512)
     @NotBlank
-    @Size(max = 255)
+    @Size(max = 512)
     private String filename;
+
     @Column(name = "doc_type", length = 50)
     @NotBlank
     @Size(max = 50)
     private String docType;
+
     @Column(name = "uploaded_at")
     @Nullable
     private LocalDateTime uploadedAt;
@@ -48,8 +60,6 @@ public class Document {
     protected Document() {
         // Constructor needed by JPA
     }
-
-
 
     @Nullable
     public Long getUuid() {

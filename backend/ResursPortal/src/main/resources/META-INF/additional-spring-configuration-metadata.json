@@ -217,6 +217,16 @@
             "type": "java.lang.Double",
             "description": "Fraction of the industry margin average below which the applicant is flagged.",
             "defaultValue": 0.5
+        },
+        {
+            "name": "resurs.jna.library.path",
+            "type": "java.lang.String",
+            "description": "Directory containing the native module 'libresurs_crypto.so', relative to the working directory. Copied into the JVM system property 'jna.library.path' by JnaConfig before the library is loaded (unless that property is already set, e.g. by Surefire). Defaults to 'target/libs'."
+        },
+        {
+            "name": "resurs.jna.key.path",
+            "type": "java.lang.String",
+            "description": "Path to the 64-byte crypto key file ([32 AES-256 bytes][32 HMAC-SHA256 bytes]) passed to resurs_crypto_init. Loads from the RESURS_CRYPTO_KEY_PATH environment variable. If unset (or blank), the native library is not initialised and PII encryption silently falls back to non-encrypting storage — set it in production."
         }
     ]
 }

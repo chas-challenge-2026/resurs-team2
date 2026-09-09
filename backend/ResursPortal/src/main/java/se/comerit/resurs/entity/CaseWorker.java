@@ -3,7 +3,9 @@ package se.comerit.resurs.entity;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EntityListeners;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -12,21 +14,38 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
+/**
+ * Case worker account. {@link #name} and {@link #email} are stored at rest via
+ * {@link PiiAttributeConverter} (encrypted base64 in production, plain strings
+ * under the test profile). {@link #emailIndex} is a blind index (HMAC-SHA256 of
+ * the canonicalized email) derived on persist by
+ * {@link CaseWorkerBlindIndexListener} and used for equality lookups without
+ * comparing the stored PII.
+ */
 @Entity
 @Table(name = "case_workers")
+@EntityListeners(CaseWorkerBlindIndexListener.class)
 public class CaseWorker {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    @Column(length = 100)
+
+    @Convert(converter = PiiAttributeConverter.class)
+    @Column(length = 512)
     @NotBlank
-    @Size(max = 100)
+    @Size(max = 512)
     private String name;
-    @Column(length = 100, unique = true)
+
+    @Convert(converter = PiiAttributeConverter.class)
+    @Column(length = 512)
     @NotBlank
     @Email
-    @Size(max = 100)
+    @Size(max = 512)
     private String email;
+
+    @Column(name = "email_index", columnDefinition = "BYTEA", unique = true, nullable = false)
+    private byte[] emailIndex;
+
     @Column(length = 255)
     @NotBlank
     @Size(max = 255)
@@ -63,6 +82,15 @@ public class CaseWorker {
 
     public void setEmail(@Nonnull String email) {
         this.email = email;
+    }
+
+    @Nonnull
+    public byte[] getEmailIndex() {
+        return emailIndex;
+    }
+
+    public void setEmailIndex(@Nonnull byte[] emailIndex) {
+        this.emailIndex = emailIndex;
     }
 
     @Nonnull
