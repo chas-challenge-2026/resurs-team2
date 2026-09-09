@@ -263,7 +263,7 @@ class ApplicationControllerIntegrationTest {
                 "DELETE FROM applications",
                 "DELETE FROM companies",
                 "INSERT INTO companies (id, org_number, org_number_index, company_name, authorized_signatory) VALUES (700, '556000-1234', X'dedd7d2467a47aac7cc703665899fded7d8013ddecbbbf69e0ff366fd4812ed7', 'Malmö Fastigheter AB', 'Test Person')",
-                "INSERT INTO applications (id, company_id, requested_amount, purpose, status, decision, decision_reason, scoring_result, audit_log) VALUES (700, 700, 300000.00, 'Rörelsekapital', 'UNDER_REVIEW', NULL, NULL, NULL, '[]')",
+                "INSERT INTO applications (id, company_id, requested_amount, purpose, status, decision, decision_reason, scoring_result) VALUES (700, 700, 300000.00, 'Rörelsekapital', 'UNDER_REVIEW', NULL, NULL, NULL)",
                 "INSERT INTO documents (id, application_id, filename, doc_type) VALUES (700, 700, 'bokaplan.pdf', 'BOKFORING')"
         })
         void companyCanViewOwnApplication() throws Exception {
@@ -287,7 +287,7 @@ class ApplicationControllerIntegrationTest {
                 "DELETE FROM applications",
                 "DELETE FROM companies",
                 "INSERT INTO companies (id, org_number, org_number_index, company_name, authorized_signatory) VALUES (701, '556000-1234', X'dedd7d2467a47aac7cc703665899fded7d8013ddecbbbf69e0ff366fd4812ed7', 'Ägarens Bolag AB', 'Test Person')",
-                "INSERT INTO applications (id, company_id, requested_amount, purpose, status, decision, decision_reason, scoring_result, audit_log) VALUES (701, 701, 300000.00, 'Rörelsekapital', 'UNDER_REVIEW', NULL, NULL, NULL, '[]')"
+                "INSERT INTO applications (id, company_id, requested_amount, purpose, status, decision, decision_reason, scoring_result) VALUES (701, 701, 300000.00, 'Rörelsekapital', 'UNDER_REVIEW', NULL, NULL, NULL)"
         })
         void companyCannotViewAnotherCompanysApplication() throws Exception {
             // The authenticated company (556000-9999) must NOT be able to see
@@ -307,7 +307,7 @@ class ApplicationControllerIntegrationTest {
                 "DELETE FROM applications",
                 "DELETE FROM companies",
                 "INSERT INTO companies (id, org_number, org_number_index, company_name, authorized_signatory) VALUES (702, '556000-1234', X'dedd7d2467a47aac7cc703665899fded7d8013ddecbbbf69e0ff366fd4812ed7', 'Malmö Fastigheter AB', 'Test Person')",
-                "INSERT INTO applications (id, company_id, requested_amount, purpose, status, decision, decision_reason, scoring_result, audit_log) VALUES (702, 702, 400000.00, 'Expansion', 'APPROVED', 'APPROVED', 'Godkänd', NULL, '[]')"
+                "INSERT INTO applications (id, company_id, requested_amount, purpose, status, decision, decision_reason, scoring_result) VALUES (702, 702, 400000.00, 'Expansion', 'APPROVED', 'APPROVED', 'Godkänd', NULL)"
         })
         void caseWorkerCanViewAnyApplication() throws Exception {
             mockMvc.perform(get("/api/v1/applications/702"))
@@ -352,9 +352,9 @@ class ApplicationControllerIntegrationTest {
                 "DELETE FROM companies",
                 "INSERT INTO companies (id, org_number, org_number_index, company_name, authorized_signatory) VALUES (800, '556000-1234', X'dedd7d2467a47aac7cc703665899fded7d8013ddecbbbf69e0ff366fd4812ed7', 'Company A', 'Test')",
                 "INSERT INTO companies (id, org_number, org_number_index, company_name, authorized_signatory) VALUES (801, '556000-5678', X'a4f37788064f1cf726eadc704db91cdc0b1513e482981ff59641e13f518bbbea', 'Company B', 'Test')",
-                "INSERT INTO applications (id, company_id, requested_amount, purpose, status, audit_log) VALUES (810, 800, 300000.00, 'App A', 'UNDER_REVIEW', '[]')",
-                "INSERT INTO applications (id, company_id, requested_amount, purpose, status, audit_log) VALUES (811, 801, 300000.00, 'App B', 'UNDER_REVIEW', '[]')",
-                "INSERT INTO applications (id, company_id, requested_amount, purpose, status, audit_log) VALUES (812, 800, 300000.00, 'App C', 'APPROVED', '[]')"
+                "INSERT INTO applications (id, company_id, requested_amount, purpose, status) VALUES (810, 800, 300000.00, 'App A', 'UNDER_REVIEW')",
+                "INSERT INTO applications (id, company_id, requested_amount, purpose, status) VALUES (811, 801, 300000.00, 'App B', 'UNDER_REVIEW')",
+                "INSERT INTO applications (id, company_id, requested_amount, purpose, status) VALUES (812, 800, 300000.00, 'App C', 'APPROVED')"
         })
         void caseWorkerSeesOnlyUnderReviewApplications() throws Exception {
             mockMvc.perform(get("/api/v1/applications"))
@@ -374,8 +374,8 @@ class ApplicationControllerIntegrationTest {
                 "DELETE FROM applications",
                 "DELETE FROM companies",
                 "INSERT INTO companies (id, org_number, org_number_index, company_name, authorized_signatory) VALUES (820, '556000-1234', X'dedd7d2467a47aac7cc703665899fded7d8013ddecbbbf69e0ff366fd4812ed7', 'Company A', 'Test')",
-                "INSERT INTO applications (id, company_id, requested_amount, purpose, status, audit_log) VALUES (830, 820, 300000.00, 'App X', 'APPROVED', '[]')",
-                "INSERT INTO applications (id, company_id, requested_amount, purpose, status, audit_log) VALUES (831, 820, 300000.00, 'App Y', 'REJECTED', '[]')"
+                "INSERT INTO applications (id, company_id, requested_amount, purpose, status) VALUES (830, 820, 300000.00, 'App X', 'APPROVED')",
+                "INSERT INTO applications (id, company_id, requested_amount, purpose, status) VALUES (831, 820, 300000.00, 'App Y', 'REJECTED')"
         })
         void caseWorkerWithNoPendingApplicationsSeesEmptyList() throws Exception {
             mockMvc.perform(get("/api/v1/applications"))
@@ -392,9 +392,9 @@ class ApplicationControllerIntegrationTest {
                 "DELETE FROM companies",
                 "INSERT INTO companies (id, org_number, org_number_index, company_name, authorized_signatory) VALUES (840, '556000-1234', X'dedd7d2467a47aac7cc703665899fded7d8013ddecbbbf69e0ff366fd4812ed7', 'Company A', 'Test')",
                 "INSERT INTO companies (id, org_number, org_number_index, company_name, authorized_signatory) VALUES (841, '556000-5678', X'a4f37788064f1cf726eadc704db91cdc0b1513e482981ff59641e13f518bbbea', 'Company B', 'Test')",
-                "INSERT INTO applications (id, company_id, requested_amount, purpose, status, audit_log) VALUES (850, 840, 300000.00, 'Own Under Review', 'UNDER_REVIEW', '[]')",
-                "INSERT INTO applications (id, company_id, requested_amount, purpose, status, audit_log) VALUES (851, 840, 300000.00, 'Own Approved', 'APPROVED', '[]')",
-                "INSERT INTO applications (id, company_id, requested_amount, purpose, status, audit_log) VALUES (852, 841, 300000.00, 'Other Company', 'UNDER_REVIEW', '[]')"
+                "INSERT INTO applications (id, company_id, requested_amount, purpose, status) VALUES (850, 840, 300000.00, 'Own Under Review', 'UNDER_REVIEW')",
+                "INSERT INTO applications (id, company_id, requested_amount, purpose, status) VALUES (851, 840, 300000.00, 'Own Approved', 'APPROVED')",
+                "INSERT INTO applications (id, company_id, requested_amount, purpose, status) VALUES (852, 841, 300000.00, 'Other Company', 'UNDER_REVIEW')"
         })
         void companySeesOnlyItsOwnApplications() throws Exception {
             mockMvc.perform(get("/api/v1/applications"))
@@ -412,9 +412,9 @@ class ApplicationControllerIntegrationTest {
                 "DELETE FROM applications",
                 "DELETE FROM companies",
                 "INSERT INTO companies (id, org_number, org_number_index, company_name, authorized_signatory) VALUES (860, '556000-1234', X'dedd7d2467a47aac7cc703665899fded7d8013ddecbbbf69e0ff366fd4812ed7', 'Company A', 'Test')",
-                "INSERT INTO applications (id, company_id, requested_amount, purpose, status, audit_log) VALUES (870, 860, 300000.00, 'Under Review', 'UNDER_REVIEW', '[]')",
-                "INSERT INTO applications (id, company_id, requested_amount, purpose, status, audit_log) VALUES (871, 860, 300000.00, 'Approved', 'APPROVED', '[]')",
-                "INSERT INTO applications (id, company_id, requested_amount, purpose, status, audit_log) VALUES (872, 860, 300000.00, 'Rejected', 'REJECTED', '[]')"
+                "INSERT INTO applications (id, company_id, requested_amount, purpose, status) VALUES (870, 860, 300000.00, 'Under Review', 'UNDER_REVIEW')",
+                "INSERT INTO applications (id, company_id, requested_amount, purpose, status) VALUES (871, 860, 300000.00, 'Approved', 'APPROVED')",
+                "INSERT INTO applications (id, company_id, requested_amount, purpose, status) VALUES (872, 860, 300000.00, 'Rejected', 'REJECTED')"
         })
         void companySeesAllOwnApplicationsRegardlessOfStatus() throws Exception {
             mockMvc.perform(get("/api/v1/applications"))
@@ -433,7 +433,7 @@ class ApplicationControllerIntegrationTest {
                 "DELETE FROM companies",
                 "INSERT INTO companies (id, org_number, org_number_index, company_name, authorized_signatory) VALUES (880, '556000-1234', X'dedd7d2467a47aac7cc703665899fded7d8013ddecbbbf69e0ff366fd4812ed7', 'Company A', 'Test')",
                 "INSERT INTO companies (id, org_number, org_number_index, company_name, authorized_signatory) VALUES (881, '556000-9999', X'f3449df24d42bdb4f840559a40456274c4828b6a115838e6d588e89296eeb1fc', 'Company With No Apps', 'Test')",
-                "INSERT INTO applications (id, company_id, requested_amount, purpose, status, audit_log) VALUES (890, 880, 300000.00, 'App', 'UNDER_REVIEW', '[]')"
+                "INSERT INTO applications (id, company_id, requested_amount, purpose, status) VALUES (890, 880, 300000.00, 'App', 'UNDER_REVIEW')"
         })
         void companyWithNoApplicationsSeesEmptyList() throws Exception {
             mockMvc.perform(get("/api/v1/applications"))
@@ -449,9 +449,9 @@ class ApplicationControllerIntegrationTest {
                 "DELETE FROM applications",
                 "DELETE FROM companies",
                 "INSERT INTO companies (id, org_number, org_number_index, company_name, authorized_signatory) VALUES (900, '556000-1234', X'dedd7d2467a47aac7cc703665899fded7d8013ddecbbbf69e0ff366fd4812ed7', 'Company A', 'Test')",
-                "INSERT INTO applications (id, company_id, requested_amount, purpose, status, audit_log) VALUES (910, 900, 300000.00, 'Under Review', 'UNDER_REVIEW', '[]')",
-                "INSERT INTO applications (id, company_id, requested_amount, purpose, status, audit_log) VALUES (911, 900, 300000.00, 'Approved', 'APPROVED', '[]')",
-                "INSERT INTO applications (id, company_id, requested_amount, purpose, status, audit_log) VALUES (912, 900, 300000.00, 'Rejected', 'REJECTED', '[]')"
+                "INSERT INTO applications (id, company_id, requested_amount, purpose, status) VALUES (910, 900, 300000.00, 'Under Review', 'UNDER_REVIEW')",
+                "INSERT INTO applications (id, company_id, requested_amount, purpose, status) VALUES (911, 900, 300000.00, 'Approved', 'APPROVED')",
+                "INSERT INTO applications (id, company_id, requested_amount, purpose, status) VALUES (912, 900, 300000.00, 'Rejected', 'REJECTED')"
         })
         void caseWorkerCanFilterByStatus() throws Exception {
             mockMvc.perform(get("/api/v1/applications").param("status", "APPROVED"))
@@ -469,8 +469,8 @@ class ApplicationControllerIntegrationTest {
                 "DELETE FROM applications",
                 "DELETE FROM companies",
                 "INSERT INTO companies (id, org_number, org_number_index, company_name, authorized_signatory) VALUES (920, '556000-1234', X'dedd7d2467a47aac7cc703665899fded7d8013ddecbbbf69e0ff366fd4812ed7', 'Company A', 'Test')",
-                "INSERT INTO applications (id, company_id, requested_amount, purpose, status, audit_log) VALUES (930, 920, 300000.00, 'A', 'UNDER_REVIEW', '[]')",
-                "INSERT INTO applications (id, company_id, requested_amount, purpose, status, audit_log) VALUES (931, 920, 300000.00, 'B', 'APPROVED', '[]')"
+                "INSERT INTO applications (id, company_id, requested_amount, purpose, status) VALUES (930, 920, 300000.00, 'A', 'UNDER_REVIEW')",
+                "INSERT INTO applications (id, company_id, requested_amount, purpose, status) VALUES (931, 920, 300000.00, 'B', 'APPROVED')"
         })
         void caseWorkerFilterUnderReviewMatchesDefault() throws Exception {
             mockMvc.perform(get("/api/v1/applications").param("status", "UNDER_REVIEW"))
@@ -487,9 +487,9 @@ class ApplicationControllerIntegrationTest {
                 "DELETE FROM applications",
                 "DELETE FROM companies",
                 "INSERT INTO companies (id, org_number, org_number_index, company_name, authorized_signatory) VALUES (940, '556000-1234', X'dedd7d2467a47aac7cc703665899fded7d8013ddecbbbf69e0ff366fd4812ed7', 'Company A', 'Test')",
-                "INSERT INTO applications (id, company_id, requested_amount, purpose, status, audit_log) VALUES (950, 940, 300000.00, 'Under Review', 'UNDER_REVIEW', '[]')",
-                "INSERT INTO applications (id, company_id, requested_amount, purpose, status, audit_log) VALUES (951, 940, 300000.00, 'Approved', 'APPROVED', '[]')",
-                "INSERT INTO applications (id, company_id, requested_amount, purpose, status, audit_log) VALUES (952, 940, 300000.00, 'Rejected', 'REJECTED', '[]')"
+                "INSERT INTO applications (id, company_id, requested_amount, purpose, status) VALUES (950, 940, 300000.00, 'Under Review', 'UNDER_REVIEW')",
+                "INSERT INTO applications (id, company_id, requested_amount, purpose, status) VALUES (951, 940, 300000.00, 'Approved', 'APPROVED')",
+                "INSERT INTO applications (id, company_id, requested_amount, purpose, status) VALUES (952, 940, 300000.00, 'Rejected', 'REJECTED')"
         })
         void companyCanFilterByStatus() throws Exception {
             mockMvc.perform(get("/api/v1/applications").param("status", "APPROVED"))
@@ -508,8 +508,8 @@ class ApplicationControllerIntegrationTest {
                 "DELETE FROM companies",
                 "INSERT INTO companies (id, org_number, org_number_index, company_name, authorized_signatory) VALUES (960, '556000-1234', X'dedd7d2467a47aac7cc703665899fded7d8013ddecbbbf69e0ff366fd4812ed7', 'Company A', 'Test')",
                 "INSERT INTO companies (id, org_number, org_number_index, company_name, authorized_signatory) VALUES (961, '556000-5678', X'a4f37788064f1cf726eadc704db91cdc0b1513e482981ff59641e13f518bbbea', 'Company B', 'Test')",
-                "INSERT INTO applications (id, company_id, requested_amount, purpose, status, audit_log) VALUES (970, 960, 300000.00, 'Own', 'UNDER_REVIEW', '[]')",
-                "INSERT INTO applications (id, company_id, requested_amount, purpose, status, audit_log) VALUES (971, 961, 300000.00, 'Other', 'UNDER_REVIEW', '[]')"
+                "INSERT INTO applications (id, company_id, requested_amount, purpose, status) VALUES (970, 960, 300000.00, 'Own', 'UNDER_REVIEW')",
+                "INSERT INTO applications (id, company_id, requested_amount, purpose, status) VALUES (971, 961, 300000.00, 'Other', 'UNDER_REVIEW')"
         })
         void companyFilterDoesNotLeakOtherCompaniesApplications() throws Exception {
             mockMvc.perform(get("/api/v1/applications").param("status", "UNDER_REVIEW"))

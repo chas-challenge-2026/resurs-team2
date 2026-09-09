@@ -64,7 +64,7 @@ class DecisionControllerIntegrationTest {
                 "DELETE FROM applications",
                 "DELETE FROM companies",
                 "INSERT INTO companies (id, org_number, company_name, authorized_signatory) VALUES (500, '556000-9101', 'Beslut Bolag AB', 'Test Person')",
-                "INSERT INTO applications (id, company_id, requested_amount, purpose, status, decision, decision_reason, scoring_result, audit_log) VALUES (500, 500, 150000.00, 'Företagslån', 'UNDER_REVIEW', NULL, NULL, NULL, '[]')"
+                "INSERT INTO applications (id, company_id, requested_amount, purpose, status, decision, decision_reason, scoring_result) VALUES (500, 500, 150000.00, 'Företagslån', 'UNDER_REVIEW', NULL, NULL, NULL)"
         })
         void approveApplication() throws Exception {
             mockMvc.perform(post("/api/v1/applications/500/decision")
@@ -86,7 +86,7 @@ class DecisionControllerIntegrationTest {
                 "DELETE FROM applications",
                 "DELETE FROM companies",
                 "INSERT INTO companies (id, org_number, company_name, authorized_signatory) VALUES (501, '556000-9102', 'Avslag Bolag AB', 'Test Person')",
-                "INSERT INTO applications (id, company_id, requested_amount, purpose, status, decision, decision_reason, scoring_result, audit_log) VALUES (501, 501, 150000.00, 'Företagslån', 'UNDER_REVIEW', NULL, NULL, NULL, '[]')"
+                "INSERT INTO applications (id, company_id, requested_amount, purpose, status, decision, decision_reason, scoring_result) VALUES (501, 501, 150000.00, 'Företagslån', 'UNDER_REVIEW', NULL, NULL, NULL)"
         })
         void rejectApplication() throws Exception {
             mockMvc.perform(post("/api/v1/applications/501/decision")
@@ -107,7 +107,7 @@ class DecisionControllerIntegrationTest {
                 "DELETE FROM applications",
                 "DELETE FROM companies",
                 "INSERT INTO companies (id, org_number, company_name, authorized_signatory) VALUES (502, '556000-9103', 'Tyst Bolag AB', 'Test Person')",
-                "INSERT INTO applications (id, company_id, requested_amount, purpose, status, decision, decision_reason, scoring_result, audit_log) VALUES (502, 502, 150000.00, 'Företagslån', 'UNDER_REVIEW', NULL, NULL, NULL, '[]')"
+                "INSERT INTO applications (id, company_id, requested_amount, purpose, status, decision, decision_reason, scoring_result) VALUES (502, 502, 150000.00, 'Företagslån', 'UNDER_REVIEW', NULL, NULL, NULL)"
         })
         void approveWithoutComment() throws Exception {
             mockMvc.perform(post("/api/v1/applications/502/decision")
@@ -149,7 +149,7 @@ class DecisionControllerIntegrationTest {
                 "DELETE FROM applications",
                 "DELETE FROM companies",
                 "INSERT INTO companies (id, org_number, company_name, authorized_signatory) VALUES (503, '556000-9104', 'Redan Beslutat AB', 'Test Person')",
-                "INSERT INTO applications (id, company_id, requested_amount, purpose, status, decision, decision_reason, scoring_result, audit_log) VALUES (503, 503, 150000.00, 'Företagslån', 'APPROVED', 'APPROVED', 'Godkänd', NULL, '[]')"
+                "INSERT INTO applications (id, company_id, requested_amount, purpose, status, decision, decision_reason, scoring_result) VALUES (503, 503, 150000.00, 'Företagslån', 'APPROVED', 'APPROVED', 'Godkänd', NULL)"
         })
         void alreadyDecidedIs409() throws Exception {
             mockMvc.perform(post("/api/v1/applications/503/decision")

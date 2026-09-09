@@ -101,6 +101,7 @@ class ApplicationLifecycleIntegrationTest {
     @DisplayName("Full lifecycle: manual-review -> case worker approval -> company confirms")
     @Sql(statements = {
             "DELETE FROM documents",
+            "DELETE FROM audit_log",
             "DELETE FROM applications",
             "DELETE FROM companies",
             "DELETE FROM case_workers",
