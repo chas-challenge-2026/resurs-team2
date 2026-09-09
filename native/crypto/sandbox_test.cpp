@@ -7,8 +7,10 @@
 #include <cstdio>
 #include <filesystem>
 #include <fstream>
+#include <limits>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <system_error>
 #include <vector>
 
@@ -265,6 +267,23 @@ int main()
         check(empty_ok, "hmacSha256 accepts empty input");
 
         dump("hmac(556000-1234)", a1.data(), a1.size());
+    }
+
+    // --- AesGcmCipher rejects an input whose length would not fit an int ---
+    {
+        resurs::Key ek{};
+        resurs::Nonce en{};
+        RAND_bytes(ek.data(), static_cast<int>(ek.size()));
+        RAND_bytes(en.data(), static_cast<int>(en.size()));
+
+        // A string_view can describe a huge range without allocating it; 
+        // the guard must trip on the length alone, before any OpenSSL call reads the data.
+        const std::size_t too_big =
+            static_cast<std::size_t>(std::numeric_limits<int>::max()) + 1;
+        const std::string_view fake_huge{reinterpret_cast<const char *>(ek.data()), too_big};
+        check(throws_as<std::runtime_error>([&]
+                                            { resurs::AesGcmCipher::encrypt(fake_huge, ek, en); }),
+              "AesGcmCipher::encrypt rejects an over-int-max input");
     }
 
     // --- AesGcmCipher demo, variation 1: random keys ---
