@@ -6,7 +6,7 @@ import jakarta.annotation.Nonnull;
 
 public record DocumentResponse(
     @Nonnull
-    Long id,
+    Long uuid,
     @Nonnull
     String filename,
     @Nonnull

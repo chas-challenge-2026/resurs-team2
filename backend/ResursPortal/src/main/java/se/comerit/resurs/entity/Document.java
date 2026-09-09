@@ -5,24 +5,20 @@ import java.time.ZoneId;
 
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.PrePersist;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import org.hibernate.annotations.UuidGenerator;
+
 
 @Entity
 @Table(name = "documents")
 public class Document {
     @Id
+    @UuidGenerator
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private Long uuid;
     @ManyToOne
     @NotNull
     private Application application;
@@ -53,9 +49,14 @@ public class Document {
         // Constructor needed by JPA
     }
 
+
+
     @Nullable
-    public Long getId() {
-        return id;
+    public Long getUuid() {
+        return uuid;
+    }
+
+    public void setUuid(@Nonnull Long uuid) {this.uuid = uuid;
     }
 
     @Nonnull
