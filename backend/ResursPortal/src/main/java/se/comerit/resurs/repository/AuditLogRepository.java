@@ -17,6 +17,6 @@ public interface AuditLogRepository extends JpaRepository<AuditLog, UUID> {
 
     Optional<AuditLog> findTopByApplicationOrderBySequenceNumberDesc(Application app);
 
-    @Query("SELECT a.hash FROM AuditLog a WHERE a.application = :app ORDER BY a.sequenceNumber DESC")
+    @Query("SELECT a.hash FROM AuditLog a WHERE a.application = :app ORDER BY a.sequenceNumber DESC LIMIT 1")
     Optional<String> findPreviousHash(@Param("app") Application app);
 }
