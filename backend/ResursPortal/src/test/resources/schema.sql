@@ -23,7 +23,6 @@ CREATE TABLE applications (
     decision VARCHAR(20),
     decision_reason TEXT,
     scoring_result TEXT,
-    audit_log TEXT DEFAULT '[]',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
