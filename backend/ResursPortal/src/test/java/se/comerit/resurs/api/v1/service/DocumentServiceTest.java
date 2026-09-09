@@ -15,6 +15,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 
+
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockMultipartFile;
 
@@ -36,12 +37,12 @@ class DocumentServiceTest {
     void getDocuments_returnsDocumentsForMatchingApplication() {
         Company company = company("556677-8899");
         Application application = application(company, "Rörelsekapital");
-        setId(application, 7L);
+        setId(application, 7L );
 
         Document older = new Document(application, "older.pdf", "AnnualReview");
         Document newer = new Document(application, "newer.pdf", "BankStatement");
-        setId(older, 11L);
-        setId(newer, 12L);
+        setUuid(older, 11L);
+        setUuid(newer, 12L);
 
         Map<Long, Application> applications = new HashMap<>();
         applications.put(7L, application);
@@ -87,7 +88,8 @@ class DocumentServiceTest {
                 "file",
                 "report.pdf",
                 "application/pdf",
-                "hello world".getBytes(StandardCharsets.UTF_8));
+                "%PDF-1.4\n1 0 obj\n<<>>\nendobj\ntrailer\n<<>>\n%%EOF".getBytes(StandardCharsets.UTF_8)
+        );
 
         DocumentDto saved = service.uploadDocument(
                 7L,
@@ -95,7 +97,7 @@ class DocumentServiceTest {
                 file,
                 new CompanyPrincipal(1L, "customer", "556677-8899"));
 
-        assertThat(saved.filename()).isEqualTo("7_report.pdf");
+        assertThat(saved.filename()).startsWith("7_").endsWith("_report.pdf");
         assertThat(saved.docType()).isEqualTo("AnnualReview");
         assertThat(application.getStatus()).isEqualTo(ApplicationStatus.UNDER_REVIEW);
         assertThat(documentsByApplication.get(7L)).hasSize(1);
@@ -144,7 +146,7 @@ class DocumentServiceTest {
         setId(application, 7L);
 
         Document document = new Document(application, "foreign.pdf", "AnnualReview");
-        setId(document, 21L);
+        setUuid(document, 21L);
 
         Map<Long, Application> applications = new HashMap<>();
         applications.put(7L, application);
@@ -181,7 +183,7 @@ class DocumentServiceTest {
                         case "save" -> {
                             Application app = (Application) args[0];
                             if (app.getId() == null) {
-                                setId(app, nextId.getAndIncrement());
+                                setUuid(app, nextId.getAndIncrement());
                             }
                             applications.put(app.getId(), app);
                             return app;
@@ -218,10 +220,10 @@ class DocumentServiceTest {
                         }
                         case "save" -> {
                             Document document = (Document) args[0];
-                            if (document.getId() == null) {
-                                setId(document, nextId.getAndIncrement());
+                            if (document.getUuid() == null) {
+                                setUuid(document, nextId.getAndIncrement());
                             }
-                            byId.put(document.getId(), document);
+                            byId.put(document.getUuid(), document);
 
                             Long applicationId = document.getApplication().getId();
                             byApplication.computeIfAbsent(applicationId, k -> new ArrayList<>())
@@ -231,7 +233,7 @@ class DocumentServiceTest {
                         }
                         case "delete" -> {
                             Document document = (Document) args[0];
-                            byId.remove(document.getId());
+                            byId.remove(document.getUuid());
                             Long appId = document.getApplication().getId();
                             List<Document> list = byApplication.get(appId);
                             if (list != null) {
@@ -250,6 +252,7 @@ class DocumentServiceTest {
 
 
     private static Company company(String orgNumber) {
+
         return new Company(orgNumber, "Testbolaget AB", "Kalle Kula");
     }
 
@@ -264,6 +267,17 @@ class DocumentServiceTest {
             field.set(target, id);
         } catch (ReflectiveOperationException e) {
             throw new IllegalStateException("Failed to assign id", e);
+        }
+    }
+
+
+    private static void setUuid(Object target, Long uuid) {
+        try {
+            Field field = target.getClass().getDeclaredField("uuid");
+            field.setAccessible(true);
+            field.set(target, uuid);
+        } catch (ReflectiveOperationException e) {
+            throw new IllegalStateException("Failed to assign uuid", e);
         }
     }
 }

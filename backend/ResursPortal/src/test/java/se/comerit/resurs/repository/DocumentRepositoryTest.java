@@ -52,7 +52,7 @@ class DocumentRepositoryTest {
 
         Document savedDoc = documentRepository.save(doc);
 
-        assertThat(savedDoc.getId()).isNotNull();
+        assertThat(savedDoc.getUuid()).isNotNull();
         assertThat(savedDoc.getUploadedAt()).isNotNull();
         assertThat(documentRepository.findByApplicationId(savedApp.getId())).hasSize(1);
     }
