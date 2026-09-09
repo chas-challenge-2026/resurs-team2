@@ -51,17 +51,16 @@ public class DocumentController {
 
     @PreAuthorize("hasRole('COMPANY')")
     @PostMapping(
-            path = "applications/{id}/documents",
+            path = "applications/{id}/documents{id}",
             consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-
     public ResponseEntity<DocumentDto> uploadDocument(
-            @RequestParam Long id,
+            @RequestParam Long uuId,
             @RequestParam String docType,
             @RequestParam MultipartFile file,
             @AuthenticationPrincipal UserPrincipal principal) {
 
         DocumentDto document = documentService.uploadDocument(
-                id,
+                uuId,
                 docType,
                 file,
                 principal
@@ -84,7 +83,7 @@ public class DocumentController {
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION,
                         "attachment")
-                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .contentType(MediaType.APPLICATION_PDF)
                 .body(resource);
     }
 
