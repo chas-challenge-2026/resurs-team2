@@ -7,22 +7,21 @@
 #   dev            - Run Vite dev server (HMR) + backend with local profile
 #   build-frontend - Build only the React frontend
 #   build-backend  - Build only the Spring Boot backend
-#   # build-native - Build only the C++ native module (uncomment when CMake is added)
+#   build-native   - Build only the C++ native module
 
 ROOT         := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 FRONTEND_DIR := frontend
-# NATIVE_DIR   := native
+NATIVE_DIR   := native
 BACKEND_DIR  := backend/ResursPortal
 TARGET_DIR   := target
 
-.PHONY: clean build test test_frontend test_backend test_native dev \
-        build-frontend build-backend package dev-vite dev-spring
+.PHONY: clean build test test_frontend test_backend test_native test-encryption dev \
+        build-frontend build-backend build-native package dev-vite dev-spring
         # build-native
 
 # ── Aggregate targets ─────────────────────────────────────────────
 
-build: build-frontend build-backend
-# build: build-native build-frontend build-backend
+build: build-native build-frontend build-backend
 
 # Alias used by the Dockerfile - same as `build`.
 package: build
@@ -54,20 +53,23 @@ test_backend:
 	cd $(BACKEND_DIR) && ./mvnw test
 
 test_native:
-	@echo "No native tests yet – passing by default."
+	cd $(NATIVE_DIR) && $(MAKE) test
+
+test-encryption: build-native
+	cd $(BACKEND_DIR) && ./mvnw -Dtest=RealEncryptionIT test
 
 clean:
 	rm -rf $(TARGET_DIR)
 	rm -rf $(FRONTEND_DIR)/dist
-	# rm -rf $(NATIVE_DIR)/build
+	cd $(NATIVE_DIR) && $(MAKE) clean
 	cd $(BACKEND_DIR) && ./mvnw clean
 
 # ── Sub-builds ────────────────────────────────────────────────────
 
-# build-native:
-# 	cd $(NATIVE_DIR) && cmake -S . -B build && cmake --build build
-# 	mkdir -p $(TARGET_DIR)/libs
-# 	cp $(NATIVE_DIR)/build/crypto/libresurs_crypto.so $(TARGET_DIR)/libs/
+build-native:
+	cd $(NATIVE_DIR) && $(MAKE) build
+	mkdir -p $(TARGET_DIR)/libs
+	cp $(NATIVE_DIR)/build/crypto/libresurs_crypto.so $(TARGET_DIR)/libs/
 
 build-frontend:
 	cd $(FRONTEND_DIR) && npm ci && npm run build
