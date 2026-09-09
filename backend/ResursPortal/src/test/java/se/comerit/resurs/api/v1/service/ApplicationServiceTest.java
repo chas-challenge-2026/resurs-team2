@@ -17,14 +17,15 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
-
 
 
 import se.comerit.resurs.api.v1.dto.ApplicationRequest;
 import se.comerit.resurs.entity.Application;
 import se.comerit.resurs.entity.ApplicationStatus;
+import se.comerit.resurs.entity.AuditLog;
 import se.comerit.resurs.entity.Company;
 import se.comerit.resurs.exception.CompanyNotFoundException;
 import se.comerit.resurs.rating.CheckResult;
@@ -33,6 +34,7 @@ import se.comerit.resurs.rating.Decision;
 import se.comerit.resurs.rating.Score;
 import se.comerit.resurs.rating.ScoringResult;
 import se.comerit.resurs.repository.ApplicationRepository;
+import se.comerit.resurs.repository.AuditLogRepository;
 import se.comerit.resurs.repository.CompanyRepository;
 import tools.jackson.databind.ObjectMapper;
 
@@ -48,6 +50,7 @@ class ApplicationServiceTest {
 
     private CompanyRepository companyRepository;
     private ApplicationRepository applicationRepository;
+    private AuditLogRepository auditLogRepository;
     private ScoringService scoringService;
     private AuditLogService auditLogService;
     private ApplicationService applicationService;
@@ -59,8 +62,9 @@ class ApplicationServiceTest {
     void setUp() {
         companyRepository = mock(CompanyRepository.class);
         applicationRepository = mock(ApplicationRepository.class);
+        auditLogRepository = mock(AuditLogRepository.class);
         scoringService = mock(ScoringService.class);
-        auditLogService = new AuditLogService(new ObjectMapper());
+        auditLogService = new AuditLogService(auditLogRepository, new ObjectMapper());
 
         applicationService = new ApplicationService(
                 companyRepository, applicationRepository, scoringService, auditLogService);
@@ -161,7 +165,7 @@ class ApplicationServiceTest {
 
     @Nested
     @DisplayName("Audit log")
-    class AuditLog {
+    class AuditLogEntries {
 
         @Test
         @DisplayName("Creates an APPLICATION_CREATED entry carrying the org number")
@@ -178,12 +182,11 @@ class ApplicationServiceTest {
                 applicationService.submitApplication("556677-8899", validRequest);
             }
 
-            verify(applicationRepository).save(argThat(app -> {
-                String log = app.getAuditLog();
-                return log.contains("\"action\":\"APPLICATION_CREATED\"")
-                        && log.contains("\"orgNumber\":\"556677-8899\"")
-                        && log.contains("\"ts\":");
-            }));
+            List<AuditLog> saved = capturedAuditLogs();
+            AuditLog created = saved.get(0);
+            assertThat(created.getEntry())
+                    .contains("\"action\":\"APPLICATION_CREATED\"")
+                    .contains("\"orgNumber\":\"556677-8899\"");
         }
 
         @Test
@@ -201,16 +204,16 @@ class ApplicationServiceTest {
                 applicationService.submitApplication("556677-8899", validRequest);
             }
 
-            verify(applicationRepository).save(argThat(app -> {
-                String log = app.getAuditLog();
-                return log.contains("\"action\":\"SCORING_RUN\"")
-                        && log.contains("\"result\":\"APPROVED\"")
-                        && log.contains("\"flags\":\"2\"");
-            }));
+            List<AuditLog> saved = capturedAuditLogs();
+            AuditLog scoring = saved.get(1);
+            assertThat(scoring.getEntry())
+                    .contains("\"action\":\"SCORING_RUN\"")
+                    .contains("\"result\":\"APPROVED\"")
+                    .contains("\"flags\":\"2\"");
         }
 
         @Test
-        @DisplayName("APPLICATION_CREATED precedes SCORING_RUN, both as a single JSON array")
+        @DisplayName("APPLICATION_CREATED precedes SCORING_RUN")
         void entriesInOrderAsSingleArray() {
             when(companyRepository.findByOrgNumber("556677-8899"))
                     .thenReturn(Optional.of(company));
@@ -224,16 +227,17 @@ class ApplicationServiceTest {
                 applicationService.submitApplication("556677-8899", validRequest);
             }
 
-            verify(applicationRepository).save(argThat(app -> {
-                String log = app.getAuditLog().trim();
-                int created = log.indexOf("APPLICATION_CREATED");
-                int scoring = log.indexOf("SCORING_RUN");
-                return log.startsWith("[")
-                        && log.endsWith("]")
-                        && created >= 0
-                        && scoring > created;
-            }));
+            List<AuditLog> saved = capturedAuditLogs();
+            assertThat(saved).hasSize(2);
+            assertThat(saved.get(0).getEntry()).contains("APPLICATION_CREATED");
+            assertThat(saved.get(1).getEntry()).contains("SCORING_RUN");
         }
+    }
+
+    private List<AuditLog> capturedAuditLogs() {
+        ArgumentCaptor<AuditLog> captor = ArgumentCaptor.forClass(AuditLog.class);
+        verify(auditLogRepository, Mockito.times(2)).save(captor.capture());
+        return captor.getAllValues();
     }
 
     @Nested

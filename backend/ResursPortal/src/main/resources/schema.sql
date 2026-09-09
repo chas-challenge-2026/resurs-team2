@@ -35,3 +35,13 @@ CREATE TABLE documents (
     doc_type VARCHAR(50),
     uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE audit_log (
+    id UUID PRIMARY KEY,
+    application_id INT REFERENCES applications(id),
+    sequence_number BIGINT NOT NULL,
+    hash VARCHAR(512) NOT NULL,
+    previous_hash VARCHAR(512) NOT NULL,
+    entry TEXT NOT NULL,
+    timestamp TIMESTAMP NOT NULL
+);

@@ -60,6 +60,7 @@ class DecisionControllerIntegrationTest {
         @WithCaseWorker(name = "Karin Handläggare")
         @Sql(statements = {
                 "DELETE FROM documents",
+                "DELETE FROM audit_log",
                 "DELETE FROM applications",
                 "DELETE FROM companies",
                 "INSERT INTO companies (id, org_number, company_name, authorized_signatory) VALUES (500, '556000-9101', 'Beslut Bolag AB', 'Test Person')",
@@ -81,6 +82,7 @@ class DecisionControllerIntegrationTest {
         @WithCaseWorker(name = "Karin Handläggare")
         @Sql(statements = {
                 "DELETE FROM documents",
+                "DELETE FROM audit_log",
                 "DELETE FROM applications",
                 "DELETE FROM companies",
                 "INSERT INTO companies (id, org_number, company_name, authorized_signatory) VALUES (501, '556000-9102', 'Avslag Bolag AB', 'Test Person')",
@@ -101,6 +103,7 @@ class DecisionControllerIntegrationTest {
         @WithCaseWorker(name = "Karin Handläggare")
         @Sql(statements = {
                 "DELETE FROM documents",
+                "DELETE FROM audit_log",
                 "DELETE FROM applications",
                 "DELETE FROM companies",
                 "INSERT INTO companies (id, org_number, company_name, authorized_signatory) VALUES (502, '556000-9103', 'Tyst Bolag AB', 'Test Person')",
@@ -142,6 +145,7 @@ class DecisionControllerIntegrationTest {
         @WithCaseWorker
         @Sql(statements = {
                 "DELETE FROM documents",
+                "DELETE FROM audit_log",
                 "DELETE FROM applications",
                 "DELETE FROM companies",
                 "INSERT INTO companies (id, org_number, company_name, authorized_signatory) VALUES (503, '556000-9104', 'Redan Beslutat AB', 'Test Person')",
