@@ -23,7 +23,6 @@ CREATE TABLE applications (
     decision VARCHAR(20),
     decision_reason TEXT,
     scoring_result TEXT,
-    audit_log TEXT DEFAULT '[]',  -- legacy JSON blob; entries are appended to audit_log table
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW()
 );

@@ -23,7 +23,6 @@ import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.DecimalMin;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
 @Entity
@@ -68,10 +67,6 @@ public class Application {
     @Nullable
     private String scoringResult;
 
-    @Column(name = "audit_log", columnDefinition = "TEXT")
-    @NotBlank
-    private String auditLog = "[]";
-
     @Convert(converter = PiiAttributeConverter.class)
     @Column(name = "financial_data", columnDefinition = "TEXT")
     @Nullable
@@ -112,7 +107,7 @@ public class Application {
 
     public Application(@Nonnull Company company, @Nonnull BigDecimal requestedAmount,
             @Nonnull String purpose, ApplicationStatus statusValue, Decision decision,
-            String decisionReason, String scoringResult, String auditLog) {
+            String decisionReason, String scoringResult) {
         this.company = company;
         this.requestedAmount = requestedAmount;
         this.purpose = purpose;
@@ -120,12 +115,11 @@ public class Application {
         this.decision = decision;
         this.decisionReason = decisionReason;
         this.scoringResult = scoringResult;
-        this.auditLog = auditLog;
     }
 
     public Application(@Nonnull Company company, @Nonnull BigDecimal requestedAmount,
             @Nonnull String purpose, ApplicationStatus statusValue, Decision decision,
-            String decisionReason, String scoringResult, String auditLog, String financialData) {
+            String decisionReason, String scoringResult, String financialData) {
         this.company = company;
         this.requestedAmount = requestedAmount;
         this.purpose = purpose;
@@ -133,7 +127,6 @@ public class Application {
         this.decision = decision;
         this.decisionReason = decisionReason;
         this.scoringResult = scoringResult;
-        this.auditLog = auditLog;
         this.financialData = financialData;
     }
 
@@ -207,15 +200,6 @@ public class Application {
 
     public void setScoringResult(@Nullable String scoringResult) {
         this.scoringResult = scoringResult;
-    }
-
-    @Nonnull
-    public String getAuditLog() {
-        return auditLog;
-    }
-
-    public void setAuditLog(@Nonnull String auditLog) {
-        this.auditLog = auditLog;
     }
 
     @Nullable
