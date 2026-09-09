@@ -1,19 +1,26 @@
 package se.comerit.resurs.api.v1.mapper;
 
 import java.util.List;
+import java.util.Map;
 
+import se.comerit.resurs.api.v1.dto.AuditLogResponse;
 import se.comerit.resurs.api.v1.dto.ApplicationDetailsResponse;
 import se.comerit.resurs.api.v1.dto.ApplicationRequest;
 import se.comerit.resurs.api.v1.dto.ApplicationResponse;
 import se.comerit.resurs.api.v1.dto.DocumentResponse;
 import se.comerit.resurs.entity.Application;
 import se.comerit.resurs.entity.ApplicationStatus;
+import se.comerit.resurs.entity.AuditLog;
 import se.comerit.resurs.entity.Decision;
 import se.comerit.resurs.entity.Document;
 import se.comerit.resurs.rating.ApplicationData;
 import se.comerit.resurs.rating.ScoringResult;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
 
 public final class ApplicationMapper {
+
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     private ApplicationMapper() {
     }
@@ -54,9 +61,16 @@ public final class ApplicationMapper {
     public static ApplicationDetailsResponse toDetailsResponse(Application app, String caseWorker) {
         return new ApplicationDetailsResponse(
                 toResponse(app),
-                app.getAuditLog(),
                 caseWorker,
-                app.getDocuments().stream().map(ApplicationMapper::toDocumentResponse).toList());
+                app.getDocuments().stream().map(ApplicationMapper::toDocumentResponse).toList(),
+                app.getAuditLogs().stream().map(ApplicationMapper::toAuditLogResponse).toList());
+    }
+
+    public static AuditLogResponse toAuditLogResponse(AuditLog log) {
+        return new AuditLogResponse(
+                log.getSequenceNumber(),
+                log.getTimestamp(),
+                OBJECT_MAPPER.readValue(log.getEntry(), new TypeReference<Map<String, Object>>() {}));
     }
 
     public static ApplicationResponse toResponse(Application app) {

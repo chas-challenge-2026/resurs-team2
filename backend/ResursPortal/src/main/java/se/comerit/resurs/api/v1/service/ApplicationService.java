@@ -63,8 +63,7 @@ public class ApplicationService {
             ApplicationMapper.toStatus(score),
             ApplicationMapper.toDecision(score),
             score.summary(),
-            scoring.scoringLog(),
-            "[]"
+            scoring.scoringLog()
         );
 
         app = applicationRepository.save(app);
