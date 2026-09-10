@@ -22,6 +22,7 @@ import se.comerit.resurs.audit.ScoringRun;
 import se.comerit.resurs.entity.Application;
 import se.comerit.resurs.entity.AuditLog;
 import se.comerit.resurs.entity.Company;
+import se.comerit.resurs.repository.ApplicationRepository;
 import se.comerit.resurs.repository.AuditLogRepository;
 import tools.jackson.databind.ObjectMapper;
 
@@ -33,7 +34,8 @@ class AuditLogServiceTest {
     @BeforeEach
     void setUp() {
         auditLogRepository = mock(AuditLogRepository.class);
-        auditLogService = new AuditLogService(auditLogRepository, new ObjectMapper());
+        auditLogService = new AuditLogService(auditLogRepository, mock(ApplicationRepository.class),
+                new ObjectMapper());
     }
 
     private Application application() {
