@@ -68,6 +68,7 @@ public class ApplicationService {
             financialDataJson = null;
         }
 
+        // TODO: Consider what should be the default status
         Application app = new Application(
                 company,
                 application.requestedAmount(),
