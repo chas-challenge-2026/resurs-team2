@@ -23,7 +23,6 @@ CREATE TABLE applications (
     decision VARCHAR(20),
     decision_reason TEXT,
     scoring_result TEXT,
-    audit_log TEXT DEFAULT '[]',  -- JSON blob, no separate table
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW()
 );
@@ -34,6 +33,16 @@ CREATE TABLE documents (
     filename VARCHAR(512),
     doc_type VARCHAR(50),
     uploaded_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE audit_log (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    application_id INT NOT NULL REFERENCES applications(id),
+    sequence_number BIGINT NOT NULL,
+    hash VARCHAR(512) NOT NULL,
+    previous_hash VARCHAR(512) NOT NULL,
+    entry TEXT NOT NULL,
+    timestamp TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
 -- NOTE: companies, applications and case workers contain PII. Production seeds

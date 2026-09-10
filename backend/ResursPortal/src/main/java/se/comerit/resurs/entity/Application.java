@@ -23,7 +23,6 @@ import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.DecimalMin;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
 @Entity
@@ -68,13 +67,13 @@ public class Application {
     @Nullable
     private String scoringResult;
 
-    @Column(name = "audit_log", columnDefinition = "TEXT")
-    @NotBlank
-    private String auditLog = "[]";
-
     @OneToMany(fetch = FetchType.LAZY, mappedBy = "application")
     @OrderBy("uploadedAt DESC")
     private List<Document> documents;
+
+    @OneToMany(fetch = FetchType.LAZY, mappedBy = "application")
+    @OrderBy("timestamp DESC")
+    private List<AuditLog> auditLogs;
 
     @Column(name = "created_at")
     @Nullable
@@ -103,7 +102,7 @@ public class Application {
 
     public Application(@Nonnull Company company, @Nonnull BigDecimal requestedAmount,
             @Nonnull String purpose, ApplicationStatus statusValue, Decision decision,
-            String decisionReason, String scoringResult, String auditLog) {
+            String decisionReason, String scoringResult) {
         this.company = company;
         this.requestedAmount = requestedAmount;
         this.purpose = purpose;
@@ -111,8 +110,6 @@ public class Application {
         this.decision = decision;
         this.decisionReason = decisionReason;
         this.scoringResult = scoringResult;
-        this.auditLog = auditLog;
-
     }
 
     protected Application() {
@@ -188,17 +185,13 @@ public class Application {
     }
 
     @Nonnull
-    public String getAuditLog() {
-        return auditLog;
-    }
-
-    public void setAuditLog(@Nonnull String auditLog) {
-        this.auditLog = auditLog;
+    public List<Document> getDocuments() {
+        return documents;
     }
 
     @Nonnull
-    public List<Document> getDocuments() {
-        return documents;
+    public List<AuditLog> getAuditLogs() {
+        return auditLogs;
     }
 
     @Nullable

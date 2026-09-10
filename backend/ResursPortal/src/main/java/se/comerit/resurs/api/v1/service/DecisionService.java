@@ -1,12 +1,10 @@
 package se.comerit.resurs.api.v1.service;
 
-import java.util.LinkedHashMap;
-import java.util.Map;
-
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import jakarta.annotation.Nonnull;
+import se.comerit.resurs.audit.ManualDecision;
 import se.comerit.resurs.api.v1.dto.DecisionRequest;
 import se.comerit.resurs.api.v1.dto.ApplicationResponse;
 import se.comerit.resurs.api.v1.mapper.ApplicationMapper;
@@ -42,14 +40,13 @@ public class DecisionService {
         application.setDecision(request.decision());
         application.setDecisionReason(request.comment());
 
-        Map<String, String> auditDetails = new LinkedHashMap<>();
-        auditDetails.put("decision", request.decision().name());
-        auditDetails.put("worker", caseWorker);
-        if (request.comment() != null && !request.comment().isBlank()) {
-            auditDetails.put("comment", request.comment());
-        }
-        auditLogService.append(application, "MANUAL_DECISION", auditDetails);
+        auditLogService.append(application,
+                new ManualDecision(request.decision().name(), caseWorker, blankToNull(request.comment())));
 
         return ApplicationMapper.toResponse(repository.save(application));
+    }
+
+    private static String blankToNull(String value) {
+        return value == null || value.isBlank() ? null : value;
     }
 }

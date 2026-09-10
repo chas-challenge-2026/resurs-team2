@@ -74,7 +74,6 @@ class ApplicationRepositoryTest {
         assertThat(saved.getCreatedAt()).isNotNull();
         assertThat(saved.getUpdatedAt()).isNotNull();
         assertThat(saved.getStatus()).isEqualTo(ApplicationStatus.PENDING_DOCS);
-        assertThat(saved.getAuditLog()).isEqualTo("[]");
     }
 
     @Test

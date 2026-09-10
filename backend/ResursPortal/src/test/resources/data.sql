@@ -5,5 +5,8 @@ INSERT INTO companies (org_number, org_number_index, company_name, authorized_si
 INSERT INTO case_workers (name, email, email_index, password) VALUES
 ('Karin Handläggare', 'karin@resurs.se', X'240cf76b4caf0123ebfc7392cd379b0467f4026fa356c0a05bfa360a87679413', '$2a$10$rUonBwDLz9IA0Ivwnor38.tjZevxSeIHzQx5b4u0RwHhHJ/sbao32');
 
-INSERT INTO applications (company_id, requested_amount, purpose, status, decision, scoring_result, audit_log) VALUES
-(1, 500000.00, 'Expansion av verksamheten', 'UNDER_REVIEW', null, 'FLAGGED: soliditet=0.28 (OK)', '[{"ts":"2026-01-15T10:00:00","action":"APPLICATION_CREATED"}]');
+INSERT INTO applications (company_id, requested_amount, purpose, status, decision, scoring_result) VALUES
+(1, 500000.00, 'Expansion av verksamheten', 'UNDER_REVIEW', null, 'FLAGGED: soliditet=0.28 (OK)');
+
+INSERT INTO audit_log (application_id, sequence_number, hash, previous_hash, entry, timestamp) VALUES
+(1, 1, '', '', '{"action":"APPLICATION_CREATED","orgNumber":"556000-1234"}', '2026-01-15T10:00:00');

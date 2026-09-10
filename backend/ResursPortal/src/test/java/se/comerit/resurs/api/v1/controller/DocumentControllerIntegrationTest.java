@@ -38,6 +38,7 @@ import se.comerit.resurs.entity.Document;
 import se.comerit.resurs.exception.ApplicationNotFoundException;
 import se.comerit.resurs.exception.DocumentNotFoundException;
 import se.comerit.resurs.repository.ApplicationRepository;
+import se.comerit.resurs.repository.AuditLogRepository;
 import se.comerit.resurs.repository.CompanyRepository;
 import se.comerit.resurs.repository.DocumentRepository;
 import se.comerit.resurs.security.CompanyPrincipal;
@@ -66,6 +67,9 @@ class DocumentControllerIntegrationTest {
     @Autowired
     private DocumentRepository documentRepository;
 
+    @Autowired
+    private AuditLogRepository auditLogRepository;
+
     private static final String COMPANY_A = "556000-1234";
     private static final String COMPANY_B = "556000-5678";
 
@@ -77,6 +81,7 @@ class DocumentControllerIntegrationTest {
     @BeforeEach
     void setUp() throws IOException {
         documentRepository.deleteAll();
+        auditLogRepository.deleteAll();
         applicationRepository.deleteAll();
         companyRepository.deleteAll();
 

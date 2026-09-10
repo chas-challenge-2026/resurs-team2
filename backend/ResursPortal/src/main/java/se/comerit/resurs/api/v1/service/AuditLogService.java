@@ -1,90 +1,82 @@
 package se.comerit.resurs.api.v1.service;
 
+import java.util.List;
+
 import jakarta.annotation.Nonnull;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import se.comerit.resurs.audit.AuditEntry;
+import se.comerit.resurs.api.v1.dto.AuditLogResponse;
+import se.comerit.resurs.api.v1.dto.AuditSort;
+import se.comerit.resurs.api.v1.mapper.ApplicationMapper;
 import se.comerit.resurs.entity.Application;
+import se.comerit.resurs.entity.AuditLog;
+import se.comerit.resurs.exception.ApplicationNotFoundException;
+import se.comerit.resurs.repository.ApplicationRepository;
+import se.comerit.resurs.repository.AuditLogRepository;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
 
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.LinkedHashMap;
-import java.util.Map;
-
-/**
- * Helper for appending tamper-evident audit entries to an {@link Application}'s
- * {@code auditLog} JSON blob. The current implementation manipulates the JSON
- * string directly; a future plan replaces this with a dedicated audit table.
- */
 @Service
 public class AuditLogService {
 
-    private static final DateTimeFormatter TS_FORMAT = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
-
+    private final AuditLogRepository auditLogRepository;
+    private final ApplicationRepository applicationRepository;
     private final ObjectMapper objectMapper;
 
-    public AuditLogService(ObjectMapper objectMapper) {
+    public AuditLogService(AuditLogRepository auditLogRepository, ApplicationRepository applicationRepository,
+            ObjectMapper objectMapper) {
+        this.auditLogRepository = auditLogRepository;
+        this.applicationRepository = applicationRepository;
         this.objectMapper = objectMapper;
     }
 
-    /**
-     * Returns {@code true} when the audit log has no entries yet, i.e. it is
-     * {@code null}, blank, or the empty JSON array literal {@code []}.
-     */
-    private static boolean isEmptyLog(String currentLog) {
-        return currentLog == null || currentLog.isBlank() || "[]".equals(currentLog.trim());
-    }
-
-    /**
-     * Builds a new log containing only the given first entry (a valid JSON
-     * array with a single element).
-     */
     @Nonnull
-    private static String newLog(String entry) {
-        return "[" + entry + "]";
-    }
+    public AuditLog append(Application application, @Nonnull AuditEntry entry) {
+        long seq = auditLogRepository.getNextSequenceNumber(application) + 1;
+        String prevHash = auditLogRepository.findPreviousHash(application).orElse("");
 
-    /**
-     * Appends the given entry to the end of an existing non-empty audit log
-     * JSON array by inserting it before the closing {@code ]}.
-     */
-    @Nonnull
-    private static String appendEntry(String currentLog, String entry) {
-        return currentLog.substring(0, currentLog.lastIndexOf("]")) + "," + entry + "]";
-    }
+        String entryJson = toJson(entry);
+        String hash = computeHash(prevHash, entryJson);
 
-    /**
-     * Appends a single audit entry to the given application's log, persists it
-     * on the application via {@link Application#setAuditLog}, and returns the
-     * resulting full log JSON. The entry always carries a timestamp and an
-     * {@code action}, plus any additional {@code details} supplied.
-     */
-    @Nonnull
-    public String append(Application application, @Nonnull String action,
-                         @Nonnull Map<String, String> details) {
-        Map<String, String> fields = new LinkedHashMap<>();
-        fields.put("ts", LocalDateTime.now().format(TS_FORMAT));
-        fields.put("action", action);
-        fields.putAll(details);
-
-        String entry = toJson(fields);
-        String currentLog = application.getAuditLog();
-        String updatedLog;
-        if (isEmptyLog(currentLog)) {
-            updatedLog = newLog(entry);
-        } else {
-            updatedLog = appendEntry(currentLog, entry);
-        }
-        application.setAuditLog(updatedLog);
-        return updatedLog;
+        AuditLog log = new AuditLog(application, seq, hash, prevHash, entryJson);
+        return auditLogRepository.save(log);
     }
 
     @Nonnull
-    private String toJson(Map<String, String> fields) {
+    private String computeHash(@Nonnull String previousHash, @Nonnull String entry) {
+        // TODO: Implement actual hash computation
+        return "";
+    }
+
+    @Nonnull
+    private String toJson(AuditEntry entry) {
         try {
-            return objectMapper.writeValueAsString(fields);
+            return objectMapper.writeValueAsString(entry);
         } catch (JacksonException e) {
             throw new IllegalStateException("Failed to serialize audit entry", e);
         }
+    }
+
+    /**
+     * Returns the audit log for an application, ordered by the requested sort.
+     * Throws an {@link ApplicationNotFoundException} if the application does
+     * not exist.
+     */
+    @Nonnull
+    public List<AuditLogResponse> listAuditLogs(@Nonnull Long applicationId, @Nonnull AuditSort sort) {
+        Application application = applicationRepository.findById(applicationId)
+                .orElseThrow(() -> new ApplicationNotFoundException(applicationId));
+
+        Sort order = switch (sort) {
+            case SEQUENCE_ASC -> Sort.by(Sort.Direction.ASC, "sequenceNumber");
+            case SEQUENCE_DESC -> Sort.by(Sort.Direction.DESC, "sequenceNumber");
+            case TIMESTAMP_ASC -> Sort.by(Sort.Direction.ASC, "timestamp");
+            case TIMESTAMP_DESC -> Sort.by(Sort.Direction.DESC, "timestamp");
+        };
+
+        return auditLogRepository.findByApplication(application, order).stream()
+                .map(ApplicationMapper::toAuditLogResponse)
+                .toList();
     }
 }
