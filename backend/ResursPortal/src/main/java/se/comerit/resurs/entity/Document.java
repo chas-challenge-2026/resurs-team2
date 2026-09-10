@@ -62,8 +62,7 @@ public class Document {
     }
 
     @Nullable
-    public Long getUuid() {
-        return uuid;
+    public Long getUuid() {return uuid;
     }
 
     public void setUuid(@Nonnull Long uuid) {this.uuid = uuid;
