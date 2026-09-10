@@ -10,7 +10,6 @@ import tools.jackson.databind.ObjectMapper;
 
 import jakarta.annotation.Nonnull;
 import se.comerit.resurs.audit.ApplicationCreated;
-import se.comerit.resurs.audit.ScoringRun;
 import se.comerit.resurs.api.v1.dto.ApplicationDetailsResponse;
 import se.comerit.resurs.api.v1.dto.ApplicationRequest;
 import se.comerit.resurs.api.v1.dto.ApplicationResponse;
@@ -21,8 +20,6 @@ import se.comerit.resurs.entity.Company;
 import se.comerit.resurs.exception.ApplicationNotFoundException;
 import se.comerit.resurs.exception.CompanyNotFoundException;
 import se.comerit.resurs.rating.ApplicationData;
-import se.comerit.resurs.rating.Score;
-import se.comerit.resurs.rating.ScoringResult;
 import se.comerit.resurs.repository.ApplicationRepository;
 import se.comerit.resurs.repository.CompanyRepository;
 import se.comerit.resurs.security.CaseWorkerPrincipal;
@@ -63,8 +60,6 @@ public class ApplicationService {
                 .orElseThrow(() -> new CompanyNotFoundException(orgNumber));
 
         ApplicationData data = ApplicationMapper.toApplicationData(application);
-        ScoringResult score = scoringService.score(data);
-        Score scoring = ScoringService.toScore(score);
 
         String financialDataJson;
         try {
@@ -76,26 +71,16 @@ public class ApplicationService {
         Application app = new Application(
                 company,
                 application.requestedAmount(),
-                application.purpose(),
-                ApplicationMapper.toStatus(score),
-                ApplicationMapper.toDecision(score),
-                score.summary(),
-                scoring.scoringLog(),
-                financialDataJson);
+                application.purpose());
+        app.setFinancialData(financialDataJson);
 
         app = applicationRepository.save(app);
 
         emailService.sendApplicationSubmitted(company.getAuthorizedSignatory(), app.getId());
 
         auditLogService.append(app, new ApplicationCreated(orgNumber));
-        auditLogService.append(app, new ScoringRun(scoring.decision(), String.valueOf(scoring.flagCount())));
 
-        String signatory = app.getCompany().getAuthorizedSignatory();
-        if (app.getDecision() != null) {
-            emailService.sendDecision(signatory, app.getId(), app.getDecision().name(), app.getDecisionReason());
-        } else {
-            emailService.sendStatusUpdate(signatory, app.getId(), app.getStatus().name());
-        }
+        scoringService.scoreApplication(app.getId());
 
         return app.getId();
     }
