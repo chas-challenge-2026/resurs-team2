@@ -17,19 +17,34 @@ export function CreditAmount({
   onPrevious,
 }: CreditAmountProps) {
   const [purposeError, setPurposeError] = useState<string | null>(null);
+  const [amountError, setAmountError] = useState<string | null>(null);
 
   const MIN_PURPOSE_LENGTH = 10;
   const MAX_PURPOSE_LENGTH = 500;
+  const MIN_AMOUNT = 50000;
+  const MAX_AMOUNT = 10000000;
 
   // *Handles changes to the requested credit amount.*
-  const handleAmountChange = (event: ChangeEvent<HTMLInputElement>) => {
-    const value = event.target.value;
+ const handleAmountChange = (
+  event: ChangeEvent<HTMLInputElement>,
+) => {
+  const { value } = event.target;
 
-    onChange({
-      ...data,
-      requestedAmount: value === "" ? 0 : Number(value),
-    });
-  };
+  const amount = value === "" ? 0 : Number(value);
+
+  onChange({
+    ...data,
+    requestedAmount: amount,
+  });
+
+  if (
+    amountError &&
+    amount >= MIN_AMOUNT &&
+    amount <= MAX_AMOUNT
+  ) {
+    setAmountError(null);
+  }
+};
 
   // Handles changes to the credit purpose.
   const handlePurposeChange = (event: ChangeEvent<HTMLTextAreaElement>) => {
@@ -46,19 +61,41 @@ export function CreditAmount({
   };
 
   // Prevents the default form submission and proceeds to the confirmation step.
-  const handleSubmit = (event: SubmitEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const handleSubmit = (
+  event: SubmitEvent<HTMLFormElement>,
+) => {
+  event.preventDefault();
 
-    if (data.purpose.trim().length < MIN_PURPOSE_LENGTH) {
-      setPurposeError(
-        `Beskrivningen måste innehålla minst ${MIN_PURPOSE_LENGTH} tecken.`,
-      );
+  let hasError = false;
 
-      return;
-    }
+  if (
+    data.requestedAmount < MIN_AMOUNT ||
+    data.requestedAmount > MAX_AMOUNT
+  ) {
+    setAmountError(
+      `Kreditbeloppet måste vara mellan ${MIN_AMOUNT.toLocaleString("sv-SE")} SEK och ${MAX_AMOUNT.toLocaleString("sv-SE")} SEK.`,
+    );
 
-    onNext();
-  };
+    hasError = true;
+  }
+
+  if (
+    data.purpose.trim().length <
+    MIN_PURPOSE_LENGTH
+  ) {
+    setPurposeError(
+      `Beskrivningen måste innehålla minst ${MIN_PURPOSE_LENGTH} tecken.`,
+    );
+
+    hasError = true;
+  }
+
+  if (hasError) {
+    return;
+  }
+
+  onNext();
+};
 
   return (
     <section className={styles.formSection}>
@@ -79,13 +116,19 @@ export function CreditAmount({
             min="50000"
             max="10000000"
             placeholder="500000"
-            value={data.requestedAmount}
+            value={data.requestedAmount === 0 ? "" : data.requestedAmount}
             onChange={handleAmountChange}
           />
 
           <p className={styles.helpText}>
             Minsta belopp: 50 000 kr. Maxbelopp: 10 000 000 kr.
           </p>
+
+        {amountError && (
+          <p className={styles.errorText}>
+            {amountError}
+          </p>
+)}
         </div>
 
         <div className={styles.formGroup}>
