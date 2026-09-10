@@ -15,6 +15,7 @@ import se.comerit.resurs.api.v1.service.DocumentService;
 import se.comerit.resurs.security.UserPrincipal;
 
 import java.util.List;
+import java.util.UUID;
 
 
 /**
@@ -74,7 +75,7 @@ public class DocumentController {
     @PreAuthorize("hasAnyRole('COMPANY', 'CASE_WORKER')")
     @GetMapping("/documents/{id}")
     public ResponseEntity<Resource> downloadDocument(
-            @PathVariable Long id,
+            @PathVariable UUID id,
             @AuthenticationPrincipal UserPrincipal principal) {
 
 
@@ -90,7 +91,7 @@ public class DocumentController {
     @PreAuthorize("hasAnyRole('COMPANY', 'CASE_WORKER')")
     @DeleteMapping("/documents/{id}")
     public ResponseEntity<Void> deleteDocument(
-            @PathVariable Long id,
+            @PathVariable UUID id,
             @AuthenticationPrincipal UserPrincipal principal) {
 
 
