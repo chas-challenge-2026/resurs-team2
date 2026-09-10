@@ -8,11 +8,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Proxy;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;
 
 
@@ -37,19 +33,19 @@ class DocumentServiceTest {
     void getDocuments_returnsDocumentsForMatchingApplication() {
         Company company = company("556677-8899");
         Application application = application(company, "Rörelsekapital");
-        setId(application, 7L );
+        setId(application);
 
         Document older = new Document(application, "older.pdf", "AnnualReview");
         Document newer = new Document(application, "newer.pdf", "BankStatement");
-        setUuid(older, 11L);
-        setUuid(newer, 12L);
+
 
         Map<Long, Application> applications = new HashMap<>();
         applications.put(7L, application);
 
-        Map<Long, Document> byId = new HashMap<>();
-        byId.put(11L, older);
-        byId.put(12L, newer);
+        Map<UUID, Document> byId = new HashMap<>();
+        byId.put(new UUID(0L,11L), older);
+
+        byId.put(new UUID(0L,12L), newer);
 
         Map<Long, List<Document>> byApplication = new HashMap<>();
         byApplication.put(7L, List.of(newer, older));
@@ -70,13 +66,13 @@ class DocumentServiceTest {
     void uploadDocument_savesFile_andUpdatesApplicationStatus() {
         Company company = company("556677-8899");
         Application application = application(company, "Rörelsekapital");
-        setId(application, 7L);
+        setId(application);
         application.setStatus(ApplicationStatus.PENDING_DOCS);
 
         Map<Long, Application> applications = new HashMap<>();
         applications.put(7L, application);
 
-        Map<Long, Document> documentsById = new HashMap<>();
+        Map<UUID, Document> documentsById = new HashMap<>();
         Map<Long, List<Document>> documentsByApplication = new HashMap<>();
         AtomicLong nextDocumentId = new AtomicLong(1L);
 
@@ -125,7 +121,7 @@ class DocumentServiceTest {
     void companyCannotAccessAnotherCompanyApplication() {
         Company otherCompany = company("111111-2222");
         Application application = application(otherCompany, "Expansion");
-        setId(application, 7L);
+        setId(application);
 
         Map<Long, Application> applications = new HashMap<>();
         applications.put(7L, application);
@@ -142,8 +138,9 @@ class DocumentServiceTest {
     @Test
     void downloadDocument_rejectsForeignCompanyDocument() {
         Company otherCompany = company("111111-2222");
+        setId(otherCompany);
         Application application = application(otherCompany, "Expansion");
-        setId(application, 7L);
+        setId(application);
 
         Document document = new Document(application, "foreign.pdf", "AnnualReview");
         setUuid(document, 21L);
@@ -151,15 +148,17 @@ class DocumentServiceTest {
         Map<Long, Application> applications = new HashMap<>();
         applications.put(7L, application);
 
-        Map<Long, Document> byId = new HashMap<>();
-        byId.put(21L, document);
+        Map<UUID, Document> byId = new HashMap<>();
+        byId.put(new UUID(0L,21L), document);
+
 
         DocumentService service = new DocumentService(
                 applicationRepository(applications, new AtomicLong(1L)),
                 documentRepository(byId, Map.of(7L, List.of(document)), new AtomicLong(1L)));
 
         assertThatThrownBy(() ->
-                service.downloadDocument(21L, new CompanyPrincipal(1L, "customer", "556677-8899")))
+                service.downloadDocument(new UUID(0L,21L),
+                        new CompanyPrincipal(1L, "customer", "556677-8899")))
                 .isInstanceOf(DocumentNotFoundException.class);
     }
 
@@ -201,50 +200,62 @@ class DocumentServiceTest {
     }
 
     private static DocumentRepository documentRepository(
-            Map<Long, Document> byId,
+            Map<UUID, Document> byId,
             Map<Long, List<Document>> byApplication,
             AtomicLong nextId) {
 
         return (DocumentRepository) Proxy.newProxyInstance(
                 DocumentRepository.class.getClassLoader(),
-                new Class<?>[] { DocumentRepository.class },
+                new Class<?>[]{DocumentRepository.class},
                 (proxy, method, args) -> {
-                    switch (method.getName()) {
-                        case "findById" -> {
-                            Long id = (Long) args[0];
-                            return Optional.ofNullable(byId.get(id));
-                        }
-                        case "findByApplicationId", "findByApplicationIdOrderByUploadedAtDesc" -> {
-                            Long appId = (Long) args[0];
-                            return byApplication.getOrDefault(appId, List.of());
-                        }
-                        case "save" -> {
-                            Document document = (Document) args[0];
-                            if (document.getUuid() == null) {
-                                setUuid(document, nextId.getAndIncrement());
-                            }
-                            byId.put(document.getUuid(), document);
+                    String name = method.getName();
 
-                            Long applicationId = document.getApplication().getId();
-                            byApplication.computeIfAbsent(applicationId, k -> new ArrayList<>())
-                                    .add(document);
 
-                            return document;
-                        }
-                        case "delete" -> {
-                            Document document = (Document) args[0];
-                            byId.remove(document.getUuid());
-                            Long appId = document.getApplication().getId();
-                            List<Document> list = byApplication.get(appId);
-                            if (list != null) {
-                                list.remove(document);
-                            }
-                            return null;
-                        }
-                        case "hashCode" -> System.identityHashCode(proxy);
-                        default -> defaultValue(method.getReturnType());
+                    if ("findById".equals(name) || "findByUuid".equals(name)) {
+                        UUID id = (UUID) args[0];
+                        return Optional.ofNullable(byId.get(id));
                     }
-                    return proxy;
+
+
+                    if ("findByApplicationId".equals(name) || "findByApplicationIdOrderByUploadedAtDesc".equals(name)) {
+                        Long appId = (Long) args[0];
+                        return byApplication.getOrDefault(appId, List.of());
+                    }
+
+
+                    if ("save".equals(name)) {
+                        Document document = (Document) args[0];
+                        if (document.getUuid() == null) {
+                            setUuid(document, nextId.getAndIncrement());
+                        }
+                        byId.put(document.getUuid(), document);
+
+                        Long applicationId = document.getApplication().getId();
+                        byApplication.computeIfAbsent(applicationId, k -> new ArrayList<>()).add(document);
+                        return document;
+                    }
+
+
+                    if ("delete".equals(name)) {
+                        Document document = (Document) args[0];
+                        byId.remove(document.getUuid());
+                        Long appId = document.getApplication().getId();
+                        List<Document> list = byApplication.get(appId);
+                        if (list != null) list.remove(document);
+                        return null;
+                    }
+
+                    if ("hashCode".equals(name)) {
+                        return System.identityHashCode(proxy);
+                    }
+
+
+                    if (args != null && args.length == 1 && args[0] instanceof UUID) {
+                        UUID id = (UUID) args[0];
+                        return Optional.ofNullable(byId.get(id));
+                    }
+
+                    return defaultValue(method.getReturnType());
                 });
     }
 
@@ -260,11 +271,11 @@ class DocumentServiceTest {
         return new Application(company, new BigDecimal("250000"), purpose);
     }
 
-    private static void setId(Object target, long id) {
+    private static void setId(Object target) {
         try {
             Field field = target.getClass().getDeclaredField("id");
             field.setAccessible(true);
-            field.set(target, id);
+            field.set(target, (Long) 7L);
         } catch (ReflectiveOperationException e) {
             throw new IllegalStateException("Failed to assign id", e);
         }
@@ -275,9 +286,12 @@ class DocumentServiceTest {
         try {
             Field field = target.getClass().getDeclaredField("uuid");
             field.setAccessible(true);
-            field.set(target, uuid);
+            if (uuid == null) {
+                field.set(target, null);
+            } else {
+                field.set(target, new java.util.UUID(0L, uuid));
+            }
         } catch (ReflectiveOperationException e) {
-            throw new IllegalStateException("Failed to assign uuid", e);
-        }
-    }
+            throw new IllegalStateException("Failed to assign uuid", e);     } }
+
 }

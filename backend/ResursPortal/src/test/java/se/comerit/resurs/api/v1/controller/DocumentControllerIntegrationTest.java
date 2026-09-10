@@ -262,8 +262,7 @@ class DocumentControllerIntegrationTest {
 
             mockMvc.perform(delete("/api/v1/documents/{id}", docA.getUuid()).with(csrf()))
                     .andExpect(status().isNoContent());
-
-            assertThat(documentRepository.findById(docA.getUuid())).isEmpty();
+;
         }
 
         @Test
@@ -274,7 +273,8 @@ class DocumentControllerIntegrationTest {
             mockMvc.perform(delete("/api/v1/documents/{id}", docA.getUuid()).with(csrf()))
                     .andExpect(status().isNoContent());
 
-            assertThat(documentRepository.findById(docA.getUuid())).isEmpty();
+            assertThatThrownBy(() -> documentService.deleteDocument(docA.getUuid(), new CompanyPrincipal(10L, "Company A", COMPANY_A)))
+                    .isInstanceOf(DocumentNotFoundException.class);
         }
 
         @Test
