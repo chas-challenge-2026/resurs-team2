@@ -88,16 +88,16 @@ public class DocumentService {
 
     }
 
-    public Resource downloadDocument(Long documentId, UserPrincipal principal) {
+    public Resource downloadDocument(UUID uuid, UserPrincipal principal) {
         Document document = documentRepository
-                .findById(documentId)
-                .orElseThrow(() -> new DocumentNotFoundException(documentId));
+                .findByUuid(uuid)
+                .orElseThrow(() -> new DocumentNotFoundException(uuid));
         checkDocumentAccess(document, principal);
 
         File file = new File( document.getFilename());
 
         if (!file.exists()) {
-            throw new DocumentNotFoundException(documentId);
+            throw new DocumentNotFoundException(uuid);
         }
 
         return new FileSystemResource(file);
@@ -117,7 +117,7 @@ public class DocumentService {
             if (!isPdf(checkBytes)) {
                 throw new FileUploadException("Only PDF files are allowed.");
             }
-        } catch (IOException e) {
+        } catch (IOException _) {
             throw new FileUploadException("Upload failed.");
         }
     }
@@ -141,7 +141,7 @@ public class DocumentService {
     private void saveFile(MultipartFile file, File destination) {
         try {
             file.transferTo(destination);
-        } catch (IOException e) {
+        } catch (IOException _) {
             throw new FileUploadException("Upload failed.");
         }
     }
@@ -197,8 +197,8 @@ public class DocumentService {
     }
 
     // delete document
-    public void deleteDocument(Long documentId, UserPrincipal principal) {
-        Document document = documentRepository.findById(documentId)
+    public void deleteDocument(UUID documentId, UserPrincipal principal) {
+        Document document = (Document) documentRepository.findByUuid(documentId)
                 .orElseThrow(() -> new DocumentNotFoundException(documentId));
         checkDocumentAccess(document, principal);
         documentRepository.delete(document);
@@ -209,7 +209,7 @@ public class DocumentService {
         boolean hasAccess = switch (principal) {
             case CompanyPrincipal companyPrincipal ->
                 application.getCompany().getOrgNumber().equals(companyPrincipal.orgNumber());
-            case CaseWorkerPrincipal ignored -> true;
+            case CaseWorkerPrincipal _ -> true;
         };
 
         if (!hasAccess) {
@@ -221,7 +221,7 @@ public class DocumentService {
         boolean hasAccess = switch (principal) {
             case CompanyPrincipal companyPrincipal ->
                 document.getApplication().getCompany().getOrgNumber().equals(companyPrincipal.orgNumber());
-            case CaseWorkerPrincipal ignored -> true;
+            case CaseWorkerPrincipal _ -> true;
         };
         if (!hasAccess) {
             throw new DocumentNotFoundException(document.getUuid());
