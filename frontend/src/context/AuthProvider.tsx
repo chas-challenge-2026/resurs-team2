@@ -1,37 +1,45 @@
-import React, { useEffect, useState } from "react";
-
 import {
-  AuthContext,
-  type User,
-  type CompanyCredentials,
-  type CaseWorkerCredentials,
-} from "./AuthContext";
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
 
 import { authApi } from "../api/authApi";
+import { AuthContext } from "./AuthContext";
+
+import type {
+  AuthContextType,
+  CaseWorkerCredentials,
+  CompanyCredentials,
+  User,
+} from "./auth.types";
 
 const ACCESS_TOKEN_KEY = "accessToken";
 const REFRESH_TOKEN_KEY = "refreshToken";
 
-export const AuthProvider: React.FC<{
-  children: React.ReactNode;
-}> = ({ children }) => {
+interface AuthProviderProps {
+  children: ReactNode;
+}
+
+export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const saveTokens = useCallback(
+    (accessToken: string, refreshToken: string) => {
+      sessionStorage.setItem(ACCESS_TOKEN_KEY, accessToken);
+      sessionStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+    },
+    [],
+  );
 
-  const saveTokens = (accessToken: string, refreshToken: string) => {
-    sessionStorage.setItem(ACCESS_TOKEN_KEY, accessToken);
-
-    sessionStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
-  };
-
-  const clearSession = () => {
+  const clearSession = useCallback(() => {
     sessionStorage.removeItem(ACCESS_TOKEN_KEY);
-
     sessionStorage.removeItem(REFRESH_TOKEN_KEY);
-
     setUser(null);
-  };
+  }, []);
 
   useEffect(() => {
     const restoreSession = async () => {
@@ -48,7 +56,9 @@ export const AuthProvider: React.FC<{
         saveTokens(tokens.accessToken, tokens.refreshToken);
 
         if (tokens.role === "COMPANY") {
-          const company = await authApi.getCurrentCompany(tokens.accessToken);
+          const company = await authApi.getCurrentCompany(
+            tokens.accessToken,
+          );
 
           setUser({
             id: company.orgNumber,
@@ -74,69 +84,70 @@ export const AuthProvider: React.FC<{
         clearSession();
       } catch (error) {
         console.error("Kunde inte återställa sessionen:", error);
-
         clearSession();
       } finally {
         setIsLoading(false);
       }
     };
 
-    restoreSession();
-  }, []);
+    void restoreSession();
+  }, [clearSession, saveTokens]);
 
-  const loginCompany = async (credentials: CompanyCredentials) => {
-    setIsLoading(true);
+  const loginCompany = useCallback(
+    async (credentials: CompanyCredentials) => {
+      setIsLoading(true);
 
-    try {
-      const tokens = await authApi.loginCompany(credentials);
+      try {
+        const tokens = await authApi.loginCompany(credentials);
 
-      saveTokens(tokens.accessToken, tokens.refreshToken);
+        saveTokens(tokens.accessToken, tokens.refreshToken);
 
-      const company = await authApi.getCurrentCompany(tokens.accessToken);
+        const company = await authApi.getCurrentCompany(
+          tokens.accessToken,
+        );
 
-      console.log("COMPANY LOGIN TOKENS:", tokens);
+        setUser({
+          id: company.orgNumber || credentials.orgNumber,
+          name: company.name || tokens.name || "Företag",
+          email: "",
+          role: "COMPANY",
+        });
+      } catch (error) {
+        clearSession();
+        throw error;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [clearSession, saveTokens],
+  );
 
-      console.log("CURRENT COMPANY:", company);
+  const loginCaseWorker = useCallback(
+    async (credentials: CaseWorkerCredentials) => {
+      setIsLoading(true);
 
-      setUser({
-        id: company.orgNumber || credentials.orgNumber,
+      try {
+        const tokens = await authApi.loginCaseWorker(credentials);
 
-        name: company.name || tokens.name || "Företag",
+        saveTokens(tokens.accessToken, tokens.refreshToken);
 
-        email: "",
-        role: "COMPANY",
-      });
-    } catch (error) {
-      clearSession();
-      throw error;
-    } finally {
-      setIsLoading(false);
-    }
-  };
+        setUser({
+          id: credentials.email,
+          name: tokens.name || credentials.email,
+          email: credentials.email,
+          role: "CASEWORKER",
+        });
+      } catch (error) {
+        clearSession();
+        throw error;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [clearSession, saveTokens],
+  );
 
-  const loginCaseWorker = async (credentials: CaseWorkerCredentials) => {
-    setIsLoading(true);
-
-    try {
-      const tokens = await authApi.loginCaseWorker(credentials);
-
-      saveTokens(tokens.accessToken, tokens.refreshToken);
-
-      setUser({
-        id: credentials.email,
-        name: tokens.name || credentials.email,
-        email: credentials.email,
-        role: "CASEWORKER",
-      });
-    } catch (error) {
-      clearSession();
-      throw error;
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const logout = async () => {
+  const logout = useCallback(async () => {
     setIsLoading(true);
 
     const accessToken = sessionStorage.getItem(ACCESS_TOKEN_KEY);
@@ -151,19 +162,28 @@ export const AuthProvider: React.FC<{
       clearSession();
       setIsLoading(false);
     }
-  };
+  }, [clearSession]);
+
+  const value = useMemo<AuthContextType>(
+    () => ({
+      user,
+      isLoggedIn: user !== null,
+      isLoading,
+      loginCompany,
+      loginCaseWorker,
+      logout,
+    }),
+    [
+      user,
+      isLoading,
+      loginCompany,
+      loginCaseWorker,
+      logout,
+    ],
+  );
 
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        isLoggedIn: user !== null,
-        isLoading,
-        loginCompany,
-        loginCaseWorker,
-        logout,
-      }}
-    >
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );

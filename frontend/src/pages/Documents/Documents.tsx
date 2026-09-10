@@ -114,30 +114,46 @@ export function Documents() {
     }
   };
 
-  const handleDownload = async (documentId: number) => {
+  const handleDownload = async (documentId: number, filename: string) => {
     try {
+      setError(null);
       const blob = await documentApi.downloadDocument(documentId);
-
       const url = URL.createObjectURL(blob);
 
       const link = document.createElement("a");
-
       link.href = url;
-
-      link.download = "";
-
+      link.download = filename;
+      document.body.appendChild(link);
       link.click();
+      link.remove();
 
       URL.revokeObjectURL(url);
     } catch (error) {
       console.error("Kunde inte ladda ner dokument:", error);
       setError("Kunde inte ladda ner dokumentet.");
     }
+
   };
 
   const handleBack = () => {
     navigate("/application");
   };
+
+  const handleDelete = async (documentId: number) => {
+  try {
+    setError(null);
+
+    await documentApi.deleteDocument(documentId);
+
+    setDocuments((currentDocuments) =>
+      currentDocuments.filter((document) => document.id !== documentId),
+    );
+  } catch (error) {
+    console.error("Kunde inte ta bort dokument:", error);
+
+    setError("Kunde inte ta bort dokumentet.");
+  }
+};
 
   return (
     <section className={styles.formSection}>
@@ -230,9 +246,17 @@ export function Documents() {
                           <button
                             type="button"
                             className={styles.secondaryButton}
-                            onClick={() => handleDownload(document.id)}
+                            onClick={() => handleDownload(document.id, document.filename)}
                           >
                             ↓
+                          </button>
+
+                          <button
+                          type="button"
+                          className={styles.secondaryButton}
+                          onClick={() => handleDelete(document.id)}
+                          >
+                            Ta bort
                           </button>
                         </td>
                       </tr>

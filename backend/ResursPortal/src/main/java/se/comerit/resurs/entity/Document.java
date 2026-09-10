@@ -6,6 +6,7 @@ import java.time.ZoneId;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -23,17 +24,22 @@ public class Document {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
     @ManyToOne
     @NotNull
     private Application application;
-    @Column(length = 255)
+
+    @Convert(converter = PiiAttributeConverter.class)
+    @Column(length = 512)
     @NotBlank
-    @Size(max = 255)
+    @Size(max = 512)
     private String filename;
+
     @Column(name = "doc_type", length = 50)
     @NotBlank
     @Size(max = 50)
     private String docType;
+    
     @Column(name = "uploaded_at")
     @Nullable
     private LocalDateTime uploadedAt;
