@@ -1,17 +1,20 @@
-import "./Backoffice.css";
+import { useAuth } from "@/components/hooks/useAuth";
 import "@/styles/components.css";
 
-import { useBackofficeApplications } from "./hooks/useBackofficeApplications";
-import { ReviewApplicationsTable } from "./components/ReviewApplicationsTable";
+import "./Backoffice.css";
 import { DecidedApplicationsTable } from "./components/DecidedApplicationsTable";
-
-import { useAuth } from "@/components/hooks/useAuth";
+import { ReviewApplicationsTable } from "./components/ReviewApplicationsTable";
+import { useBackofficeApplications } from "./hooks/useBackofficeApplications";
 
 export const Backoffice = () => {
-
   const { user } = useAuth();
-  const { reviewApps, decidedApps, loading, error } = useBackofficeApplications();
 
+  const {
+    reviewApps,
+    decidedApps,
+    loading,
+    error,
+  } = useBackofficeApplications();
 
   if (loading) {
     return (

@@ -1,14 +1,15 @@
 import { useNavigate, useParams } from "react-router-dom";
 
 import "@/styles/components.css";
+
 import "./Backofficedetail.css";
 
+import { AuditLogPanel } from "./components/AuditLogPanel";
 import { CompanyPanel } from "./components/CompanyPanel";
 import { CreditPanel } from "./components/CreditPanel";
-import { ScoringPanel } from "./components/ScoringPanel";
 import { DecisionPanel } from "./components/DecisionPanel";
 import { DocumentsPanel } from "./components/DocumentsPanel";
-import { AuditLogPanel } from "./components/AuditLogPanel";
+import { ScoringPanel } from "./components/ScoringPanel";
 import { useBackofficeApplication } from "./hooks/useBackofficeApplication";
 
 export const Backofficedetail = () => {
@@ -18,7 +19,7 @@ export const Backofficedetail = () => {
   const {
     application,
     documents,
-    auditLogRaw,
+    auditLogs,
     workerName,
     loading,
     decisionLoading,
@@ -85,7 +86,7 @@ export const Backofficedetail = () => {
 
           <DocumentsPanel documents={documents} />
 
-          <AuditLogPanel auditLogRaw={auditLogRaw} />
+          <AuditLogPanel auditLogs={auditLogs} />
         </div>
       </div>
 

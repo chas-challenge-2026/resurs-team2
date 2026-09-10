@@ -16,7 +16,6 @@ export const Status = () => {
   const {
     application,
     documents,
-    auditLogRaw,
     workerName,
     loading,
     error,
@@ -72,10 +71,6 @@ export const Status = () => {
             applicationId={application.id}
             documents={documents}
           />
-
-          <Panel title="Händelselogg">
-            <pre className="audit-log">{auditLogRaw}</pre>
-          </Panel>
         </div>
       </div>
 
