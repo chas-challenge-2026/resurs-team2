@@ -2,6 +2,7 @@ package se.comerit.resurs.entity;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.UUID;
 
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
@@ -17,16 +18,17 @@ import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
-import org.hibernate.annotations.UuidGenerator;
+
 
 
 @Entity
 @Table(name = "documents")
 public class Document {
     @Id
-    @UuidGenerator
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long uuid;
+    @Column(name = "uuid", unique = true, nullable = false)
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private UUID uuid;
+
     @ManyToOne
     @NotNull
     private Application application;
@@ -62,10 +64,10 @@ public class Document {
     }
 
     @Nullable
-    public Long getUuid() {return uuid;
+    public UUID getUuid() {return uuid;
     }
 
-    public void setUuid(@Nonnull Long uuid) {this.uuid = uuid;
+    public void setUuid(@Nonnull UUID uuid) {this.uuid = uuid;
     }
 
     @Nonnull
