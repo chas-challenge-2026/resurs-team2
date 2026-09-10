@@ -3,6 +3,8 @@ package se.comerit.resurs.api.v1.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -320,6 +322,49 @@ class ApplicationServiceTest {
                     "MANUELL GRANSKNING".equals(app.getDecisionReason())
                     && app.getDecision() == null
                     && app.getStatus() == ApplicationStatus.UNDER_REVIEW));
+        }
+
+        @Test
+        @DisplayName("Sends a decision email when scoring approves the application")
+        void definitiveDecisionSendsDecisionEmail() {
+            when(companyRepository.findByOrgNumber("556677-8899"))
+                    .thenReturn(Optional.of(company));
+            ScoringResult result = approvedScoringResult();
+            when(scoringService.score(any())).thenReturn(result);
+            stubSaveReturnsSavedWithId(1L);
+
+            try (MockedStatic<ScoringService> staticMock = Mockito.mockStatic(ScoringService.class)) {
+                staticMock.when(() -> ScoringService.toScore(result))
+                        .thenReturn(new Score("APPROVED", 0, "log", "APPROVED", "ANSÖKAN GODKÄND"));
+
+                applicationService.submitApplication("556677-8899", validRequest);
+            }
+
+            verify(emailService).sendDecision("Kalle Kula", 1L, "APPROVED", "ANSÖKAN GODKÄND");
+            verify(emailService, never()).sendStatusUpdate(anyString(), anyLong(), anyString());
+        }
+
+        @Test
+        @DisplayName("Sends a status update email when scoring sends the application to manual review")
+        void reviewDecisionSendsStatusUpdateEmail() {
+            when(companyRepository.findByOrgNumber("556677-8899"))
+                    .thenReturn(Optional.of(company));
+            ScoringResult result = new ScoringResult(
+                    se.comerit.resurs.rating.Decision.UNDER_REVIEW,
+                    List.of(new CheckResult("solidity", 0.5, 0.2, CheckStatus.OK, 0, "ok")),
+                    "MANUELL GRANSKNING");
+            when(scoringService.score(any())).thenReturn(result);
+            stubSaveReturnsSavedWithId(1L);
+
+            try (MockedStatic<ScoringService> staticMock = Mockito.mockStatic(ScoringService.class)) {
+                staticMock.when(() -> ScoringService.toScore(result))
+                        .thenReturn(new Score("REVIEW", 0, "solidity=OK", "UNDER_REVIEW", "MANUELL GRANSKNING"));
+
+                applicationService.submitApplication("556677-8899", validRequest);
+            }
+
+            verify(emailService).sendStatusUpdate("Kalle Kula", 1L, "UNDER_REVIEW");
+            verify(emailService, never()).sendDecision(anyString(), anyLong(), anyString(), anyString());
         }
     }
 }

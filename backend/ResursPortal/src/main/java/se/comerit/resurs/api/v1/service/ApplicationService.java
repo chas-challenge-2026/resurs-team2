@@ -90,6 +90,13 @@ public class ApplicationService {
         auditLogService.append(app, new ApplicationCreated(orgNumber));
         auditLogService.append(app, new ScoringRun(scoring.decision(), String.valueOf(scoring.flagCount())));
 
+        String signatory = app.getCompany().getAuthorizedSignatory();
+        if (app.getDecision() != null) {
+            emailService.sendDecision(signatory, app.getId(), app.getDecision().name(), app.getDecisionReason());
+        } else {
+            emailService.sendStatusUpdate(signatory, app.getId(), app.getStatus().name());
+        }
+
         return app.getId();
     }
 
