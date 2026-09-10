@@ -34,10 +34,12 @@ public class DocumentService {
 
     private final ApplicationRepository applicationRepository;
     private final DocumentRepository documentRepository;
+    private final EmailService emailService;
 
-    public DocumentService (ApplicationRepository applicationRepository, DocumentRepository documentRepository) {
+    public DocumentService(ApplicationRepository applicationRepository, DocumentRepository documentRepository, EmailService emailService) {
         this.applicationRepository = applicationRepository;
         this.documentRepository = documentRepository;
+        this.emailService = emailService;
     }
 
     public List<DocumentDto> getDocuments (Long applicationId, UserPrincipal principal) {
@@ -147,8 +149,17 @@ public class DocumentService {
 
 
     private void updateApplicationStatus (Application application, String docType) {
-        if ("AnnualReview".equals(docType) && application.getStatus() == ApplicationStatus.PENDING_DOCS) {
-            application.setStatus(ApplicationStatus.UNDER_REVIEW);
+        if ("AnnualReview".equals(docType)
+                && application.getStatus() == ApplicationStatus.PENDING_DOCS) {
+
+            application.setStatus(
+                    ApplicationStatus.UNDER_REVIEW);
+
+            emailService.sendStatusUpdate(
+                application.getCompany().getAuthorizedSignatory(),
+                application.getId(),
+                ApplicationStatus.UNDER_REVIEW.name()
+            );
         }
     }
 

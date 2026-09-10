@@ -36,16 +36,19 @@ public class ApplicationService {
     private final AuditLogService auditLogService;
     private final CaseWorkerAssignmentService caseWorkerAssignmentService;
     private final ObjectMapper objectMapper;
+    private final EmailService emailService;
 
     public ApplicationService(CompanyRepository companyRepository, ApplicationRepository applicationRepository,
             ScoringService scoringService, AuditLogService auditLogService,
-            CaseWorkerAssignmentService caseWorkerAssignmentService, ObjectMapper objectMapper) {
+            CaseWorkerAssignmentService caseWorkerAssignmentService, ObjectMapper objectMapper,
+            EmailService emailService) {
         this.companyRepository = companyRepository;
         this.applicationRepository = applicationRepository;
         this.scoringService = scoringService;
         this.auditLogService = auditLogService;
         this.caseWorkerAssignmentService = caseWorkerAssignmentService;
         this.objectMapper = objectMapper;
+        this.emailService = emailService;
     }
 
     public Optional<Company> getCompany(String orgNumber) {
@@ -67,7 +70,6 @@ public class ApplicationService {
         try {
             financialDataJson = objectMapper.writeValueAsString(data);
         } catch (Exception _) {
-            // TODO: Log this error somehow
             financialDataJson = null;
         }
 
@@ -82,6 +84,8 @@ public class ApplicationService {
                 financialDataJson);
 
         app = applicationRepository.save(app);
+
+        emailService.sendApplicationSubmitted(company.getAuthorizedSignatory(), app.getId());
 
         auditLogService.append(app, new ApplicationCreated(orgNumber));
         auditLogService.append(app, new ScoringRun(scoring.decision(), String.valueOf(scoring.flagCount())));

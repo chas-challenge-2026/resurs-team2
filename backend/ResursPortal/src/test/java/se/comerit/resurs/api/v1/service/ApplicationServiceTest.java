@@ -54,6 +54,7 @@ class ApplicationServiceTest {
     private ScoringService scoringService;
     private AuditLogService auditLogService;
     private CaseWorkerAssignmentService caseWorkerAssignmentService;
+    private EmailService emailService;
     private ApplicationService applicationService;
     private ObjectMapper objectMapper;
 
@@ -72,9 +73,12 @@ class ApplicationServiceTest {
 
         caseWorkerAssignmentService = mock(CaseWorkerAssignmentService.class);
 
+        emailService = mock(EmailService.class);
+
         applicationService = new ApplicationService(
                 companyRepository, applicationRepository, scoringService, auditLogService,
-                caseWorkerAssignmentService, objectMapper);
+                caseWorkerAssignmentService, objectMapper,
+                emailService);
 
         company = new Company("556677-8899", "Testbolaget AB", "Kalle Kula");
 
