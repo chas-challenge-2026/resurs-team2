@@ -5,7 +5,7 @@ import se.comerit.resurs.entity.Document;
 import java.time.LocalDateTime;
 
 public record DocumentDto(
-        Long uuid,
+        java.util.UUID uuid,
         Long applicationId,
         String filename,
         String docType,
