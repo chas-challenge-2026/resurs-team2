@@ -1,32 +1,29 @@
 import { useEffect, useState } from "react";
-import { applicationApi, type Decision } from "../../../api/applicationApi";
-import type { Application } from "../../../types/application";
-import type { ApplicationDocument } from "../../../types/document";
+
+import {
+  applicationApi,
+  type Decision,
+} from "@/api/applicationApi";
+import type { Application } from "@/types/application";
+import type { AuditLog } from "@/types/auditLog";
+import type { ApplicationDocument } from "@/types/document";
 
 export const useBackofficeApplication = (id: string | undefined) => {
   const [application, setApplication] = useState<Application | null>(null);
-
   const [documents, setDocuments] = useState<ApplicationDocument[]>([]);
-
-  const [auditLogRaw, setAuditLogRaw] = useState<string>("[]");
-
+  const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [workerName, setWorkerName] = useState<string>("");
-
   const [loading, setLoading] = useState<boolean>(true);
-
   const [decisionLoading, setDecisionLoading] = useState<boolean>(false);
-
   const [error, setError] = useState<string | null>(null);
 
   const loadApplication = async (applicationId: string) => {
     const details = await applicationApi.getById(applicationId);
+    const auditLogs = await applicationApi.getAuditLog(applicationId);
 
     setApplication(details.application);
-
     setDocuments(details.documents);
-
-    setAuditLogRaw(details.auditLogRaw);
-
+    setAuditLogs(auditLogs);
     setWorkerName(details.workerName);
   };
 
@@ -34,7 +31,6 @@ export const useBackofficeApplication = (id: string | undefined) => {
     const load = async () => {
       if (!id) {
         setError("Ansöknings-ID saknas.");
-
         setLoading(false);
         return;
       }
@@ -87,7 +83,7 @@ export const useBackofficeApplication = (id: string | undefined) => {
   return {
     application,
     documents,
-    auditLogRaw,
+    auditLogs,
     workerName,
     loading,
     decisionLoading,

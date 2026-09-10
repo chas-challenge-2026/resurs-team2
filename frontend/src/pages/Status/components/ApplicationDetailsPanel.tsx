@@ -1,21 +1,23 @@
-import React from "react";
-import type { Application } from "../../../types/application";
-import { Panel } from "../../../components/Panel/Panel";
-import { formatCurrency, formatDateTime } from "../utils/statusFormatters";
+import { Panel } from "@/components/Panel/Panel";
+import type { Application } from "@/types/application";
+
+import {
+  formatCurrency,
+  formatDateTime,
+} from "../utils/statusFormatters";
 
 interface ApplicationDetailsPanelProps {
   application: Application;
 }
 
-export const ApplicationDetailsPanel: React.FC<
-  ApplicationDetailsPanelProps
-> = ({ application }) => {
+export const ApplicationDetailsPanel = ({
+  application,
+}: ApplicationDetailsPanelProps) => {
   return (
     <Panel title="Ansökningsdetaljer">
       <p>
         <strong>Företag:</strong>
         <br />
-
         {application.companyName}
       </p>
 
