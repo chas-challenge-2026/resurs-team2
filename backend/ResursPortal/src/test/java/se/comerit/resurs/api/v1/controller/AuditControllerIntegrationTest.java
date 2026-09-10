@@ -111,41 +111,11 @@ class AuditControllerIntegrationTest {
 
         @Test
         @WithCompany
-        @Sql(statements = {
-                "DELETE FROM documents",
-                "DELETE FROM audit_log",
-                "DELETE FROM applications",
-                "DELETE FROM companies",
-                "INSERT INTO companies (id, org_number, company_name, authorized_signatory) VALUES (600, '556000-1234', 'Audit Bolag AB', 'Test Person')",
-                "INSERT INTO applications (id, company_id, requested_amount, purpose, status) VALUES (600, 600, 150000.00, 'Företagslån', 'UNDER_REVIEW')",
-                "INSERT INTO audit_log (application_id, sequence_number, hash, previous_hash, entry, timestamp) VALUES (600, 1, '', '', '{\"action\":\"APPLICATION_CREATED\"}', '2026-01-15T10:00:00')",
-                "INSERT INTO audit_log (application_id, sequence_number, hash, previous_hash, entry, timestamp) VALUES (600, 2, '', '', '{\"action\":\"SCORING_RUN\"}', '2026-01-15T10:00:01')"
-        })
-        void owningCompanyCanReadItsOwnLog() throws Exception {
+        void companyIsForbidden() throws Exception {
             mockMvc.perform(get("/api/v1/applications/600/audit-log"))
-                    .andExpect(status().isOk())
-                    .andExpect(jsonPath("$", hasSize(2)))
-                    .andExpect(jsonPath("$[0].entry.action").value("APPLICATION_CREATED"))
-                    .andExpect(jsonPath("$[1].entry.action").value("SCORING_RUN"));
-        }
-
-        @Test
-        @WithCompany(orgNumber = "556000-9999")
-        @Sql(statements = {
-                "DELETE FROM documents",
-                "DELETE FROM audit_log",
-                "DELETE FROM applications",
-                "DELETE FROM companies",
-                "INSERT INTO companies (id, org_number, company_name, authorized_signatory) VALUES (600, '556000-1234', 'Audit Bolag AB', 'Test Person')",
-                "INSERT INTO applications (id, company_id, requested_amount, purpose, status) VALUES (600, 600, 150000.00, 'Företagslån', 'UNDER_REVIEW')",
-                "INSERT INTO audit_log (application_id, sequence_number, hash, previous_hash, entry, timestamp) VALUES (600, 1, '', '', '{\"action\":\"APPLICATION_CREATED\"}', '2026-01-15T10:00:00')"
-        })
-        void otherCompanysLogIsNotLeaked() throws Exception {
-            mockMvc.perform(get("/api/v1/applications/600/audit-log"))
-                    .andExpect(status().isNotFound())
-                    .andExpect(jsonPath("$.status").value(404))
-                    .andExpect(jsonPath("$.title").value("Application Not Found"))
-                    .andExpect(jsonPath("$.detail", containsString("600")));
+                    .andExpect(status().isForbidden())
+                    .andExpect(jsonPath("$.status").value(403))
+                    .andExpect(jsonPath("$.title").value("Access Denied"));
         }
 
         @Test
