@@ -10,9 +10,7 @@ public record ApplicationDetailsResponse(
     @Nonnull
     String workerName,
     @Nonnull
-    List<DocumentResponse> documents,
-    @Nonnull
-    List<AuditLogResponse> auditLogs
+    List<DocumentResponse> documents
 ) {
     
 }
