@@ -62,8 +62,7 @@ public final class ApplicationMapper {
         return new ApplicationDetailsResponse(
                 toResponse(app),
                 caseWorker,
-                app.getDocuments().stream().map(ApplicationMapper::toDocumentResponse).toList(),
-                app.getAuditLogs().stream().map(ApplicationMapper::toAuditLogResponse).toList());
+                app.getDocuments().stream().map(ApplicationMapper::toDocumentResponse).toList());
     }
 
     public static AuditLogResponse toAuditLogResponse(AuditLog log) {
