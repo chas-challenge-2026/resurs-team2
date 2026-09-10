@@ -55,13 +55,13 @@ public class DocumentController {
             path = "applications/{id}/documents",
             consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<DocumentDto> uploadDocument(
-            @RequestParam Long uuId,
+            @PathVariable Long id,
             @RequestParam String docType,
             @RequestParam MultipartFile file,
             @AuthenticationPrincipal UserPrincipal principal) {
 
         DocumentDto document = documentService.uploadDocument(
-                uuId,
+                id,
                 docType,
                 file,
                 principal

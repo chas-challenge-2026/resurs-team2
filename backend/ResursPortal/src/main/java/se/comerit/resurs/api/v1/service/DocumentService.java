@@ -2,6 +2,7 @@ package se.comerit.resurs.api.v1.service;
 
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import se.comerit.resurs.api.v1.dto.DocumentDto;
@@ -17,6 +18,7 @@ import se.comerit.resurs.repository.DocumentRepository;
 import se.comerit.resurs.security.CaseWorkerPrincipal;
 import se.comerit.resurs.security.CompanyPrincipal;
 import se.comerit.resurs.security.UserPrincipal;
+import org.springframework.http.MediaType;
 
 import java.io.File;
 import java.io.IOException;
@@ -27,7 +29,7 @@ import java.util.UUID;
 @Service
 public class DocumentService {
 
-    private static final String UPLOAD_DIR = "data";
+    private static final String UPLOAD_DIR = "/tmp/uploads";
 
 
     private final ApplicationRepository applicationRepository;
@@ -89,36 +91,25 @@ public class DocumentService {
     }
 
     public Resource downloadDocument(UUID uuid, UserPrincipal principal) {
-        Document document = documentRepository
-                .findByUuid(uuid)
-                .orElseThrow(() -> new DocumentNotFoundException(uuid));
+        Document document = documentRepository.findByUuid(uuid).orElseThrow(() -> new DocumentNotFoundException(uuid));
         checkDocumentAccess(document, principal);
-
-        File file = new File( document.getFilename());
-
+        File file = new File(UPLOAD_DIR, document.getFilename());
         if (!file.exists()) {
             throw new DocumentNotFoundException(uuid);
         }
-
         return new FileSystemResource(file);
     }
 
     private void validateFile(MultipartFile file) {
-
         if (file == null || file.isEmpty()) {
             throw new EmptyFileException();
         }
-        try {
-            byte[] checkBytes = file.getBytes();
-
-            if (checkBytes.length <= 4) {
-                throw new FileUploadException("Only PDF files are allowed. File must be larger than 4 bytes.");
-            }
-            if (!isPdf(checkBytes)) {
-                throw new FileUploadException("Only PDF files are allowed.");
-            }
-        } catch (IOException _) {
-            throw new FileUploadException("Upload failed.");
+        String original = file.getOriginalFilename();
+        String contentType = file.getContentType();
+        boolean filenameLooksPdf = original != null && original.toLowerCase().endsWith(".pdf");
+        boolean typeLooksPdf = contentType != null && contentType.equalsIgnoreCase(MediaType.APPLICATION_PDF_VALUE);
+        if (!filenameLooksPdf && !typeLooksPdf) {
+            throw new FileUploadException("Only PDF files are allowed.");
         }
     }
         private Application getApplication(Long applicationId) {
@@ -127,13 +118,10 @@ public class DocumentService {
                 .orElseThrow(() -> new ApplicationNotFoundException(applicationId));
     }
 
-    // Prepare destination file, create upload directory if it does not exist
     private File prepareDestination(String storedFilename) {
         File uploadDir = new File(UPLOAD_DIR);
-
         if (!uploadDir.exists() && !uploadDir.mkdirs()) {
-            throw new FileUploadException(
-                    "Could not create upload directory.");
+            throw new FileUploadException("Could not create upload directory.");
         }
         return new File(uploadDir, storedFilename);
     }

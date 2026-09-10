@@ -25,7 +25,7 @@ import jakarta.validation.constraints.Size;
 @Table(name = "documents")
 public class Document {
     @Id
-    @Column(name = "uuid", unique = true, nullable = false)
+    @Column(name = "uuid", nullable = false)
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID uuid;
 
@@ -50,6 +50,9 @@ public class Document {
 
     @PrePersist
     protected void onCreate() {
+        if (uuid == null) {
+            uuid = UUID.randomUUID();
+        }
         uploadedAt = LocalDateTime.now(ZoneId.of("UTC"));
     }
 
