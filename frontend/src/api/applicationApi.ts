@@ -1,6 +1,6 @@
 import type { Application, ApplicationStatus } from "../types/application";
 import type { ApplicationDetails } from "../types/applicationDetails";
-import type { ApplicationRequest } from "../types/applicationRequest";
+import type { ApplicationRequest } from "../schemas/ApplicationRequest.schema";
 import { apiFetch } from "./apiFetch";
 export type Decision = "APPROVED" | "REJECTED";
 

@@ -126,6 +126,16 @@
     border-color: #adadad;
 }
 
+.inputError {
+  border-color: red;
+}
+
+.errorText {
+  margin-top: 0.25rem;
+  color: red;
+  font-size: 0.875rem;
+}
+
 @media (max-width: 767px) {
     .column {
         width: 100%;

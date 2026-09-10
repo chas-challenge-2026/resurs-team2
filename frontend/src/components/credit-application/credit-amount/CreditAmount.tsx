@@ -1,6 +1,6 @@
 import type { ChangeEvent, SubmitEvent } from "react";
 import { useState } from "react";
-import type { CreditAmountData } from "./CreditAmount.schema";
+import type { CreditAmountData } from "../../../schemas/credit-application-schemas/CreditAmount.schema";
 import styles from "./CreditAmount.module.css";
 
 type CreditAmountProps = {

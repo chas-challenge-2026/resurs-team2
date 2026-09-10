@@ -2,7 +2,7 @@ import type { ChangeEvent } from "react";
 import { useRef, useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 
-import type { DocumentType } from "./Documents.schema";
+import { documentUploadSchema, type DocumentType } from "../../schemas/Documents.schema";
 import type { ApplicationDocument } from "../../types/document";
 import { documentApi } from "../../api/documentApi";
 
@@ -51,14 +51,14 @@ export function Documents() {
       return;
     }
 
-    if (selectedFile.type !== "application/pdf") {
-      setError("Endast PDF-filer kan laddas upp.");
-      setFile(null);
-      return;
-    }
+    const result = documentUploadSchema.safeParse({
+      applicationId,
+      docType,
+      file: selectedFile,
+    });
 
-    if (selectedFile.size > 10 * 1024 * 1024) {
-      setError("Filen får vara högst 10 MB.");
+    if (!result.success) {
+      setError(result.error.issues[0].message);
       setFile(null);
       return;
     }
@@ -71,15 +71,30 @@ export function Documents() {
   const handleSubmit = async (event: React.SyntheticEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (!file) return;
+    const result = documentUploadSchema.safeParse({
+      applicationId,
+      docType,
+      file,
+    });
+
+    if (!result.success) {
+      setError(result.error.issues[0].message);
+      return;
+    }
+
+    const {
+      applicationId: validatedApplicationId,
+      docType: validatedDocType,
+      file: validatedFile,
+    } = result.data;
 
     try {
       setError(null);
 
       const uploadedDocument = await documentApi.uploadDocument(
-        applicationId,
-        docType,
-        file,
+        validatedApplicationId,
+        validatedDocType,
+        validatedFile,
       );
 
       setDocuments((currentDocuments) => [
