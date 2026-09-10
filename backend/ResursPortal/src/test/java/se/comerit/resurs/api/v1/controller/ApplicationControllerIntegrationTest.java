@@ -250,7 +250,7 @@ class ApplicationControllerIntegrationTest {
                 "DELETE FROM companies",
                 "INSERT INTO companies (id, org_number, org_number_index, company_name, authorized_signatory) VALUES (700, '556000-1234', X'dedd7d2467a47aac7cc703665899fded7d8013ddecbbbf69e0ff366fd4812ed7', 'Malmö Fastigheter AB', 'Test Person')",
                 "INSERT INTO applications (id, company_id, requested_amount, purpose, status, decision, decision_reason, scoring_result, audit_log) VALUES (700, 700, 300000.00, 'Rörelsekapital', 'UNDER_REVIEW', NULL, NULL, NULL, '[]')",
-                "INSERT INTO documents (id, application_id, filename, doc_type) VALUES (700, 700, 'bokaplan.pdf', 'BOKFORING')"
+                "INSERT INTO documents (uuid, application_id, filename, doc_type) VALUES ('00000000-0000-0000-0000-000000000700', 700, 'bokaplan.pdf', 'BOKFORING')"
         })
         void companyCanViewOwnApplication() throws Exception {
             mockMvc.perform(get("/api/v1/applications/700"))
