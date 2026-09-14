@@ -3,7 +3,7 @@ import type {
   ApplicationStatus,
 } from "@/types/application";
 import type { ApplicationDetails } from "@/types/applicationDetails";
-import type { ApplicationRequest } from "@/types/applicationRequest";
+import type { ApplicationRequest } from "@/schemas/ApplicationRequest.schema";
 import type { AuditLog } from "@/types/auditLog";
 
 import { apiFetch } from "./apiFetch";
