@@ -1,7 +1,6 @@
 package se.comerit.resurs.entity;
 
-import java.time.LocalDateTime;
-import java.time.ZoneId;
+import java.time.Instant;
 
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
@@ -42,11 +41,11 @@ public class Document {
     
     @Column(name = "uploaded_at")
     @Nullable
-    private LocalDateTime uploadedAt;
+    private Instant uploadedAt;
 
     @PrePersist
     protected void onCreate() {
-        uploadedAt = LocalDateTime.now(ZoneId.of("UTC"));
+        uploadedAt = Instant.now();
     }
 
     public Document(@Nonnull Application application, @Nonnull String filename, @Nonnull String docType) {
@@ -92,7 +91,7 @@ public class Document {
     }
 
     @Nullable
-    public LocalDateTime getUploadedAt() {
+    public Instant getUploadedAt() {
         return uploadedAt;
     }
 }

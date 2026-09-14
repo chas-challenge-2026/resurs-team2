@@ -1,8 +1,7 @@
 package se.comerit.resurs.entity;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
+import java.time.Instant;
 import java.util.List;
 
 import jakarta.annotation.Nonnull;
@@ -82,21 +81,21 @@ public class Application {
 
     @Column(name = "created_at")
     @Nullable
-    private LocalDateTime createdAt;
+    private Instant createdAt;
     
     @Column(name = "updated_at")
     @Nullable
-    private LocalDateTime updatedAt;
+    private Instant updatedAt;
 
     @PrePersist
     protected void onCreate() {
-        createdAt = LocalDateTime.now(ZoneId.of("UTC"));
-        updatedAt = LocalDateTime.now(ZoneId.of("UTC"));
+        createdAt = Instant.now();
+        updatedAt = Instant.now();
     }
 
     @PreUpdate
     protected void onUpdate() {
-        updatedAt = LocalDateTime.now(ZoneId.of("UTC"));
+        updatedAt = Instant.now();
     }
 
     public Application(@Nonnull Company company, @Nonnull BigDecimal requestedAmount, @Nonnull String purpose) {
@@ -222,12 +221,12 @@ public class Application {
     }
 
     @Nullable
-    public LocalDateTime getCreatedAt() {
+    public Instant getCreatedAt() {
         return createdAt;
     }
 
     @Nullable
-    public LocalDateTime getUpdatedAt() {
+    public Instant getUpdatedAt() {
         return updatedAt;
     }
 }

@@ -23,8 +23,8 @@ CREATE TABLE applications (
     decision VARCHAR(20),
     decision_reason TEXT,
     scoring_result TEXT,
-    created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW()
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 CREATE TABLE documents (
@@ -32,7 +32,7 @@ CREATE TABLE documents (
     application_id INT REFERENCES applications(id),
     filename VARCHAR(512),
     doc_type VARCHAR(50),
-    uploaded_at TIMESTAMP DEFAULT NOW()
+    uploaded_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 CREATE TABLE audit_log (
@@ -42,7 +42,7 @@ CREATE TABLE audit_log (
     hash VARCHAR(512) NOT NULL,
     previous_hash VARCHAR(512) NOT NULL,
     entry TEXT NOT NULL,
-    timestamp TIMESTAMP NOT NULL DEFAULT NOW()
+    timestamp TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
 
 -- NOTE: companies, applications and case workers contain PII. Production seeds

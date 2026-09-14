@@ -1,7 +1,6 @@
 package se.comerit.resurs.entity;
 
-import java.time.LocalDateTime;
-import java.time.ZoneId;
+import java.time.Instant;
 import java.util.UUID;
 
 import jakarta.annotation.Nonnull;
@@ -45,7 +44,7 @@ public class AuditLog {
     private String entry;
 
     @Column(nullable = false)
-    private LocalDateTime timestamp;
+    private Instant timestamp;
 
     protected AuditLog() {}
 
@@ -60,7 +59,7 @@ public class AuditLog {
 
     @PrePersist
     protected void onCreate() {
-        timestamp = LocalDateTime.now(ZoneId.of("UTC"));
+        timestamp = Instant.now();
     }
 
     public UUID getId() {
@@ -91,7 +90,7 @@ public class AuditLog {
         return entry;
     }
 
-    public LocalDateTime getTimestamp() {
+    public Instant getTimestamp() {
         return timestamp;
     }
 }
