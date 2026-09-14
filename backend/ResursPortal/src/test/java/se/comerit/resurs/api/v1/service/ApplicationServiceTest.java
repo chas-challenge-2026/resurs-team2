@@ -3,8 +3,6 @@ package se.comerit.resurs.api.v1.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -157,7 +155,9 @@ class ApplicationServiceTest {
 
             applicationService.submitApplication("556677-8899", validRequest);
 
-            verify(emailService).sendApplicationSubmitted("Kalle Kula", 1L);
+            verify(emailService).sendApplicationSubmitted(argThat(app ->
+                    app.getId().equals(1L)
+                            && app.getCompany().getAuthorizedSignatory().equals("Kalle Kula")));
         }
     }
 
@@ -198,7 +198,7 @@ class ApplicationServiceTest {
 
             verify(applicationRepository, never()).save(any(Application.class));
             verify(scoringService, never()).scoreApplication(any());
-            verify(emailService, never()).sendApplicationSubmitted(anyString(), anyLong());
+            verify(emailService, never()).sendApplicationSubmitted(any(Application.class));
         }
     }
 }

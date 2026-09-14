@@ -97,11 +97,10 @@ public class ScoringService {
 
         applicationRepository.save(app);
 
-        String signatory = app.getCompany().getAuthorizedSignatory();
         if (app.getDecision() != null) {
-            emailService.sendDecision(signatory, app.getId(), app.getDecision().name(), app.getDecisionReason());
+            emailService.sendDecision(app);
         } else {
-            emailService.sendStatusUpdate(signatory, app.getId(), app.getStatus().name());
+            emailService.sendStatusUpdate(app);
         }
     }
 

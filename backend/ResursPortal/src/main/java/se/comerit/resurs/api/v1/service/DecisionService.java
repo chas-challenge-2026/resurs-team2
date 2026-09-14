@@ -53,12 +53,7 @@ public class DecisionService {
 
         Application saved = repository.save(application);
 
-        emailService.sendDecision(
-            saved.getCompany().getAuthorizedSignatory(),
-            saved.getId(),
-            request.decision().name(),
-            request.comment()
-        );
+        emailService.sendDecision(saved);
 
         return ApplicationMapper.toResponse(saved);
     }

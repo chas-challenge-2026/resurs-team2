@@ -77,7 +77,7 @@ public class ApplicationService {
 
         app = applicationRepository.save(app);
 
-        emailService.sendApplicationSubmitted(company.getAuthorizedSignatory(), app.getId());
+        emailService.sendApplicationSubmitted(app);
 
         auditLogService.append(app, new ApplicationCreated(orgNumber));
 

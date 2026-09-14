@@ -155,11 +155,7 @@ public class DocumentService {
             application.setStatus(
                     ApplicationStatus.UNDER_REVIEW);
 
-            emailService.sendStatusUpdate(
-                application.getCompany().getAuthorizedSignatory(),
-                application.getId(),
-                ApplicationStatus.UNDER_REVIEW.name()
-            );
+            emailService.sendStatusUpdate(application);
         }
     }
 

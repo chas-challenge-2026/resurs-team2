@@ -2,8 +2,6 @@ package se.comerit.resurs.api.v1.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -115,8 +113,8 @@ class ScoringServiceScoreApplicationTest {
                 .contains("\"flags\"");
 
         verify(repository).save(app);
-        verify(emailService).sendDecision("Kalle Kula", 7L, "APPROVED", "ANSÖKAN GODKÄND");
-        verify(emailService, never()).sendStatusUpdate(anyString(), anyLong(), anyString());
+        verify(emailService).sendDecision(app);
+        verify(emailService, never()).sendStatusUpdate(any(Application.class));
     }
 
     @Test
@@ -128,8 +126,8 @@ class ScoringServiceScoreApplicationTest {
 
         assertThat(app.getStatus()).isEqualTo(ApplicationStatus.UNDER_REVIEW);
         assertThat(app.getDecision()).isNull();
-        verify(emailService).sendStatusUpdate("Kalle Kula", 7L, "UNDER_REVIEW");
-        verify(emailService, never()).sendDecision(anyString(), anyLong(), anyString(), anyString());
+        verify(emailService).sendStatusUpdate(app);
+        verify(emailService, never()).sendDecision(any(Application.class));
     }
 
     @Test
@@ -140,8 +138,8 @@ class ScoringServiceScoreApplicationTest {
         scoringService.scoreApplication(99L);
 
         verify(repository, never()).save(any());
-        verify(emailService, never()).sendDecision(anyString(), anyLong(), anyString(), anyString());
-        verify(emailService, never()).sendStatusUpdate(anyString(), anyLong(), anyString());
+        verify(emailService, never()).sendDecision(any(Application.class));
+        verify(emailService, never()).sendStatusUpdate(any(Application.class));
     }
 
     @Test
@@ -152,7 +150,7 @@ class ScoringServiceScoreApplicationTest {
         scoringService.scoreApplication(7L);
 
         verify(repository, never()).save(any());
-        verify(emailService, never()).sendDecision(anyString(), anyLong(), anyString(), anyString());
-        verify(emailService, never()).sendStatusUpdate(anyString(), anyLong(), anyString());
+        verify(emailService, never()).sendDecision(any(Application.class));
+        verify(emailService, never()).sendStatusUpdate(any(Application.class));
     }
 }
