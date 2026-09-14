@@ -16,7 +16,10 @@ public class ResursCryptoServiceImpl implements ResursCryptoService {
     private static final int TAG_LEN = 16;
     private static final int KEY_VERSION_LEN = 1;
     private static final int HMAC_LEN = 32;
-    private static final int MIN_CIPHERTEXT_LEN = KEY_VERSION_LEN + TAG_LEN + 1;
+    // Smallest valid ciphertext: key-version byte + GCM tag. The plaintext may be
+    // empty, in which case the ciphertext is exactly these bytes and the total
+    // blob is NONCE_LEN + MIN_CIPHERTEXT_LEN.
+    private static final int MIN_CIPHERTEXT_LEN = KEY_VERSION_LEN + TAG_LEN;
 
     private final ResursCryptoLibrary library;
     private final SecureRandom secureRandom = new SecureRandom();
@@ -60,7 +63,9 @@ public class ResursCryptoServiceImpl implements ResursCryptoService {
         int plainLen = ciphertextLen - KEY_VERSION_LEN - TAG_LEN;
         LongByReference outLen = new LongByReference(plainLen);
 
-        Memory plainBuf = new Memory(plainLen);
+        // JNA rejects a zero-length allocation, but an empty plaintext is valid:
+        // the native side then writes nothing and reports a length of 0.
+        Memory plainBuf = new Memory(Math.max(plainLen, 1));
 
         int rc = library.resurs_decrypt_pii(blobMem, NONCE_LEN,
                 blobMem.share(NONCE_LEN), ciphertextLen,

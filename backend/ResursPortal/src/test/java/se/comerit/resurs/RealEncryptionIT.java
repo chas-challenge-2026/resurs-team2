@@ -145,6 +145,14 @@ class RealEncryptionIT {
     }
 
     @Test
+    void emptyPlaintextRoundTrips() {
+        byte[] blob = cryptoService.encryptPii("");
+
+        assertThat(blob).hasSize(NONCE_LEN + KEY_VERSION_LEN + TAG_LEN);
+        assertThat(cryptoService.decryptPii(blob)).isEmpty();
+    }
+
+    @Test
     void eachEncryptionUsesARandomNonce() {
         byte[] first = cryptoService.encryptPii(ORG_NUMBER);
         byte[] second = cryptoService.encryptPii(ORG_NUMBER);
