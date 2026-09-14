@@ -14,7 +14,7 @@ public class EmailService {
     }
 
     public void sendApplicationSubmitted(Application app) {
-        emailProvider.send(app.getCompany().getAuthorizedSignatory(),
+        emailProvider.send(recipientAddress(app),
                 "Ansökan mottagen - #" + app.getId(),
                 "Din kreditansökan har mottagits och behandlas.\n\n"
                         + "Ansöknings-ID: " + app.getId() + "\n\n"
@@ -22,7 +22,7 @@ public class EmailService {
     }
 
     public void sendStatusUpdate(Application app) {
-        emailProvider.send(app.getCompany().getAuthorizedSignatory(),
+        emailProvider.send(recipientAddress(app),
                 "Ansökningsstatus uppdaterad - #" + app.getId(),
                 "Statusen för din kreditansökan har uppdaterats.\n\n"
                         + "Ansöknings-ID: " + app.getId() + "\n"
@@ -39,6 +39,14 @@ public class EmailService {
             body += "Motivering: " + app.getDecisionReason() + "\n";
         }
         body += "\nTack för din ansökan.";
-        emailProvider.send(app.getCompany().getAuthorizedSignatory(), subject, body);
+        emailProvider.send(recipientAddress(app), subject, body);
+    }
+
+    private String recipientAddress(Application app) {
+        String signatory = app.getCompany().getAuthorizedSignatory();
+        if (signatory.contains("@")) {
+            return signatory;
+        }
+        return signatory.trim().toLowerCase().replaceAll("\\s+", "_") + "@example.com";
     }
 }
