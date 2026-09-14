@@ -1,45 +1,56 @@
 package se.comerit.resurs.api.v1.service;
 
+import java.util.Map;
+
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
+import org.thymeleaf.TemplateEngine;
+import org.thymeleaf.context.Context;
 
 import se.comerit.resurs.entity.Application;
 
+/**
+ * Composes and sends transactional email. Copy lives in Thymeleaf text
+ * templates under {@code email-templates/}: the first line of each file is the
+ * subject, a {@code ---} delimiter separates it from the body.
+ */
 @Service
 public class EmailService {
 
-    private final EmailProvider emailProvider;
+    private record EmailMessage(String subject, String body) {
+    }
 
-    public EmailService(EmailProvider emailProvider) {
+    private final EmailProvider emailProvider;
+    private final TemplateEngine emailTemplateEngine;
+
+    public EmailService(EmailProvider emailProvider,
+            @Qualifier("emailTemplateEngine") TemplateEngine emailTemplateEngine) {
         this.emailProvider = emailProvider;
+        this.emailTemplateEngine = emailTemplateEngine;
     }
 
     public void sendApplicationSubmitted(Application app) {
-        emailProvider.send(recipientAddress(app),
-                "Ansökan mottagen - #" + app.getId(),
-                "Din kreditansökan har mottagits och behandlas.\n\n"
-                        + "Ansöknings-ID: " + app.getId() + "\n\n"
-                        + "Vi meddelar dig när ett beslut har tagits.");
+        EmailMessage message = render("application-submitted", Map.of("app", app));
+        emailProvider.send(recipientAddress(app), message.subject(), message.body());
     }
 
     public void sendStatusUpdate(Application app) {
-        emailProvider.send(recipientAddress(app),
-                "Ansökningsstatus uppdaterad - #" + app.getId(),
-                "Statusen för din kreditansökan har uppdaterats.\n\n"
-                        + "Ansöknings-ID: " + app.getId() + "\n"
-                        + "Ny status: " + app.getStatus() + "\n\n"
-                        + "Vi granskar din ansökan och uppdaterar dig inom kort.");
+        EmailMessage message = render("status-updated", Map.of("app", app));
+        emailProvider.send(recipientAddress(app), message.subject(), message.body());
     }
 
     public void sendDecision(Application app) {
-        String subject = "Ansökan " + app.getDecision() + " - #" + app.getId();
-        String body = "Ett beslut har tagits angående din kreditansökan.\n\n"
-                + "Ansöknings-ID: " + app.getId() + "\n"
-                + "Beslut: " + app.getDecision() + "\n";
-        if (app.getDecisionReason() != null && !app.getDecisionReason().isBlank()) {
-            body += "Motivering: " + app.getDecisionReason() + "\n";
-        }
-        body += "\nTack för din ansökan.";
-        emailProvider.send(recipientAddress(app), subject, body);
+        EmailMessage message = render("decision", Map.of("app", app));
+        emailProvider.send(recipientAddress(app), message.subject(), message.body());
+    }
+
+    private EmailMessage render(String template, Map<String, Object> model) {
+        Context context = new Context();
+        context.setVariables(model);
+        String rendered = emailTemplateEngine.process(template, context);
+
+        String[] parts = rendered.split("\\R---\\R", 2);
+        return new EmailMessage(parts[0].trim(), parts.length > 1 ? parts[1].trim() : "");
     }
 
     private String recipientAddress(Application app) {

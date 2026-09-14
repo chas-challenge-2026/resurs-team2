@@ -1,0 +1,13 @@
+Ansökan mottagen - #[(${app.id})]
+---
+Hej [(${app.company.authorizedSignatory})]!
+
+Din kreditansökan har mottagits och behandlas.
+
+Ansöknings-ID: [(${app.id})]
+Företag: [(${app.company.name})]
+Organisationsnummer: [(${app.company.orgNumber})]
+Önskat belopp: [(${app.requestedAmount})] kronor
+Ändamål: [(${app.purpose})]
+
+Vi meddelar dig när ett beslut har tagits.
