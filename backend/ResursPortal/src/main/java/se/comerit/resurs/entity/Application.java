@@ -72,6 +72,11 @@ public class Application {
     @NotBlank
     private String auditLog = "[]";
 
+    @Convert(converter = PiiAttributeConverter.class)
+    @Column(name = "financial_data", columnDefinition = "TEXT")
+    @Nullable
+    private String financialData;
+
     @OneToMany(fetch = FetchType.LAZY, mappedBy = "application")
     @OrderBy("uploadedAt DESC")
     private List<Document> documents;
@@ -112,7 +117,20 @@ public class Application {
         this.decisionReason = decisionReason;
         this.scoringResult = scoringResult;
         this.auditLog = auditLog;
+    }
 
+    public Application(@Nonnull Company company, @Nonnull BigDecimal requestedAmount,
+            @Nonnull String purpose, ApplicationStatus statusValue, Decision decision,
+            String decisionReason, String scoringResult, String auditLog, String financialData) {
+        this.company = company;
+        this.requestedAmount = requestedAmount;
+        this.purpose = purpose;
+        this.status = statusValue;
+        this.decision = decision;
+        this.decisionReason = decisionReason;
+        this.scoringResult = scoringResult;
+        this.auditLog = auditLog;
+        this.financialData = financialData;
     }
 
     protected Application() {
@@ -194,6 +212,15 @@ public class Application {
 
     public void setAuditLog(@Nonnull String auditLog) {
         this.auditLog = auditLog;
+    }
+
+    @Nullable
+    public String getFinancialData() {
+        return financialData;
+    }
+
+    public void setFinancialData(@Nullable String financialData) {
+        this.financialData = financialData;
     }
 
     @Nonnull

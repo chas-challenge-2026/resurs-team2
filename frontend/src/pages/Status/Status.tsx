@@ -8,6 +8,7 @@ import { ApplicationDetailsPanel } from "./components/ApplicationDetailsPanel";
 import { DocumentsPanel } from "./components/DocumentsPanel";
 import { StatusHeader } from "./components/StatusHeader";
 import { useApplicationDetails } from "./hooks/useApplicationDetails";
+import { formatWorker } from "./utils/statusFormatters";
 
 export const Status = () => {
   const { id } = useParams<{ id: string }>();
@@ -61,7 +62,7 @@ export const Status = () => {
           )}
 
           <Panel title="Handläggare">
-            {workerName || "Ej tilldelad"}
+            {formatWorker(application.status, workerName)}
           </Panel>
         </div>
 

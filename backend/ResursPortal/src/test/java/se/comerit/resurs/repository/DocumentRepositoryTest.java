@@ -21,9 +21,17 @@ import se.comerit.resurs.entity.Application;
 import se.comerit.resurs.entity.Company;
 import se.comerit.resurs.entity.Document;
 
+import org.springframework.test.context.jdbc.Sql;
+
 @DataJpaTest
 @ActiveProfiles("test")
 @Import({PiiAttributeConverter.class, AmountAttributeConverter.class, PlainPiiCodec.class, CompanyBlindIndexListener.class, DummyCryptoService.class})
+@Sql(statements = {
+        "DELETE FROM documents",
+        "DELETE FROM applications",
+        "DELETE FROM companies",
+        "INSERT INTO companies (id, org_number, org_number_index, company_name, authorized_signatory) VALUES (900, '556000-1234', X'dedd7d2467a47aac7cc703665899fded7d8013ddecbbbf69e0ff366fd4812ed7', 'Malmö Fastigheter AB', 'Anders Karlsson')"
+})
 class DocumentRepositoryTest {
 
     @Autowired

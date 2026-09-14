@@ -2,7 +2,7 @@ import type { ChangeEvent } from "react";
 import { useRef, useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 
-import type { DocumentType } from "./Documents.schema";
+import { documentUploadSchema, type DocumentType } from "../../schemas/Documents.schema";
 import type { ApplicationDocument } from "../../types/document";
 import { documentApi } from "../../api/documentApi";
 
@@ -51,14 +51,14 @@ export function Documents() {
       return;
     }
 
-    if (selectedFile.type !== "application/pdf") {
-      setError("Endast PDF-filer kan laddas upp.");
-      setFile(null);
-      return;
-    }
+    const result = documentUploadSchema.safeParse({
+      applicationId,
+      docType,
+      file: selectedFile,
+    });
 
-    if (selectedFile.size > 10 * 1024 * 1024) {
-      setError("Filen får vara högst 10 MB.");
+    if (!result.success) {
+      setError(result.error.issues[0].message);
       setFile(null);
       return;
     }
@@ -71,15 +71,30 @@ export function Documents() {
   const handleSubmit = async (event: React.SyntheticEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (!file) return;
+    const result = documentUploadSchema.safeParse({
+      applicationId,
+      docType,
+      file,
+    });
+
+    if (!result.success) {
+      setError(result.error.issues[0].message);
+      return;
+    }
+
+    const {
+      applicationId: validatedApplicationId,
+      docType: validatedDocType,
+      file: validatedFile,
+    } = result.data;
 
     try {
       setError(null);
 
       const uploadedDocument = await documentApi.uploadDocument(
-        applicationId,
-        docType,
-        file,
+        validatedApplicationId,
+        validatedDocType,
+        validatedFile,
       );
 
       setDocuments((currentDocuments) => [
@@ -99,31 +114,46 @@ export function Documents() {
     }
   };
 
-  const handleDownload = async (documentId: number) => {
+  const handleDownload = async (documentId: number, filename: string) => {
     try {
+      setError(null);
       const blob = await documentApi.downloadDocument(documentId);
-
       const url = URL.createObjectURL(blob);
 
       const link = document.createElement("a");
-
       link.href = url;
-
-      link.download = "";
-
+      link.download = filename;
+      document.body.appendChild(link);
       link.click();
+      link.remove();
 
       URL.revokeObjectURL(url);
     } catch (error) {
       console.error("Kunde inte ladda ner dokument:", error);
+      setError("Kunde inte ladda ner dokumentet.");
     }
 
-    setError("Kunde inte ladda ner dokumentet.");
   };
 
   const handleBack = () => {
     navigate("/application");
   };
+
+  const handleDelete = async (documentId: number) => {
+  try {
+    setError(null);
+
+    await documentApi.deleteDocument(documentId);
+
+    setDocuments((currentDocuments) =>
+      currentDocuments.filter((document) => document.id !== documentId),
+    );
+  } catch (error) {
+    console.error("Kunde inte ta bort dokument:", error);
+
+    setError("Kunde inte ta bort dokumentet.");
+  }
+};
 
   return (
     <section className={styles.formSection}>
@@ -216,9 +246,17 @@ export function Documents() {
                           <button
                             type="button"
                             className={styles.secondaryButton}
-                            onClick={() => handleDownload(document.id)}
+                            onClick={() => handleDownload(document.id, document.filename)}
                           >
                             ↓
+                          </button>
+
+                          <button
+                          type="button"
+                          className={styles.secondaryButton}
+                          onClick={() => handleDelete(document.id)}
+                          >
+                            Ta bort
                           </button>
                         </td>
                       </tr>

@@ -24,6 +24,7 @@ CREATE TABLE applications (
     decision_reason TEXT,
     scoring_result TEXT,
     audit_log TEXT DEFAULT '[]',
+    financial_data TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

@@ -21,6 +21,8 @@ import org.springframework.test.web.servlet.MvcResult;
 
 import se.comerit.resurs.security.AuthTokens;
 
+import org.springframework.test.context.jdbc.Sql;
+
 /**
  * Endpoint-level validation of the {@code /api/v1/auth} flows through the real
  * HTTP API (session tokens, rotation, logout and theft detection). Each test
@@ -32,6 +34,12 @@ import se.comerit.resurs.security.AuthTokens;
 })
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
+@Sql(statements = {
+        "DELETE FROM documents",
+        "DELETE FROM applications",
+        "DELETE FROM companies",
+        "INSERT INTO companies (id, org_number, org_number_index, company_name, authorized_signatory) VALUES (900, '556000-1234', X'dedd7d2467a47aac7cc703665899fded7d8013ddecbbbf69e0ff366fd4812ed7', 'Malmö Fastigheter AB', 'Anders Karlsson')"
+})
 class AuthEndpointIntegrationTest {
 
     private static final String UA = "auth-test-agent";
