@@ -24,8 +24,8 @@ CREATE TABLE applications (
     decision_reason TEXT,
     scoring_result TEXT,
     financial_data TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE documents (
@@ -33,7 +33,7 @@ CREATE TABLE documents (
     application_id INT REFERENCES applications(id),
     filename VARCHAR(512),
     doc_type VARCHAR(50),
-    uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    uploaded_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE audit_log (
@@ -43,5 +43,5 @@ CREATE TABLE audit_log (
     hash VARCHAR(512) NOT NULL,
     previous_hash VARCHAR(512) NOT NULL,
     entry TEXT NOT NULL,
-    timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    timestamp TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
