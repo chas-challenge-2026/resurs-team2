@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 import se.comerit.resurs.api.v1.dto.CaseWorkerLoginRequest;
 import se.comerit.resurs.api.v1.dto.CompanyLoginRequest;
 import se.comerit.resurs.api.v1.dto.RefreshRequest;
@@ -30,17 +31,17 @@ public class AuthController {
     }
 
     @PostMapping("/login/company")
-    public ResponseEntity<AuthTokens> loginCompany(@RequestBody CompanyLoginRequest body, HttpServletRequest req) {
+    public ResponseEntity<AuthTokens> loginCompany(@Valid @RequestBody CompanyLoginRequest body, HttpServletRequest req) {
         return ResponseEntity.ok(service.loginCompany(body.orgNumber(), fingerprint.of(req)));
     }
 
     @PostMapping("/login/caseWorker")
-    public ResponseEntity<AuthTokens> loginCaseWorker(@RequestBody CaseWorkerLoginRequest body, HttpServletRequest req) {
+    public ResponseEntity<AuthTokens> loginCaseWorker(@Valid @RequestBody CaseWorkerLoginRequest body, HttpServletRequest req) {
         return ResponseEntity.ok(service.loginCaseWorker(body.email(), body.password(), fingerprint.of(req)));
     }
 
     @PostMapping("/refresh")
-    public ResponseEntity<AuthTokens> refresh(@RequestBody RefreshRequest body, HttpServletRequest req) {
+    public ResponseEntity<AuthTokens> refresh(@Valid @RequestBody RefreshRequest body, HttpServletRequest req) {
         return ResponseEntity.ok(service.refresh(body.refreshToken(), fingerprint.of(req)));
     }
 
