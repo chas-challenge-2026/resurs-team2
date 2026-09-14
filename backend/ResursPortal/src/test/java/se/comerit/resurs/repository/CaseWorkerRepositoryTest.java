@@ -19,9 +19,15 @@ import se.comerit.resurs.entity.CaseWorkerBlindIndexListener;
 import se.comerit.resurs.entity.CompanyBlindIndexListener;
 import se.comerit.resurs.entity.PiiAttributeConverter;
 
+import org.springframework.test.context.jdbc.Sql;
+
 @DataJpaTest
 @ActiveProfiles("test")
 @Import({PiiAttributeConverter.class, PlainPiiCodec.class, CaseWorkerBlindIndexListener.class, CompanyBlindIndexListener.class, DummyCryptoService.class})
+@Sql(statements = {
+        "DELETE FROM case_workers",
+        "INSERT INTO case_workers (id, name, email, email_index, password) VALUES (900, 'Karin Handläggare', 'karin@resurs.se', X'240cf76b4caf0123ebfc7392cd379b0467f4026fa356c0a05bfa360a87679413', '$2a$10$rUonBwDLz9IA0Ivwnor38.tjZevxSeIHzQx5b4u0RwHhHJ/sbao32')"
+})
 class CaseWorkerRepositoryTest {
 
     @Autowired

@@ -101,7 +101,11 @@ class ApplicationLifecycleIntegrationTest {
     @DisplayName("Full lifecycle: manual-review -> case worker approval -> company confirms")
     @Sql(statements = {
             "DELETE FROM documents",
-            "DELETE FROM applications"
+            "DELETE FROM applications",
+            "DELETE FROM companies",
+            "DELETE FROM case_workers",
+            "INSERT INTO companies (id, org_number, org_number_index, company_name, authorized_signatory) VALUES (900, '556000-1234', X'dedd7d2467a47aac7cc703665899fded7d8013ddecbbbf69e0ff366fd4812ed7', 'Malmö Fastigheter AB', 'Anders Karlsson')",
+            "INSERT INTO case_workers (id, name, email, email_index, password) VALUES (900, 'Karin Handläggare', 'karin@resurs.se', X'240cf76b4caf0123ebfc7392cd379b0467f4026fa356c0a05bfa360a87679413', '$2a$10$rUonBwDLz9IA0Ivwnor38.tjZevxSeIHzQx5b4u0RwHhHJ/sbao32')"
     })
     void fullApplicationLifecycle() throws Exception {
         // ------------------------------------------------------------------
