@@ -1,171 +1,400 @@
 @import "../../styles/tokens.css";
 
-/* Sidstruktur */
 .backoffice-page {
-  padding-top: 20px;
-  max-width: 1170px;
+  width: 100%;
+  max-width: var(--container-width);
+
   margin: 0 auto;
-  padding-left: var(--spacing-md);
-  padding-right: var(--spacing-md);
+  padding:
+    var(--spacing-2xl)
+    var(--spacing-lg)
+    var(--spacing-3xl);
+}
+
+/* Header */
+
+.backoffice-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--spacing-lg);
+
+  margin-bottom: var(--spacing-xl);
 }
 
 .backoffice-title {
   display: flex;
   align-items: center;
   gap: var(--spacing-sm);
-  margin-top: 0;
-  margin-bottom: var(--spacing-md);
-  font-size: 28px;
-  font-weight: 300;
-  color: var(--color-text);
+
+  margin: 0;
+
+  color: var(--color-text-strong);
+
+  font-size: var(--font-size-3xl);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-tight);
 }
 
-/* Badge för antal ärenden i kö */
-.badge-count {
-  background-color: var(--color-warning);
-  color: var(--color-white);
-  padding: 4px 8px;
-  border-radius: 10px;
-  font-size: 14px;
-  font-weight: 700;
-}
-
-/* Paneler */
-.panel {
-  background-color: var(--color-white);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-  margin-bottom: var(--spacing-lg);
-  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.05);
-}
-
-.panel-heading {
-  padding: 10px var(--spacing-md);
-  background-color: #f5f5f5;
-  border-bottom: 1px solid var(--color-border);
-  font-weight: 700;
-  color: #333;
-}
-
-.panel-warning {
-  border-color: #faebcc;
-}
-
-.panel-warning .panel-heading {
-  background-color: #fcf8e3;
-  color: #8a6d3b;
-  border-bottom-color: #faebcc;
-}
-
-.panel-body {
-  padding: var(--spacing-md);
-}
-
-.text-muted {
-  color: var(--color-muted);
+.backoffice-header .text-muted {
   margin: 0;
 }
 
-/* Tabeller */
+/* Review count */
+
+.badge-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  min-width: 30px;
+  height: 30px;
+
+  padding: 0 9px;
+
+  color: var(--color-warning-text);
+  background-color: var(--color-warning-bg);
+
+  border: 1px solid var(--color-warning-border);
+  border-radius: var(--radius-pill);
+
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+}
+
+/* Panels */
+
+.backoffice-page .panel {
+  overflow: hidden;
+
+  margin-bottom: var(--spacing-lg);
+
+  background-color: var(--color-white);
+
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+
+  box-shadow: var(--shadow-sm);
+}
+
+.backoffice-page .panel-heading {
+  padding: 14px var(--spacing-lg);
+
+  color: var(--color-text-strong);
+  background-color: var(--color-surface-muted);
+
+  border-bottom: 1px solid var(--color-border);
+
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+}
+
+.backoffice-page .panel-body {
+  padding: var(--spacing-lg);
+}
+
+/* Warning panel */
+
+.backoffice-page .panel-warning {
+  border-color: var(--color-warning-border);
+}
+
+.backoffice-page .panel-warning .panel-heading {
+  color: var(--color-warning-text);
+  background-color: var(--color-warning-bg);
+
+  border-bottom-color: var(--color-warning-border);
+}
+
+.backoffice-page .text-muted {
+  color: var(--color-muted);
+
+  line-height: var(--line-height-base);
+}
+
+/* Tables */
+
 .table {
   width: 100%;
   max-width: 100%;
-  margin-bottom: 0;
+
+  margin: 0;
+
   border-collapse: collapse;
 }
 
 .table th,
 .table td {
-  padding: 8px 12px;
-  vertical-align: middle;
-  border-top: 1px solid var(--color-border);
-  font-size: var(--font-size-base);
+  padding: 12px 14px;
+
+  color: var(--color-text);
+
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-base);
+
   text-align: left;
+  vertical-align: middle;
+
+  border-bottom: 1px solid var(--color-border);
 }
 
-/* Tabell för under granskning */
-.table-review th {
-  background-color: #003366;
-  color: var(--color-white);
+.table th {
+  color: var(--color-muted);
+  background-color: var(--color-surface-muted);
+
+  font-weight: var(--font-weight-semibold);
+}
+
+.table tbody tr:last-child td {
   border-bottom: none;
 }
 
-/* Randig tabell för historik */
-.table-striped tbody tr:nth-of-type(odd) {
-  background-color: #f9f9f9;
+.table tbody tr {
+  transition: background-color var(--transition-fast);
 }
 
-/* Inramad tabell */
+.table tbody tr:hover td {
+  background-color: var(--color-primary-soft);
+}
+
+/* Review table */
+
+.table-review th {
+  color: var(--color-white);
+  background-color: var(--color-primary);
+
+  border-bottom-color: var(--color-primary);
+}
+
+.table-review tbody tr:hover td {
+  background-color: var(--color-warning-bg);
+}
+
+/* Striped */
+
+.table-striped tbody tr:nth-of-type(odd) td {
+  background-color: var(--color-surface-muted);
+}
+
+.table-striped tbody tr:nth-of-type(odd):hover td {
+  background-color: var(--color-primary-soft);
+}
+
+/* Bordered */
+
 .table-bordered {
-  border: 1px solid var(--color-border);
+  border-collapse: collapse;
 }
 
 .table-bordered th,
 .table-bordered td {
-  border: 1px solid var(--color-border);
+  border-right: 1px solid var(--color-border);
 }
 
-/* Formulär & Inmatning i tabellceller */
+.table-bordered th:last-child,
+.table-bordered td:last-child {
+  border-right: none;
+}
+
+.table small {
+  color: var(--color-muted);
+
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+}
+
+/* Status labels */
+
+.label {
+  display: inline-flex;
+  align-items: center;
+
+  padding: 5px 9px;
+
+  border: 1px solid transparent;
+  border-radius: var(--radius-pill);
+
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  line-height: 1;
+
+  white-space: nowrap;
+}
+
+.label-success {
+  color: var(--color-success-text);
+  background-color: var(--color-success-bg);
+
+  border-color: var(--color-success-border);
+}
+
+.label-danger {
+  color: var(--color-danger-text);
+  background-color: var(--color-danger-bg);
+
+  border-color: var(--color-danger-border);
+}
+
+.label-warning {
+  color: var(--color-warning-text);
+  background-color: var(--color-warning-bg);
+
+  border-color: var(--color-warning-border);
+}
+
+.label-default {
+  color: var(--color-muted);
+  background-color: var(--color-surface-muted);
+
+  border-color: var(--color-border);
+}
+
+/* Table action button */
+
+.backoffice-page .table .btn {
+  min-height: 34px;
+
+  padding: 7px 14px;
+
+  font-size: var(--font-size-sm);
+}
+
+.backoffice-page .table .btn-primary {
+  color: var(--color-accent-text);
+  background-color: var(--color-accent);
+
+  border-color: var(--color-accent);
+}
+
+.backoffice-page .table .btn-primary:hover {
+  background-color: var(--color-accent-hover);
+
+  border-color: var(--color-accent-hover);
+}
+
+/* Inline review form */
+
 .inline-form {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--spacing-xs);
 }
 
 .input-comment {
-  width: 140px;
-  padding: 4px 8px;
-  font-size: 12px;
-  border: 1px solid var(--color-border);
+  width: 160px;
+  min-height: 34px;
+
+  padding: 6px 10px;
+
+  color: var(--color-text);
+  background-color: var(--color-white);
+
+  border: 1px solid var(--color-input-border);
   border-radius: var(--radius);
-  height: 30px;
+
+  font-family: inherit;
+  font-size: var(--font-size-sm);
+
+  transition:
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast);
 }
 
-/* Små knappar för tabellåtgärder */
+.input-comment:hover {
+  border-color: var(--color-input-hover-border);
+}
+
+.input-comment:focus {
+  outline: none;
+
+  border-color: var(--color-input-focus-border);
+  box-shadow: var(--shadow-input-focus);
+}
+
+/* Small decision buttons */
+
 .btn-sm {
-  padding: 4px 8px;
-  font-size: 12px;
-  border-radius: 3px;
-  cursor: pointer;
+  min-height: 34px;
+
+  padding: 7px 12px;
+
   border: 1px solid transparent;
-  font-weight: 600;
+  border-radius: var(--radius-pill);
+
+  font-family: inherit;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  line-height: 1;
+
+  cursor: pointer;
+
+  transition:
+    background-color var(--transition-fast),
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast),
+    transform var(--transition-fast);
+}
+
+.btn-sm:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-input-focus);
+}
+
+.btn-sm:active {
+  transform: translateY(1px);
 }
 
 .btn-success-sm {
-  background-color: var(--color-success);
   color: var(--color-white);
+  background-color: var(--color-success);
+
   border-color: var(--color-success);
 }
 
 .btn-success-sm:hover {
   background-color: var(--color-success-hover);
+
+  border-color: var(--color-success-hover);
 }
 
 .btn-danger-sm {
-  background-color: var(--color-danger);
   color: var(--color-white);
+  background-color: var(--color-danger);
+
   border-color: var(--color-danger);
 }
 
 .btn-danger-sm:hover {
   background-color: var(--color-danger-hover);
+
+  border-color: var(--color-danger-hover);
 }
 
-/* Badges / Labels */
-.label {
-  display: inline-block;
-  padding: 3px 7px;
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--color-white);
-  border-radius: 3px;
-  text-transform: uppercase;
-}
+/* Responsive */
 
-.label-success {
-  background-color: var(--color-success);
-}
+@media (max-width: 900px) {
+  .backoffice-page {
+    padding:
+      var(--spacing-xl)
+      var(--spacing-md)
+      var(--spacing-2xl);
+  }
 
-.label-danger {
-  background-color: var(--color-danger);
+  .backoffice-header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+  }
+
+  .backoffice-title {
+    font-size: var(--font-size-2xl);
+  }
+
+  .backoffice-page .panel {
+    overflow-x: auto;
+  }
+
+  .table {
+    min-width: 900px;
+  }
 }

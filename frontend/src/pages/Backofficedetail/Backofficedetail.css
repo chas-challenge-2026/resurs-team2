@@ -1,142 +1,251 @@
 @import "../../styles/tokens.css";
 
 .backoffice-page {
-  max-width: 1170px;
+  width: 100%;
+  max-width: var(--container-width);
+
   margin: 0 auto;
-  padding: var(--spacing-md);
+  padding:
+    var(--spacing-2xl)
+    var(--spacing-lg)
+    var(--spacing-3xl);
 }
 
 .backoffice-page h2 {
-  margin-top: 0;
-  margin-bottom: var(--spacing-md);
-  font-size: 28px;
-  font-weight: 500;
-  color: var(--color-text);
+  margin: 0 0 var(--spacing-xl);
+
+  color: var(--color-text-strong);
+
+  font-size: var(--font-size-3xl);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-tight);
 }
 
-/* Tvåkolumnslayout */
+/* Main layout */
 
 .backoffice-layout {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
   gap: var(--spacing-lg);
+
+  align-items: start;
 }
 
-.col-left {
-  flex: 7;
-}
-
+.col-left,
 .col-right {
-  flex: 5;
+  min-width: 0;
 }
 
-/* Beslutspanel */
+/* Warning panel */
 
-.panel-warning {
-  border-color: #faebcc;
+.backoffice-page .panel-warning {
+  border-color: var(--color-warning-border);
 }
 
-.panel-warning .panel-heading {
-  background-color: #fcf8e3;
-  color: #8a6d3b;
-  border-bottom-color: #faebcc;
+.backoffice-page .panel-warning .panel-heading {
+  color: var(--color-warning-text);
+  background-color: var(--color-warning-bg);
+
+  border-bottom-color: var(--color-warning-border);
 }
 
-/* Beslutsknappar */
+/* Decision buttons */
 
 .button-group {
   display: flex;
+  align-items: center;
+  flex-wrap: wrap;
   gap: var(--spacing-sm);
+
+  margin-top: var(--spacing-lg);
 }
 
-.btn-danger {
-  color: var(--color-white);
-  background-color: var(--color-danger);
-  border: 1px solid var(--color-danger);
-  padding: 6px 12px;
-  border-radius: var(--radius);
-  cursor: pointer;
-  font-size: var(--font-size-base);
-  transition: background-color 0.15s ease-in-out;
+.button-group .btn {
+  min-width: 110px;
 }
 
-.btn-danger:hover {
-  background-color: var(--color-danger-hover);
-}
-
-/* Status */
+/* Status labels */
 
 .label {
-  display: inline-block;
-  padding: 3px 7px;
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--color-white);
-  border-radius: 3px;
-  text-transform: uppercase;
+  display: inline-flex;
+  align-items: center;
+
+  padding: 5px 9px;
+
+  border: 1px solid transparent;
+  border-radius: var(--radius-pill);
+
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  line-height: 1;
+
+  white-space: nowrap;
 }
 
 .label-success {
-  background-color: var(--color-success);
+  color: var(--color-success-text);
+  background-color: var(--color-success-bg);
+
+  border-color: var(--color-success-border);
 }
 
 .label-warning {
-  background-color: var(--color-warning);
+  color: var(--color-warning-text);
+  background-color: var(--color-warning-bg);
+
+  border-color: var(--color-warning-border);
 }
 
 .label-danger {
-  background-color: var(--color-danger);
+  color: var(--color-danger-text);
+  background-color: var(--color-danger-bg);
+
+  border-color: var(--color-danger-border);
 }
 
 .label-default {
-  background-color: var(--color-muted);
+  color: var(--color-muted);
+  background-color: var(--color-surface-muted);
+
+  border-color: var(--color-border);
 }
 
-/* Dokumentlista */
+/* Documents */
 
 .document-list {
-  list-style: none;
-  padding: 0;
   margin: 0;
+  padding: 0;
+
+  list-style: none;
 }
 
 .document-list li {
-  margin-bottom: var(--spacing-xs);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-sm);
+
+  padding: 10px 0;
+
+  color: var(--color-text);
+
+  border-bottom: 1px solid var(--color-border);
 }
 
-.document-list a {
-  color: var(--color-primary);
-  text-decoration: none;
+.document-list li:first-child {
+  padding-top: 0;
 }
 
-.document-list a:hover {
-  text-decoration: underline;
+.document-list li:last-child {
+  padding-bottom: 0;
+
+  border-bottom: none;
 }
 
-/* Händelselogg */
+.document-list .label {
+  flex: 0 0 auto;
+}
+
+/* Audit log */
 
 .audit-pre {
-  font-family: monospace;
-  font-size: 12px;
-  max-height: 200px;
-  overflow-y: auto;
-  background-color: var(--color-background);
-  padding: var(--spacing-sm);
+  max-height: 260px;
+
+  margin: 0;
+  padding: var(--spacing-md);
+
+  overflow: auto;
+
+  color: var(--color-text);
+  background-color: var(--color-surface-muted);
+
   border: 1px solid var(--color-border);
   border-radius: var(--radius);
-  margin: 0;
+
+  font-family:
+    ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    Monaco,
+    Consolas,
+    "Liberation Mono",
+    monospace;
+
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-relaxed);
+
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
 
-/* Mobil */
+/* Form helpers */
 
-@media (max-width: 768px) {
+.backoffice-page .form-group .text-muted {
+  display: block;
+
+  margin-top: var(--spacing-xs);
+
+  font-size: var(--font-size-xs);
+
+  text-align: right;
+}
+
+/* Bottom actions */
+
+.actions {
+  display: flex;
+  align-items: center;
+
+  margin-top: var(--spacing-lg);
+}
+
+.actions .btn {
+  min-width: 110px;
+}
+
+/* Empty / loading text */
+
+.backoffice-page > p {
+  color: var(--color-muted);
+
+  line-height: var(--line-height-relaxed);
+}
+
+/* Responsive */
+
+@media (max-width: 900px) {
+  .backoffice-page {
+    padding:
+      var(--spacing-xl)
+      var(--spacing-md)
+      var(--spacing-2xl);
+  }
+
+  .backoffice-page h2 {
+    font-size: var(--font-size-2xl);
+  }
+
   .backoffice-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  .button-group {
+    align-items: stretch;
     flex-direction: column;
   }
 
-  .col-left,
-  .col-right {
+  .button-group .btn {
     width: 100%;
+  }
+
+  .actions .btn {
+    width: 100%;
+  }
+
+  .document-list li {
+    align-items: flex-start;
+    flex-direction: column;
   }
 }

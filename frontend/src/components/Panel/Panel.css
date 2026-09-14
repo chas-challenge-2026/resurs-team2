@@ -1,19 +1,37 @@
 .panel {
-  margin-bottom: var(--spacing-md);
-  background-color: #ffffff;
+  overflow: hidden;
+
+  margin-bottom: var(--spacing-lg);
+
+  background-color: var(--color-white);
+
   border: 1px solid var(--color-border);
-  border-radius: 4px;
+  border-radius: var(--radius-lg);
+
+  box-shadow: var(--shadow-sm);
 }
 
 .panel-heading {
-  padding: 10px 15px;
-  font-weight: bold;
-  background-color: var(--color-background);
+  padding: 14px var(--spacing-lg);
+
+  color: var(--color-text-strong);
+  background-color: var(--color-surface-muted);
+
   border-bottom: 1px solid var(--color-border);
+
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-base);
 }
 
 .panel-body {
-  padding: var(--spacing-md);
+  padding: var(--spacing-lg);
+
+  color: var(--color-text);
+}
+
+.panel-body p {
+  line-height: var(--line-height-relaxed);
 }
 
 .panel-body p:first-child {
@@ -22,4 +40,43 @@
 
 .panel-body p:last-child {
   margin-bottom: 0;
+}
+
+/* Warning */
+
+.panel.panel-warning {
+  border-color: var(--color-warning-border);
+}
+
+.panel.panel-warning .panel-heading {
+  color: var(--color-warning-text);
+  background-color: var(--color-warning-bg);
+
+  border-bottom-color: var(--color-warning-border);
+}
+
+/* Success */
+
+.panel.panel-success {
+  border-color: var(--color-success-border);
+}
+
+.panel.panel-success .panel-heading {
+  color: var(--color-success-text);
+  background-color: var(--color-success-bg);
+
+  border-bottom-color: var(--color-success-border);
+}
+
+/* Danger */
+
+.panel.panel-danger {
+  border-color: var(--color-danger-border);
+}
+
+.panel.panel-danger .panel-heading {
+  color: var(--color-danger-text);
+  background-color: var(--color-danger-bg);
+
+  border-bottom-color: var(--color-danger-border);
 }
