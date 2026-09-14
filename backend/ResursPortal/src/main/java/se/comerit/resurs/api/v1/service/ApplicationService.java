@@ -1,8 +1,6 @@
 package se.comerit.resurs.api.v1.service;
 
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 import org.springframework.stereotype.Service;
@@ -11,6 +9,8 @@ import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.databind.ObjectMapper;
 
 import jakarta.annotation.Nonnull;
+import se.comerit.resurs.audit.ApplicationCreated;
+import se.comerit.resurs.audit.ScoringRun;
 import se.comerit.resurs.api.v1.dto.ApplicationDetailsResponse;
 import se.comerit.resurs.api.v1.dto.ApplicationRequest;
 import se.comerit.resurs.api.v1.dto.ApplicationResponse;
@@ -51,8 +51,8 @@ public class ApplicationService {
 
     @Transactional
     public Long submitApplication(
-        String orgNumber,
-        ApplicationRequest application) {
+            String orgNumber,
+            ApplicationRequest application) {
         Company company = getCompany(orgNumber)
                 .orElseThrow(() -> new CompanyNotFoundException(orgNumber));
 
@@ -69,27 +69,19 @@ public class ApplicationService {
         }
 
         Application app = new Application(
-            company, 
-            application.requestedAmount(), 
-            application.purpose(),
-            ApplicationMapper.toStatus(score),
-            ApplicationMapper.toDecision(score),
-            score.summary(),
-            scoring.scoringLog(),
-            null,
-            financialDataJson
-        );
-
-        Map<String, String> createdDetails = new LinkedHashMap<>();
-        createdDetails.put("orgNumber", orgNumber);
-        auditLogService.append(app, "APPLICATION_CREATED", createdDetails);
-
-        Map<String, String> scoringDetails = new LinkedHashMap<>();
-        scoringDetails.put("result", scoring.decision());
-        scoringDetails.put("flags", String.valueOf(scoring.flagCount()));
-        auditLogService.append(app, "SCORING_RUN", scoringDetails);
+                company,
+                application.requestedAmount(),
+                application.purpose(),
+                ApplicationMapper.toStatus(score),
+                ApplicationMapper.toDecision(score),
+                score.summary(),
+                scoring.scoringLog(),
+                financialDataJson);
 
         app = applicationRepository.save(app);
+
+        auditLogService.append(app, new ApplicationCreated(orgNumber));
+        auditLogService.append(app, new ScoringRun(scoring.decision(), String.valueOf(scoring.flagCount())));
 
         return app.getId();
     }

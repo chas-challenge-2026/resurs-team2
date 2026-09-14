@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -24,8 +25,12 @@ import org.springframework.test.context.DynamicPropertySource;
 
 import se.comerit.resurs.api.v1.service.ResursCryptoService;
 import se.comerit.resurs.api.v1.service.ResursCryptoServiceImpl;
+import se.comerit.resurs.entity.Application;
+import se.comerit.resurs.entity.AuditLog;
 import se.comerit.resurs.entity.Company;
 import se.comerit.resurs.exception.CryptoException;
+import se.comerit.resurs.repository.ApplicationRepository;
+import se.comerit.resurs.repository.AuditLogRepository;
 import se.comerit.resurs.repository.CompanyRepository;
 
 /**
@@ -77,6 +82,12 @@ class RealEncryptionIT {
 
     @Autowired
     private CompanyRepository companyRepository;
+
+    @Autowired
+    private ApplicationRepository applicationRepository;
+
+    @Autowired
+    private AuditLogRepository auditLogRepository;
 
     @Autowired
     private ResursCryptoService cryptoService;
@@ -166,6 +177,30 @@ class RealEncryptionIT {
         assertThat(storedOrg).isNotEqualTo("556000-1234");
         assertThat(cryptoService.decryptPii(Base64.getDecoder().decode(storedOrg)))
                 .isEqualTo("556000-1234");
+    }
+
+    @Test
+    void auditLogEntryIsStoredEncryptedAtRest() {
+        Company company = companyRepository.save(
+                new Company("556000-7777", "Audit Log AB", "Kalle Test"));
+        Application application = applicationRepository.save(
+                new Application(company, new BigDecimal("250000.00"), "Rörelsekapital"));
+
+        String plaintext = "{\"action\":\"APPLICATION_CREATED\",\"orgNumber\":\"556000-7777\"}";
+        AuditLog log = auditLogRepository.save(new AuditLog(application, 1L, "", "", plaintext));
+
+        String stored = jdbcTemplate.queryForObject(
+                "SELECT entry FROM audit_log WHERE application_id = ? AND sequence_number = ?",
+                String.class, application.getId(), log.getSequenceNumber());
+
+        // 1. Not plaintext, and 2. exactly [12 nonce][1 key version][N plaintext][16 tag]
+        assertThat(stored).isNotEqualTo(plaintext);
+        byte[] blob = Base64.getDecoder().decode(stored);
+        assertThat(blob).hasSize(NONCE_LEN + KEY_VERSION_LEN + plaintext.length() + TAG_LEN);
+        assertThat(blob[NONCE_LEN]).isEqualTo((byte) 1);
+
+        // 3. Decrypts back to the original audit entry payload (AES-256-GCM, real key)
+        assertThat(cryptoService.decryptPii(blob)).isEqualTo(plaintext);
     }
 
     private static Path writeTempKeyFile() {

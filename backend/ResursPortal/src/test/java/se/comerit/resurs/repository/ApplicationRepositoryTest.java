@@ -13,6 +13,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 
 import se.comerit.resurs.config.PlainPiiCodec;
+import se.comerit.resurs.config.PiiIndexProvider;
 import se.comerit.resurs.api.v1.service.DummyCryptoService;
 import se.comerit.resurs.entity.CompanyBlindIndexListener;
 import se.comerit.resurs.entity.PiiAttributeConverter;
@@ -25,13 +26,13 @@ import org.springframework.test.context.jdbc.Sql;
 
 @DataJpaTest
 @ActiveProfiles("test")
-@Import({PiiAttributeConverter.class, AmountAttributeConverter.class, PlainPiiCodec.class, CompanyBlindIndexListener.class, DummyCryptoService.class})
+@Import({PiiAttributeConverter.class, AmountAttributeConverter.class, PlainPiiCodec.class, CompanyBlindIndexListener.class, DummyCryptoService.class, PiiIndexProvider.class})
 @Sql(statements = {
         "DELETE FROM documents",
         "DELETE FROM applications",
         "DELETE FROM companies",
         "INSERT INTO companies (id, org_number, org_number_index, company_name, authorized_signatory) VALUES (1, '556000-1234', X'dedd7d2467a47aac7cc703665899fded7d8013ddecbbbf69e0ff366fd4812ed7', 'Malmö Fastigheter AB', 'Anders Karlsson')",
-        "INSERT INTO applications (id, company_id, requested_amount, purpose, status, decision, scoring_result, audit_log) VALUES (900, 1, 500000.00, 'Expansion av verksamheten', 'UNDER_REVIEW', null, 'FLAGGED: soliditet=0.28 (OK)', '[{\"ts\":\"2026-01-15T10:00:00\",\"action\":\"APPLICATION_CREATED\"}]')"
+        "INSERT INTO applications (id, company_id, requested_amount, purpose, status, decision, scoring_result) VALUES (900, 1, '500000.00', 'Expansion av verksamheten', 'UNDER_REVIEW', null, 'FLAGGED: soliditet=0.28 (OK)')"
 })
 class ApplicationRepositoryTest {
 
@@ -83,7 +84,6 @@ class ApplicationRepositoryTest {
         assertThat(saved.getCreatedAt()).isNotNull();
         assertThat(saved.getUpdatedAt()).isNotNull();
         assertThat(saved.getStatus()).isEqualTo(ApplicationStatus.PENDING_DOCS);
-        assertThat(saved.getAuditLog()).isEqualTo("[]");
     }
 
     @Test
