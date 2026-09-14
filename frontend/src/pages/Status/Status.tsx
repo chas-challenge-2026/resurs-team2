@@ -1,15 +1,12 @@
 import { useParams } from "react-router-dom";
 
+import { Panel } from "@/components/Panel/Panel";
+
 import { ApplicationDetailsPanel } from "./components/ApplicationDetailsPanel";
 import { DocumentsPanel } from "./components/DocumentsPanel";
-import { ScoringPanel } from "./components/ScoringPanel";
-import { WorkerPanel } from "./components/WorkerPanel";
+import { StatusHeader } from "./components/StatusHeader";
 import { useApplicationDetails } from "./hooks/useApplicationDetails";
-
-import {
-  formatStatus,
-  getStatusBadgeClass,
-} from "./utils/statusFormatters";
+import { formatWorker } from "./utils/statusFormatters";
 
 import "./Status.css";
 
@@ -45,40 +42,25 @@ export const Status = () => {
 
   return (
     <main className="status-page">
-      <header className="status-header">
-        <div>
-          <div className="status-title-row">
-            <h1>Ansökan #{application.id}</h1>
-
-            <span
-              className={`label ${getStatusBadgeClass(application.status)}`}
-            >
-              {formatStatus(application.status)}
-            </span>
-          </div>
-
-          <p className="status-subtitle">
-            {application.companyName}
-          </p>
-        </div>
-      </header>
+      <StatusHeader application={application} />
 
       <div className="status-layout">
         <aside className="status-side-column">
-          <ScoringPanel
-            scoringResult={application.scoringResult}
-          />
+          <Panel title="Scoringresultat">
+            <p className="status-scoring-result">
+              {application.scoringResult || "Ingen scoring tillgänglig."}
+            </p>
+          </Panel>
 
-          <WorkerPanel
-            workerName={workerName}
-            status={application.status}
-          />
+          <Panel title="Handläggare">
+            <p className="status-worker">
+              {formatWorker(application.status, workerName)}
+            </p>
+          </Panel>
         </aside>
 
         <section className="status-main-column">
-          <ApplicationDetailsPanel
-            application={application}
-          />
+          <ApplicationDetailsPanel application={application} />
 
           <DocumentsPanel
             applicationId={application.id}
