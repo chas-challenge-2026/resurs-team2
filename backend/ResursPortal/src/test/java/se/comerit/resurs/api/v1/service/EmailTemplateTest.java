@@ -17,6 +17,8 @@ import se.comerit.resurs.entity.ApplicationStatus;
 import se.comerit.resurs.entity.Company;
 import se.comerit.resurs.entity.Decision;
 
+import tools.jackson.databind.ObjectMapper;
+
 /**
  * Verifies that transactional email is rendered from the Thymeleaf text
  * templates under {@code email-templates/} (subject = first line, body after
@@ -31,7 +33,8 @@ class EmailTemplateTest {
     @BeforeEach
     void setUp() {
         emailProvider = mock(EmailProvider.class);
-        emailService = new EmailService(emailProvider, new EmailTemplateConfig().emailTemplateEngine(false));
+        emailService = new EmailService(emailProvider,
+                new EmailTemplateConfig().emailTemplateEngine(false), new ObjectMapper());
         app = new Application(new Company("556677-8899", "Testbolaget AB", "Kalle Kula"),
                 new BigDecimal("300000"), "Rörelsekapital");
         setId(app, 7L);
@@ -40,6 +43,13 @@ class EmailTemplateTest {
     @Test
     @DisplayName("Application-received email renders subject and body from the template")
     void applicationSubmittedEmail() {
+        app.setFinancialData("{\"equity\":3500000.0,\"totalCapital\":9000000.0,"
+                + "\"currentAssets\":1200000.0,\"currentLiabilities\":400000.0,"
+                + "\"totalLiabilities\":4500000.0,\"operatingIncome\":800000.0,"
+                + "\"netRevenue\":5000000.0,\"requestAmount\":300000,"
+                + "\"operatingCashFlow\":500000.0,\"investingCashFlow\":-100000.0,"
+                + "\"interestExpenses\":20000.0,\"industry\":\"Handel\"}");
+
         emailService.sendApplicationSubmitted(app);
 
         String[] email = captureEmail();
@@ -52,6 +62,11 @@ class EmailTemplateTest {
                 .contains("Organisationsnummer: 556677-8899")
                 .contains("Önskat belopp: 300000 kronor")
                 .contains("Ändamål: Rörelsekapital")
+                .contains("Bransch: Handel")
+                .contains("Nettoomsättning: 5000000.0 kronor")
+                .contains("Eget kapital: 3500000.0 kronor")
+                .contains("Omsättningstillgångar: 1200000.0 kronor")
+                .contains("Kortfristiga skulder: 400000.0 kronor")
                 .contains("Vi meddelar dig när ett beslut har tagits.");
     }
 

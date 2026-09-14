@@ -1,5 +1,6 @@
 package se.comerit.resurs.api.v1.service;
 
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -8,11 +9,20 @@ import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
 
 import se.comerit.resurs.entity.Application;
+import se.comerit.resurs.rating.ApplicationData;
+
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * Composes and sends transactional email. Copy lives in Thymeleaf text
  * templates under {@code email-templates/}: the first line of each file is the
  * subject, a {@code ---} delimiter separates it from the body.
+ *
+ * <p>
+ * Templates receive the whole {@link Application} as {@code app} and the
+ * parsed {@code financial_data} JSON as {@code financial} (an
+ * {@link ApplicationData}, or null when absent), so any application or
+ * financial figure can be interpolated.
  */
 @Service
 public class EmailService {
@@ -22,26 +32,46 @@ public class EmailService {
 
     private final EmailProvider emailProvider;
     private final TemplateEngine emailTemplateEngine;
+    private final ObjectMapper objectMapper;
 
     public EmailService(EmailProvider emailProvider,
-            @Qualifier("emailTemplateEngine") TemplateEngine emailTemplateEngine) {
+            @Qualifier("emailTemplateEngine") TemplateEngine emailTemplateEngine,
+            ObjectMapper objectMapper) {
         this.emailProvider = emailProvider;
         this.emailTemplateEngine = emailTemplateEngine;
+        this.objectMapper = objectMapper;
     }
 
     public void sendApplicationSubmitted(Application app) {
-        EmailMessage message = render("application-submitted", Map.of("app", app));
-        emailProvider.send(recipientAddress(app), message.subject(), message.body());
+        sendFromTemplate("application-submitted", app);
     }
 
     public void sendStatusUpdate(Application app) {
-        EmailMessage message = render("status-updated", Map.of("app", app));
-        emailProvider.send(recipientAddress(app), message.subject(), message.body());
+        sendFromTemplate("status-updated", app);
     }
 
     public void sendDecision(Application app) {
-        EmailMessage message = render("decision", Map.of("app", app));
+        sendFromTemplate("decision", app);
+    }
+
+    private void sendFromTemplate(String template, Application app) {
+        Map<String, Object> model = new LinkedHashMap<>();
+        model.put("app", app);
+        model.put("financial", parseFinancialData(app));
+        EmailMessage message = render(template, model);
         emailProvider.send(recipientAddress(app), message.subject(), message.body());
+    }
+
+    private ApplicationData parseFinancialData(Application app) {
+        String json = app.getFinancialData();
+        if (json == null || json.isBlank()) {
+            return null;
+        }
+        try {
+            return objectMapper.readValue(json, ApplicationData.class);
+        } catch (Exception _) {
+            return null;
+        }
     }
 
     private EmailMessage render(String template, Map<String, Object> model) {
