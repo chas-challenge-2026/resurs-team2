@@ -1,17 +1,33 @@
 .footer {
-  margin-top: 50px;
-  padding: 30px 20px;
-  background-color: #222222; /* Mörk grafitgrå färg som matchar Resurs nuvarande profil */
-  color: #ffffff;
-  text-align: center;
   width: 100%;
-  border-top: 3px solid #fce682; /* Resurs gula varumärkesfärg som subtil accentlinje */
+
+  margin-top: var(--spacing-3xl);
+  padding: var(--spacing-xl) var(--spacing-lg);
+
+  color: var(--color-white);
+  background-color: var(--color-primary);
+
+  border-top: 4px solid var(--color-accent);
 }
 
 .footer p {
-  margin: 0;
-  font-size: 14px;
-  font-weight: 400;
-  letter-spacing: 0.3px;
-  color: #e0e0e0;
+  max-width: var(--container-width);
+
+  margin: 0 auto;
+
+  color: rgba(255, 255, 255, 0.78);
+
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-normal);
+  line-height: var(--line-height-base);
+
+  text-align: center;
+  letter-spacing: 0.2px;
+}
+
+@media (max-width: 768px) {
+  .footer {
+    margin-top: var(--spacing-2xl);
+    padding: var(--spacing-lg) var(--spacing-md);
+  }
 }

@@ -1,4 +1,3 @@
-import React from "react";
 import type { ApplicationDocument } from "../../../types/document";
 import { Panel } from "../../../components/Panel/Panel";
 

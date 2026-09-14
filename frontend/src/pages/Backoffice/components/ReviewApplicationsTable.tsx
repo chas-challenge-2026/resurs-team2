@@ -11,69 +11,93 @@ interface ReviewApplicationsTableProps {
   applications: Application[];
 }
 
-
-
 export const ReviewApplicationsTable = ({
-    applications,
+  applications,
 }: ReviewApplicationsTableProps) => {
-    const navigate = useNavigate();
+  const navigate = useNavigate();
 
-     return (
-    <div className="panel panel-warning">
-      <div className="panel-heading">
-        <strong>Ansökningar för granskning</strong>
-      </div>
-
-      {applications.length === 0 ? (
-        <div className="panel-body">
-          <p className="text-muted">
-            Inga ansökningar väntar på granskning.
+  return (
+    <section className="backoffice-card backoffice-card-primary">
+      <header className="backoffice-card-header">
+        <div>
+          <h2>Ansökningar för granskning</h2>
+          <p>
+            Ansökningar som behöver hanteras manuellt.
           </p>
         </div>
+
+        <span className="backoffice-card-count">
+          {applications.length}
+        </span>
+      </header>
+
+      {applications.length === 0 ? (
+        <div className="backoffice-empty">
+          <strong>Inga ansökningar väntar</strong>
+          <p>Det finns inga kreditansökningar att granska just nu.</p>
+        </div>
       ) : (
-        <table className="table table-bordered table-review">
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>Företag</th>
-              <th>Org.nr</th>
-              <th>Belopp</th>
-              <th>Syfte</th>
-              <th>Scoring</th>
-              <th>Inlämnad</th>
-              <th>Åtgärd</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {applications.map((app) => (
-              <tr key={app.id}>
-                <td>{app.id}</td>
-                <td>{app.companyName}</td>
-                <td>{app.orgNumber}</td>
-                <td>{formatCurrency(app.requestedAmount)}</td>
-                <td>{app.purpose}</td>
-
-                <td>
-                  <small>{app.scoringResult || "-"}</small>
-                </td>
-
-                <td>{formatDateTime(app.createdAt)}</td>
-
-                <td>
-                  <button
-                    type="button"
-                    className="btn btn-primary"
-                    onClick={() => navigate(`/backoffice/${app.id}`)}
-                  >
-                    Granska
-                  </button>
-                </td>
+        <div className="backoffice-table-wrapper">
+          <table className="backoffice-table">
+            <thead>
+              <tr>
+                <th scope="col">ID</th>
+                <th scope="col">Företag</th>
+                <th scope="col">Org.nr</th>
+                <th scope="col">Belopp</th>
+                <th scope="col">Syfte</th>
+                <th scope="col">Scoring</th>
+                <th scope="col">Inlämnad</th>
+                <th scope="col">
+                  <span className="sr-only">Åtgärd</span>
+                </th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+
+            <tbody>
+              {applications.map((app) => (
+                <tr key={app.id}>
+                  <td className="backoffice-id">#{app.id}</td>
+
+                  <td>
+                    <strong className="backoffice-company">
+                      {app.companyName}
+                    </strong>
+                  </td>
+
+                  <td>{app.orgNumber}</td>
+
+                  <td className="backoffice-amount">
+                    {formatCurrency(app.requestedAmount)}
+                  </td>
+
+                  <td className="backoffice-purpose">
+                    {app.purpose || "-"}
+                  </td>
+
+                  <td>
+                    <span className="backoffice-score">
+                      {app.scoringResult || "-"}
+                    </span>
+                  </td>
+
+                  <td>{formatDateTime(app.createdAt)}</td>
+
+                  <td className="backoffice-table-action">
+                    <button
+                      type="button"
+                      className="btn btn-primary"
+                      onClick={() => navigate(`/backoffice/${app.id}`)}
+                    >
+                      Granska
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
-    </div>
+    </section>
   );
 };

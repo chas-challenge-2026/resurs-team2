@@ -17,65 +17,84 @@ export const DecidedApplicationsTable = ({
   const navigate = useNavigate();
 
   return (
-    <div className="panel">
-      <div className="panel-heading">
-        <strong>Senaste beslut (max 20)</strong>
-      </div>
+    <section className="backoffice-card">
+      <header className="backoffice-card-header">
+        <div>
+          <h2>Senaste beslut</h2>
+          <p>De 20 senast avgjorda kreditansökningarna.</p>
+        </div>
+      </header>
 
       {applications.length === 0 ? (
-        <div className="panel-body">
-          <p className="text-muted">Inga avgjorda ansökningar ännu.</p>
+        <div className="backoffice-empty">
+          <strong>Inga beslut ännu</strong>
+          <p>Avgjorda ansökningar kommer att visas här.</p>
         </div>
       ) : (
-        <table className="table table-striped">
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>Företag</th>
-              <th>Belopp</th>
-              <th>Status</th>
-              <th>Beslut</th>
-              <th>Motivering</th>
-              <th>Åtgärd</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {applications.map((app) => (
-              <tr key={app.id}>
-                <td>{app.id}</td>
-                <td>{app.companyName}</td>
-                <td>{formatCurrency(app.requestedAmount)}</td>
-
-                <td>
-                  <span
-                    className={`label ${
-                      app.status === "APPROVED"
-                        ? "label-success"
-                        : "label-danger"
-                    }`}
-                  >
-                    {formatStatus(app.status)}
-                  </span>
-                </td>
-
-                <td>{app.decision || "-"}</td>
-                <td>{app.decisionReason || "-"}</td>
-
-                <td>
-                  <button
-                    type="button"
-                    className="btn btn-default"
-                    onClick={() => navigate(`/backoffice/${app.id}`)}
-                  >
-                    Visa
-                  </button>
-                </td>
+        <div className="backoffice-table-wrapper">
+          <table className="backoffice-table">
+            <thead>
+              <tr>
+                <th scope="col">ID</th>
+                <th scope="col">Företag</th>
+                <th scope="col">Belopp</th>
+                <th scope="col">Status</th>
+                <th scope="col">Beslut</th>
+                <th scope="col">Motivering</th>
+                <th scope="col">
+                  <span className="sr-only">Åtgärd</span>
+                </th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+
+            <tbody>
+              {applications.map((app) => (
+                <tr key={app.id}>
+                  <td className="backoffice-id">#{app.id}</td>
+
+                  <td>
+                    <strong className="backoffice-company">
+                      {app.companyName}
+                    </strong>
+                  </td>
+
+                  <td className="backoffice-amount">
+                    {formatCurrency(app.requestedAmount)}
+                  </td>
+
+                  <td>
+                    <span
+                      className={`backoffice-status ${
+                        app.status === "APPROVED"
+                          ? "backoffice-status-success"
+                          : "backoffice-status-danger"
+                      }`}
+                    >
+                      {formatStatus(app.status)}
+                    </span>
+                  </td>
+
+                  <td>{app.decision || "-"}</td>
+
+                  <td className="backoffice-reason">
+                    {app.decisionReason || "-"}
+                  </td>
+
+                  <td className="backoffice-table-action">
+                    <button
+                      type="button"
+                      className="btn btn-default"
+                      onClick={() => navigate(`/backoffice/${app.id}`)}
+                    >
+                      Visa
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
-    </div>
+    </section>
   );
 };

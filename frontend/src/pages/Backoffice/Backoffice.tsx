@@ -1,7 +1,7 @@
 import { useAuth } from "@/components/hooks/useAuth";
-import "@/styles/components.css";
 
 import "./Backoffice.css";
+
 import { DecidedApplicationsTable } from "./components/DecidedApplicationsTable";
 import { ReviewApplicationsTable } from "./components/ReviewApplicationsTable";
 import { useBackofficeApplications } from "./hooks/useBackofficeApplications";
@@ -18,43 +18,63 @@ export const Backoffice = () => {
 
   if (loading) {
     return (
-      <div className="backoffice-page">
-        <h2>Handläggarkö</h2>
-
-        <p className="text-muted">Laddar ansökningar...</p>
-      </div>
+      <main className="backoffice-page">
+        <div className="backoffice-state">
+          <h1>Handläggarkö</h1>
+          <p>Laddar ansökningar...</p>
+        </div>
+      </main>
     );
   }
 
   if (error) {
     return (
-      <div className="backoffice-page">
-        <h2>Handläggarkö</h2>
+      <main className="backoffice-page">
+        <div className="backoffice-state">
+          <h1>Handläggarkö</h1>
 
-        <div className="panel">
-          <div className="panel-body">
+          <div className="backoffice-error">
+            <strong>Kunde inte hämta ansökningar</strong>
             <p>{error}</p>
           </div>
         </div>
-      </div>
+      </main>
     );
   }
 
   return (
-    <div className="backoffice-page">
+    <main className="backoffice-page">
       <header className="backoffice-header">
-        <h2 className="backoffice-title">
-          Handläggarkö <span className="badge-count">{reviewApps.length}</span>
-        </h2>
+        <div>
+          <p className="backoffice-eyebrow">Backoffice</p>
 
-        <p className="text-muted">
-          Inloggad handläggare: {user?.name || "Handläggare"}
-        </p>
+          <div className="backoffice-title-row">
+            <h1 className="backoffice-title">Handläggarkö</h1>
+
+            <span
+              className="backoffice-count"
+              aria-label={`${reviewApps.length} ansökningar väntar på granskning`}
+            >
+              {reviewApps.length}
+            </span>
+          </div>
+
+          <p className="backoffice-description">
+            Granska inkomna kreditansökningar och följ tidigare beslut.
+          </p>
+        </div>
+
+        <div className="backoffice-user">
+          <span className="backoffice-user-label">Inloggad som</span>
+          <strong>{user?.name || "Handläggare"}</strong>
+        </div>
       </header>
 
-      <ReviewApplicationsTable applications={reviewApps} />
+      <div className="backoffice-content">
+        <ReviewApplicationsTable applications={reviewApps} />
 
-      <DecidedApplicationsTable applications={decidedApps} />
-    </div>
+        <DecidedApplicationsTable applications={decidedApps} />
+      </div>
+    </main>
   );
 };
