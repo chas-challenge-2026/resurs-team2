@@ -78,6 +78,9 @@ export const Navbar: React.FC = () => {
           <ul className="navbar-nav">
             {isLoggedIn && user?.role === "COMPANY" && (
               <>
+              <li>
+                  <Link to="/dashboard">Startsida</Link>
+                </li>
                 <li>
                   <Link to="/apply">Ny ansökan</Link>
                 </li>

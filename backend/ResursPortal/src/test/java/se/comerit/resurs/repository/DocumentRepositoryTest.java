@@ -9,14 +9,21 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 
+import se.comerit.resurs.config.PlainPiiCodec;
+import se.comerit.resurs.api.v1.service.DummyCryptoService;
+import se.comerit.resurs.entity.CompanyBlindIndexListener;
+import se.comerit.resurs.entity.PiiAttributeConverter;
+import se.comerit.resurs.entity.AmountAttributeConverter;
 import se.comerit.resurs.entity.Application;
 import se.comerit.resurs.entity.Company;
 import se.comerit.resurs.entity.Document;
 
 @DataJpaTest
 @ActiveProfiles("test")
+@Import({PiiAttributeConverter.class, AmountAttributeConverter.class, PlainPiiCodec.class, CompanyBlindIndexListener.class, DummyCryptoService.class})
 class DocumentRepositoryTest {
 
     @Autowired

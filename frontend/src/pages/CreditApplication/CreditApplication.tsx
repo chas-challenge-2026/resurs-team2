@@ -3,28 +3,16 @@ import { useNavigate } from "react-router-dom";
 import styles from "./CreditApplication.module.css";
 
 import { CompanyInformation } from "../../components/credit-application/company-information/CompanyInformation";
-import {
-  companyInformationSchema,
-  type CompanyInformationData,
-} from "../../components/credit-application/company-information/CompanyInformation.schema";
+import { companyInformationSchema, type CompanyInformationData } from "../../schemas/credit-application-schemas/CompanyInformation.schema";
 import { FinancialMetrics } from "../../components/credit-application/financial-metrics/FinancialMetrics";
-import {
-  financialMetricsSchema,
-  type FinancialMetricsData,
-} from "../../components/credit-application/financial-metrics/FinancialMetrics.schema";
+import { financialMetricsSchema, type FinancialMetricsFormData } from "../../schemas/credit-application-schemas/FinancialMetrics.schema";
 
 import { CreditAmount } from "../../components/credit-application/credit-amount/CreditAmount";
-import {
-  creditAmountSchema,
-  type CreditAmountData,
-} from "../../components/credit-application/credit-amount/CreditAmount.schema";
+import { creditAmountSchema, type CreditAmountData } from "../../schemas/credit-application-schemas/CreditAmount.schema";
 
 import { Confirmation } from "../../components/credit-application/confirmation/Confirmation";
-import {
-  confirmationSchema,
-  type ConfirmationFormData,
-} from "../../components/credit-application/confirmation/Confirmation.schema";
-import type { ApplicationRequest } from "../../types/applicationRequest";
+import { confirmationSchema, type ConfirmationFormData } from "../../schemas/credit-application-schemas/Confirmation.schema";
+import { ApplicationRequestSchema } from "../../schemas/ApplicationRequest.schema";
 import { applicationApi } from "../../api/applicationApi";
 import { companyApi } from "../../api/companyApi";
 
@@ -41,15 +29,7 @@ export function CreditApplication() {
     });
 
   const [financialMetrics, setFinancialMetrics] =
-    useState<FinancialMetricsData>({
-      equity: 0,
-      totalCapital: 0,
-      currentAssets: 0,
-      currentLiabilities: 0,
-      totalLiabilities: 0,
-      operatingIncome: 0,
-      netRevenue: 0,
-    });
+    useState<FinancialMetricsFormData>({});
 
   const [creditAmount, setCreditAmount] = useState<CreditAmountData>({
     requestedAmount: 0,
@@ -134,7 +114,7 @@ export function CreditApplication() {
       return;
     }
 
-    const applicationData: ApplicationRequest = {
+    const applicationData = {
       equity: financialMetrics.equity,
       totalCapital: financialMetrics.totalCapital,
       currentAssets: financialMetrics.currentAssets,
@@ -142,21 +122,28 @@ export function CreditApplication() {
       totalLiabilities: financialMetrics.totalLiabilities,
       operatingIncome: financialMetrics.operatingIncome,
       netRevenue: financialMetrics.netRevenue,
-
       requestedAmount: creditAmount.requestedAmount,
       purpose: creditAmount.purpose,
     };
 
-    try {
-      const applicationId = await applicationApi.create(applicationData);
+const applicationResult =
+  ApplicationRequestSchema.safeParse(applicationData);
 
-      console.log("Kreditansökan skapad:", applicationId);
+if (!applicationResult.success) {
+  console.log(applicationResult.error);
+  return;
+}
 
-      navigate(`/status/${applicationId}`);
-    } catch (error) {
-      console.error("Kunde inte skapa kreditansökan:", error);
-    }
-  };
+try {
+  const applicationId = await applicationApi.create(applicationResult.data);
+
+  console.log("Kreditansökan skapad:", applicationId);
+
+  navigate(`/status/${applicationId}`);
+} catch (error) {
+  console.error("Kunde inte skapa kreditansökan:", error);
+}
+}
 
   const steps = [
     "1. Företagsuppgifter",

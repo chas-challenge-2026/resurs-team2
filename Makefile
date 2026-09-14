@@ -7,65 +7,69 @@
 #   dev            - Run Vite dev server (HMR) + backend with local profile
 #   build-frontend - Build only the React frontend
 #   build-backend  - Build only the Spring Boot backend
-#   # build-native - Build only the C++ native module (uncomment when CMake is added)
+#   build-native   - Build only the C++ native module
 
 ROOT         := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 FRONTEND_DIR := frontend
-# NATIVE_DIR   := native
+NATIVE_DIR   := native
 BACKEND_DIR  := backend/ResursPortal
 TARGET_DIR   := target
 
-.PHONY: clean build test test_frontend test_backend test_native dev \
-        build-frontend build-backend package
+.PHONY: clean build test test_frontend test_backend test_native test-encryption dev \
+        build-frontend build-backend build-native package dev-vite dev-spring
         # build-native
 
 # ── Aggregate targets ─────────────────────────────────────────────
 
-build: build-frontend build-backend
-# build: build-native build-frontend build-backend
+build: build-native build-frontend build-backend
 
 # Alias used by the Dockerfile - same as `build`.
 package: build
 
 # Run Vite dev server (HMR on :5173) with Spring Boot (local profile on :8083) concurrently.
 # Vite proxies /api -> :8083, so no CORS config is needed.
+# Parallel make (-j2) lets make handle Ctrl-C: it forwards the signal to both
+# children and waits for them to exit cleanly (no shell trap / kill 0 hacks).
 dev:
 	cd $(FRONTEND_DIR) && test -d node_modules || npm ci
-	$(MAKE) dev-run
-
-dev-run:
 	@echo "Starting Vite dev server (:5173) and Spring Boot (:8083)..."
 	@echo "  Frontend: http://localhost:5173"
 	@echo "  Spring:   http://localhost:8083"
-	@trap 'kill 0' INT TERM; \
-	(cd $(FRONTEND_DIR) && npm run dev) & \
-	(cd $(BACKEND_DIR) && ./mvnw -Plocal spring-boot:run \
-		-Dspring-boot.run.profiles=local) & \
-	wait
+	$(MAKE) -j2 dev-vite dev-spring
+
+dev-vite:
+	cd $(FRONTEND_DIR) && npm run dev
+
+dev-spring:
+	cd $(BACKEND_DIR) && ./mvnw -Plocal spring-boot:run \
+		-Dspring-boot.run.profiles=local
 
 test: test_frontend test_backend test_native
 
 test_frontend:
-	cd $(FRONTEND_DIR) && npm ci && npm run lint
+	cd $(FRONTEND_DIR) && npm ci && npm run lint && npm run build
 
 test_backend:
 	cd $(BACKEND_DIR) && ./mvnw test
 
 test_native:
-	@echo "No native tests yet – passing by default."
+	cd $(NATIVE_DIR) && $(MAKE) test
+
+test-encryption: build-native
+	cd $(BACKEND_DIR) && ./mvnw -Dtest=RealEncryptionIT test
 
 clean:
 	rm -rf $(TARGET_DIR)
 	rm -rf $(FRONTEND_DIR)/dist
-	# rm -rf $(NATIVE_DIR)/build
+	cd $(NATIVE_DIR) && $(MAKE) clean
 	cd $(BACKEND_DIR) && ./mvnw clean
 
 # ── Sub-builds ────────────────────────────────────────────────────
 
-# build-native:
-# 	cd $(NATIVE_DIR) && cmake -S . -B build && cmake --build build
-# 	mkdir -p $(TARGET_DIR)/libs
-# 	cp $(NATIVE_DIR)/build/crypto/libresurs_crypto.so $(TARGET_DIR)/libs/
+build-native:
+	cd $(NATIVE_DIR) && $(MAKE) build
+	mkdir -p $(TARGET_DIR)/libs
+	cp $(NATIVE_DIR)/build/crypto/libresurs_crypto.so $(TARGET_DIR)/libs/
 
 build-frontend:
 	cd $(FRONTEND_DIR) && npm ci && npm run build

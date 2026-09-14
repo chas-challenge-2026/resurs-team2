@@ -8,6 +8,8 @@ import java.util.Optional;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import tools.jackson.databind.ObjectMapper;
+
 import jakarta.annotation.Nonnull;
 import se.comerit.resurs.api.v1.dto.ApplicationDetailsResponse;
 import se.comerit.resurs.api.v1.dto.ApplicationRequest;
@@ -32,13 +34,15 @@ public class ApplicationService {
     private final ApplicationRepository applicationRepository;
     private final ScoringService scoringService;
     private final AuditLogService auditLogService;
+    private final ObjectMapper objectMapper;
 
     public ApplicationService(CompanyRepository companyRepository, ApplicationRepository applicationRepository,
-            ScoringService scoringService, AuditLogService auditLogService) {
+            ScoringService scoringService, AuditLogService auditLogService, ObjectMapper objectMapper) {
         this.companyRepository = companyRepository;
         this.applicationRepository = applicationRepository;
         this.scoringService = scoringService;
         this.auditLogService = auditLogService;
+        this.objectMapper = objectMapper;
     }
 
     public Optional<Company> getCompany(String orgNumber) {
@@ -56,6 +60,14 @@ public class ApplicationService {
         ScoringResult score = scoringService.score(data);
         Score scoring = ScoringService.toScore(score);
 
+        String financialDataJson;
+        try {
+            financialDataJson = objectMapper.writeValueAsString(data);
+        } catch (Exception _) {
+            // TODO: Log this error somehow
+            financialDataJson = null;
+        }
+
         Application app = new Application(
             company, 
             application.requestedAmount(), 
@@ -64,7 +76,8 @@ public class ApplicationService {
             ApplicationMapper.toDecision(score),
             score.summary(),
             scoring.scoringLog(),
-            null
+            null,
+            financialDataJson
         );
 
         Map<String, String> createdDetails = new LinkedHashMap<>();

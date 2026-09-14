@@ -16,3 +16,4 @@ export const financialMetricsSchema = z.object({
 });
 
 export type FinancialMetricsData = z.infer<typeof financialMetricsSchema>;
+export type FinancialMetricsFormData = Partial<FinancialMetricsData>;
