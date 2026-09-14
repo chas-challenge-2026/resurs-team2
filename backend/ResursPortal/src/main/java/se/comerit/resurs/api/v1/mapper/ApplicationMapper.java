@@ -58,10 +58,11 @@ public final class ApplicationMapper {
         };
     }
 
-    public static ApplicationDetailsResponse toDetailsResponse(Application app, String caseWorker) {
+    public static ApplicationDetailsResponse toDetailsResponse(Application app) {
+        String workerName = app.getCaseWorker() != null ? app.getCaseWorker().getName() : null;
         return new ApplicationDetailsResponse(
                 toResponse(app),
-                caseWorker,
+                workerName,
                 app.getDocuments().stream().map(ApplicationMapper::toDocumentResponse).toList());
     }
 

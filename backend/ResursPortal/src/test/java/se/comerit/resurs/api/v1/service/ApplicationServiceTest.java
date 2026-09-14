@@ -53,6 +53,7 @@ class ApplicationServiceTest {
     private AuditLogRepository auditLogRepository;
     private ScoringService scoringService;
     private AuditLogService auditLogService;
+    private CaseWorkerAssignmentService caseWorkerAssignmentService;
     private ApplicationService applicationService;
     private ObjectMapper objectMapper;
 
@@ -69,8 +70,11 @@ class ApplicationServiceTest {
         auditLogService = new AuditLogService(auditLogRepository, mock(ApplicationRepository.class),
                 objectMapper);
 
+        caseWorkerAssignmentService = mock(CaseWorkerAssignmentService.class);
+
         applicationService = new ApplicationService(
-                companyRepository, applicationRepository, scoringService, auditLogService, objectMapper);
+                companyRepository, applicationRepository, scoringService, auditLogService,
+                caseWorkerAssignmentService, objectMapper);
 
         company = new Company("556677-8899", "Testbolaget AB", "Kalle Kula");
 
