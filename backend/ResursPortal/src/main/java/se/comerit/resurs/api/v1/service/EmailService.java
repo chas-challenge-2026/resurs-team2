@@ -27,6 +27,7 @@ public class EmailService {
     }
 
     public void sendDecision(String to, Long applicationId, String decision, String reason) {
+        to = to.replace(' ', '_');
         String subject = "Application " + decision + " - #" + applicationId;
         String body = "A decision has been made on your credit application.\n\n"
                 + "Application ID: " + applicationId + "\n"
@@ -35,6 +36,6 @@ public class EmailService {
             body += "Reason: " + reason + "\n";
         }
         body += "\nThank you for your application.";
-        emailProvider.send(to, subject, body);
+        emailProvider.send(to + "@example.com", subject, body);
     }
 }
