@@ -51,8 +51,8 @@ public class ApplicationService {
 
     @Transactional
     public Long submitApplication(
-        String orgNumber,
-        ApplicationRequest application) {
+            String orgNumber,
+            ApplicationRequest application) {
         Company company = getCompany(orgNumber)
                 .orElseThrow(() -> new CompanyNotFoundException(orgNumber));
 
@@ -69,24 +69,14 @@ public class ApplicationService {
         }
 
         Application app = new Application(
-            company, 
-            application.requestedAmount(), 
-            application.purpose(),
-            ApplicationMapper.toStatus(score),
-            ApplicationMapper.toDecision(score),
-            score.summary(),
-            scoring.scoringLog(),
-            financialDataJson
-        );
-
-        Map<String, String> createdDetails = new LinkedHashMap<>();
-        createdDetails.put("orgNumber", orgNumber);
-        auditLogService.append(app, "APPLICATION_CREATED", createdDetails);
-
-        Map<String, String> scoringDetails = new LinkedHashMap<>();
-        scoringDetails.put("result", scoring.decision());
-        scoringDetails.put("flags", String.valueOf(scoring.flagCount()));
-        auditLogService.append(app, "SCORING_RUN", scoringDetails);
+                company,
+                application.requestedAmount(),
+                application.purpose(),
+                ApplicationMapper.toStatus(score),
+                ApplicationMapper.toDecision(score),
+                score.summary(),
+                scoring.scoringLog(),
+                financialDataJson);
 
         app = applicationRepository.save(app);
 
