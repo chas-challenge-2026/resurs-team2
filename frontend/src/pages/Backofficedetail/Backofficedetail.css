@@ -1,76 +1,183 @@
 @import "../../styles/tokens.css";
 
-.backoffice-page {
+.backoffice-detail-page {
   width: 100%;
   max-width: var(--container-width);
 
   margin: 0 auto;
+
   padding:
-    var(--spacing-2xl)
+    28px
     var(--spacing-lg)
-    var(--spacing-3xl);
+    var(--spacing-2xl);
 }
 
-.backoffice-page h2 {
-  margin: 0 0 var(--spacing-xl);
+/* Header */
+
+.backoffice-detail-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+
+  margin-bottom: var(--spacing-lg);
+}
+
+.backoffice-back-link {
+  margin: 0 0 var(--spacing-sm);
+  padding: 0;
+
+  color: var(--color-muted);
+  background: transparent;
+
+  border: 0;
+
+  font: inherit;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+
+  cursor: pointer;
+
+  transition: color var(--transition-fast);
+}
+
+.backoffice-back-link:hover {
+  color: var(--color-primary);
+}
+
+.backoffice-back-link:focus-visible {
+  outline: none;
+
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-input-focus);
+}
+
+.backoffice-detail-title-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.backoffice-detail-title-row h1 {
+  margin: 0;
 
   color: var(--color-text-strong);
 
-  font-size: var(--font-size-3xl);
+  font-size: var(--font-size-2xl);
   font-weight: var(--font-weight-bold);
   line-height: var(--line-height-tight);
 }
 
+.backoffice-detail-subtitle {
+  margin:
+    var(--spacing-xs)
+    0
+    0;
+
+  color: var(--color-muted);
+
+  font-size: var(--font-size-sm);
+}
+
 /* Main layout */
 
-.backoffice-layout {
+.backoffice-detail-layout {
   display: grid;
-  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+  grid-template-columns:
+    minmax(0, 1.15fr)
+    minmax(340px, 0.85fr);
+
   gap: var(--spacing-lg);
 
   align-items: start;
 }
 
-.col-left,
-.col-right {
+.backoffice-detail-column {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+
   min-width: 0;
 }
 
-/* Warning panel */
+/* Panels */
 
-.backoffice-page .panel-warning {
-  border-color: var(--color-warning-border);
+.backoffice-detail-page .panel {
+  margin-bottom: 0;
+
+  border-radius: var(--radius-lg);
+
+  box-shadow: var(--shadow-sm);
 }
 
-.backoffice-page .panel-warning .panel-heading {
-  color: var(--color-warning-text);
-  background-color: var(--color-warning-bg);
+.backoffice-detail-page .panel-heading {
+  padding:
+    12px
+    var(--spacing-lg);
 
-  border-bottom-color: var(--color-warning-border);
+  color: var(--color-text-strong);
+  background-color: var(--color-surface-muted);
+
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-bold);
 }
 
-/* Decision buttons */
+.backoffice-detail-page .panel-body {
+  padding:
+    var(--spacing-md)
+    var(--spacing-lg);
+}
 
-.button-group {
+.backoffice-detail-page .panel-body p {
+  margin:
+    0
+    0
+    10px;
+
+  line-height: var(--line-height-base);
+}
+
+.backoffice-detail-page .panel-body p:last-child {
+  margin-bottom: 0;
+}
+
+/* Decision panel */
+
+.backoffice-detail-page .panel-warning {
+  border-color: var(--color-border-strong);
+}
+
+.backoffice-detail-page .panel-warning .panel-heading {
+  color: var(--color-text-strong);
+  background-color: var(--color-accent);
+
+  border-bottom-color: var(--color-accent-hover);
+}
+
+/* Buttons */
+
+.backoffice-detail-page .button-group {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: var(--spacing-sm);
 
-  margin-top: var(--spacing-lg);
+  margin-top: var(--spacing-md);
 }
 
-.button-group .btn {
+.backoffice-detail-page .button-group .btn {
   min-width: 110px;
 }
 
 /* Status labels */
 
-.label {
+.backoffice-detail-page .label {
   display: inline-flex;
   align-items: center;
 
-  padding: 5px 9px;
+  padding:
+    5px
+    9px;
 
   border: 1px solid transparent;
   border-radius: var(--radius-pill);
@@ -82,28 +189,28 @@
   white-space: nowrap;
 }
 
-.label-success {
+.backoffice-detail-page .label-success {
   color: var(--color-success-text);
   background-color: var(--color-success-bg);
 
   border-color: var(--color-success-border);
 }
 
-.label-warning {
+.backoffice-detail-page .label-warning {
   color: var(--color-warning-text);
   background-color: var(--color-warning-bg);
 
   border-color: var(--color-warning-border);
 }
 
-.label-danger {
+.backoffice-detail-page .label-danger {
   color: var(--color-danger-text);
   background-color: var(--color-danger-bg);
 
   border-color: var(--color-danger-border);
 }
 
-.label-default {
+.backoffice-detail-page .label-default {
   color: var(--color-muted);
   background-color: var(--color-surface-muted);
 
@@ -112,75 +219,62 @@
 
 /* Documents */
 
-.document-list {
+.backoffice-detail-page .document-list {
   margin: 0;
   padding: 0;
 
   list-style: none;
 }
 
-.document-list li {
+.backoffice-detail-page .document-list li {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--spacing-sm);
 
-  padding: 10px 0;
+  padding:
+    8px
+    0;
 
   color: var(--color-text);
 
   border-bottom: 1px solid var(--color-border);
 }
 
-.document-list li:first-child {
+.backoffice-detail-page .document-list li:first-child {
   padding-top: 0;
 }
 
-.document-list li:last-child {
+.backoffice-detail-page .document-list li:last-child {
   padding-bottom: 0;
 
   border-bottom: none;
 }
 
-.document-list .label {
-  flex: 0 0 auto;
+/* Form */
+
+.backoffice-detail-page .form-group {
+  margin-bottom: 0;
 }
 
-/* Audit log */
+.backoffice-detail-page .form-group label {
+  display: block;
 
-.audit-pre {
-  max-height: 260px;
+  margin-bottom: var(--spacing-xs);
 
-  margin: 0;
-  padding: var(--spacing-md);
+  color: var(--color-text-strong);
 
-  overflow: auto;
-
-  color: var(--color-text);
-  background-color: var(--color-surface-muted);
-
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-
-  font-family:
-    ui-monospace,
-    SFMono-Regular,
-    Menlo,
-    Monaco,
-    Consolas,
-    "Liberation Mono",
-    monospace;
-
-  font-size: var(--font-size-xs);
-  line-height: var(--line-height-relaxed);
-
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
 }
 
-/* Form helpers */
+.backoffice-detail-page textarea.form-control {
+  min-height: 92px;
 
-.backoffice-page .form-group .text-muted {
+  resize: vertical;
+}
+
+.backoffice-detail-page .form-group .text-muted {
   display: block;
 
   margin-top: var(--spacing-xs);
@@ -190,61 +284,62 @@
   text-align: right;
 }
 
-/* Bottom actions */
+/* Error */
 
-.actions {
-  display: flex;
-  align-items: center;
+.backoffice-detail-error {
+  max-width: 640px;
 
-  margin-top: var(--spacing-lg);
+  margin-bottom: var(--spacing-md);
+  padding: var(--spacing-lg);
+
+  color: var(--color-danger-text);
+  background-color: var(--color-danger-bg);
+
+  border: 1px solid var(--color-danger-border);
+  border-radius: var(--radius-lg);
 }
 
-.actions .btn {
-  min-width: 110px;
-}
-
-/* Empty / loading text */
-
-.backoffice-page > p {
-  color: var(--color-muted);
-
-  line-height: var(--line-height-relaxed);
+.backoffice-detail-error p {
+  margin:
+    var(--spacing-xs)
+    0
+    0;
 }
 
 /* Responsive */
 
-@media (max-width: 900px) {
-  .backoffice-page {
-    padding:
-      var(--spacing-xl)
-      var(--spacing-md)
-      var(--spacing-2xl);
-  }
-
-  .backoffice-page h2 {
-    font-size: var(--font-size-2xl);
-  }
-
-  .backoffice-layout {
+@media (max-width: 1000px) {
+  .backoffice-detail-layout {
     grid-template-columns: 1fr;
   }
 }
 
+@media (max-width: 900px) {
+  .backoffice-detail-page {
+    padding:
+      var(--spacing-lg)
+      var(--spacing-md)
+      var(--spacing-xl);
+  }
+}
+
 @media (max-width: 600px) {
-  .button-group {
+  .backoffice-detail-title-row {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+  }
+
+  .backoffice-detail-page .button-group {
     align-items: stretch;
     flex-direction: column;
   }
 
-  .button-group .btn {
+  .backoffice-detail-page .button-group .btn {
     width: 100%;
   }
 
-  .actions .btn {
-    width: 100%;
-  }
-
-  .document-list li {
+  .backoffice-detail-page .document-list li {
     align-items: flex-start;
     flex-direction: column;
   }

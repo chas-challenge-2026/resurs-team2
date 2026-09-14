@@ -1,97 +1,91 @@
-import { useNavigate, useParams } from "react-router-dom";
-
-import { Panel } from "@/components/Panel/Panel";
-
-import "./Status.css";
+import { useParams } from "react-router-dom";
 
 import { ApplicationDetailsPanel } from "./components/ApplicationDetailsPanel";
 import { DocumentsPanel } from "./components/DocumentsPanel";
-import { StatusHeader } from "./components/StatusHeader";
+import { ScoringPanel } from "./components/ScoringPanel";
+import { WorkerPanel } from "./components/WorkerPanel";
 import { useApplicationDetails } from "./hooks/useApplicationDetails";
-import { formatWorker } from "./utils/statusFormatters";
+
+import {
+  formatStatus,
+  getStatusBadgeClass,
+} from "./utils/statusFormatters";
+
+import "./Status.css";
 
 export const Status = () => {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
 
   const {
     application,
-    documents,
     workerName,
+    documents,
     loading,
     error,
   } = useApplicationDetails(id);
 
   if (loading) {
     return (
-      <div className="status-page">
-        <p>Laddar ansökan...</p>
-      </div>
+      <main className="status-page">
+        <p className="text-muted">Laddar ansökan...</p>
+      </main>
     );
   }
 
   if (error || !application) {
     return (
-      <div className="status-page">
-        <p className="text-muted">
-          {error ?? "Ingen ansökan hittades."}
-        </p>
-
-        <button
-          type="button"
-          className="btn btn-default"
-          onClick={() => navigate("/application")}
-        >
-          Tillbaka till ansökningar
-        </button>
-      </div>
+      <main className="status-page">
+        <div className="status-error">
+          <strong>Kunde inte hämta ansökan</strong>
+          <p>{error || "Ansökan hittades inte."}</p>
+        </div>
+      </main>
     );
   }
 
   return (
-    <div className="status-page">
-      <StatusHeader application={application} />
+    <main className="status-page">
+      <header className="status-header">
+        <div>
+          <div className="status-title-row">
+            <h1>Ansökan #{application.id}</h1>
+
+            <span
+              className={`label ${getStatusBadgeClass(application.status)}`}
+            >
+              {formatStatus(application.status)}
+            </span>
+          </div>
+
+          <p className="status-subtitle">
+            {application.companyName}
+          </p>
+        </div>
+      </header>
 
       <div className="status-layout">
-        <div className="left-column">
-          {application.scoringResult && (
-            <Panel title="Scoringresultat">
-              {application.scoringResult}
-            </Panel>
-          )}
+        <aside className="status-side-column">
+          <ScoringPanel
+            scoringResult={application.scoringResult}
+          />
 
-          <Panel title="Handläggare">
-            {formatWorker(application.status, workerName)}
-          </Panel>
-        </div>
+          <WorkerPanel
+            workerName={workerName}
+            status={application.status}
+          />
+        </aside>
 
-        <div className="right-column">
-          <ApplicationDetailsPanel application={application} />
+        <section className="status-main-column">
+          <ApplicationDetailsPanel
+            application={application}
+          />
 
           <DocumentsPanel
             applicationId={application.id}
             documents={documents}
           />
-        </div>
+        </section>
       </div>
-
-      <div className="actions">
-        <button
-          type="button"
-          className="btn btn-default"
-          onClick={() => navigate("/application")}
-        >
-          Tillbaka
-        </button>
-
-        <button
-          type="button"
-          className="btn btn-primary"
-          onClick={() => navigate("/apply")}
-        >
-          Redigera ansökan
-        </button>
-      </div>
-    </div>
+    </main>
   );
 };
