@@ -1,15 +1,21 @@
 import { Panel } from "../../../components/Panel/Panel";
 
 interface AuditLogPanelProps {
-  auditLogRaw: string;
+  auditLogs: AuditLog[];
 }
 
-export const AuditLogPanel: React.FC<AuditLogPanelProps> = ({
-  auditLogRaw,
-}) => {
+export const AuditLogPanel = ({
+  auditLogs,
+}: AuditLogPanelProps) => {
   return (
     <Panel title="Händelselogg">
-      <pre className="audit-pre">{auditLogRaw}</pre>
+      {auditLogs.length === 0 ? (
+        <p className="text-muted">Ingen händelselogg finns ännu.</p>
+      ) : (
+        <pre className="audit-pre">
+          {JSON.stringify(auditLogs, null, 2)}
+        </pre>
+      )}
     </Panel>
   );
 };

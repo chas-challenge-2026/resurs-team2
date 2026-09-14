@@ -6,15 +6,14 @@ interface ApplicationDetailsPanelProps {
   application: Application;
 }
 
-export const ApplicationDetailsPanel: React.FC<
-  ApplicationDetailsPanelProps
-> = ({ application }) => {
+export const ApplicationDetailsPanel = ({
+  application,
+}: ApplicationDetailsPanelProps) => {
   return (
     <Panel title="Ansökningsdetaljer">
       <p>
         <strong>Företag:</strong>
         <br />
-
         {application.companyName}
       </p>
 

@@ -8,8 +8,6 @@ public record ApplicationDetailsResponse(
     @Nonnull
     ApplicationResponse application,
     @Nonnull
-    String auditLogRaw,
-    @Nonnull
     String workerName,
     @Nonnull
     List<DocumentResponse> documents
