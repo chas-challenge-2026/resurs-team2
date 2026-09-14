@@ -2,6 +2,7 @@
 add_library(resurs_audit SHARED
     resurs_audit.cpp
     hash_chain.cpp
+    signer.cpp
 )
 
 target_include_directories(resurs_audit
@@ -26,6 +27,7 @@ set_target_properties(resurs_audit PROPERTIES
 add_executable(audit_sandbox_test
     audit_sandbox_test.cpp
     hash_chain.cpp
+    signer.cpp
 )
 target_link_libraries(audit_sandbox_test PRIVATE OpenSSL::Crypto)
 add_test(NAME audit_sandbox_test COMMAND audit_sandbox_test)

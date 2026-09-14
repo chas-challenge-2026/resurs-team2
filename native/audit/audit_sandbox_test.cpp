@@ -1,7 +1,11 @@
 #include "hash_chain.hpp"
+#include "signer.hpp"
 
 #include <cstdio>
 #include <cstring>
+#include <memory>
+
+#include <openssl/evp.h>
 
 namespace {
 
@@ -14,6 +18,25 @@ void check(bool ok, const char *name)
     {
         ++g_failures;
     }
+}
+
+// Local RAII wrapper for EVP_PKEY - signer.cpp's own EvpPkeyDeleter lives in
+// an anonymous namespace there and is not visible from this file.
+struct EvpPkeyDeleter
+{
+    void operator()(EVP_PKEY *p) const noexcept { EVP_PKEY_free(p); }
+};
+using EvpPkeyPtr = std::unique_ptr<EVP_PKEY, EvpPkeyDeleter>;
+
+EvpPkeyPtr generate_ed25519_key()
+{
+    EvpPkeyPtr key{EVP_PKEY_Q_keygen(nullptr, nullptr, "ED25519")};
+    if (!key)
+    {
+        std::fprintf(stderr, "EVP_PKEY_Q_keygen failed\n");
+        std::abort();
+    }
+    return key;
 }
 
 } // namespace
@@ -50,6 +73,49 @@ int main()
     other_prev[0] ^= 0x01;
     const Hash h4 = chainHash(other_prev, "entry-a");
     check(h1 != h4, "chainHash differs for a different prev hash");
+
+    // --- signer: sign / verify / rawPublicKey ---
+    {
+        using resurs::audit::PublicKey;
+        using resurs::audit::rawPublicKey;
+        using resurs::audit::sign;
+        using resurs::audit::Signature;
+        using resurs::audit::verify;
+
+        const EvpPkeyPtr key = generate_ed25519_key();
+
+        const PublicKey pub = rawPublicKey(key.get());
+        check(pub.size() == resurs::audit::kPubKeyLen,
+              "rawPublicKey returns a 32-byte Ed25519 public key");
+
+        Hash msg{};
+        msg.fill(0xAB);
+
+        const Signature sig = sign(key.get(), msg);
+        check(sig.size() == resurs::audit::kSigLen,
+              "sign returns a 64-byte Ed25519 signature");
+
+        check(verify(pub, msg, sig.data(), sig.size()),
+              "sign -> verify round-trip succeeds");
+
+        // Tampered message: the signature no longer matches.
+        Hash tampered_msg = msg;
+        tampered_msg[0] ^= 0x01;
+        check(!verify(pub, tampered_msg, sig.data(), sig.size()),
+              "verify fails for a tampered message");
+
+        // Tampered signature: no longer matches the original message.
+        Signature tampered_sig = sig;
+        tampered_sig[0] ^= 0x01;
+        check(!verify(pub, msg, tampered_sig.data(), tampered_sig.size()),
+              "verify fails for a tampered signature");
+
+        // Wrong public key: a different key pair's signature must not verify.
+        const EvpPkeyPtr other_key = generate_ed25519_key();
+        const PublicKey other_pub = rawPublicKey(other_key.get());
+        check(!verify(other_pub, msg, sig.data(), sig.size()),
+              "verify fails for the wrong public key");
+    }
 
     std::printf("\n%d failure(s)\n", g_failures);
     return g_failures == 0 ? 0 : 1;
