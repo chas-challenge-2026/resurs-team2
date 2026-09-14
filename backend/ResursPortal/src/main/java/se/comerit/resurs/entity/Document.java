@@ -67,7 +67,8 @@ public class Document {
     }
 
     @Nullable
-    public UUID getUuid() {return uuid;
+    public UUID getUuid() {
+        return uuid;
     }
 
     public void setUuid(@Nonnull UUID uuid) {this.uuid = uuid;

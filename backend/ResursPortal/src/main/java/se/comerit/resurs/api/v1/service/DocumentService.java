@@ -18,7 +18,6 @@ import se.comerit.resurs.repository.DocumentRepository;
 import se.comerit.resurs.security.CaseWorkerPrincipal;
 import se.comerit.resurs.security.CompanyPrincipal;
 import se.comerit.resurs.security.UserPrincipal;
-import org.springframework.http.MediaType;
 
 import java.io.File;
 import java.io.IOException;
@@ -40,9 +39,7 @@ public class DocumentService {
         this.documentRepository = documentRepository;
     }
 
-    public List<DocumentDto> getDocuments(
-            Long applicationId,
-            UserPrincipal principal) {
+    public List<DocumentDto> getDocuments(Long applicationId, UserPrincipal principal) {
         Application application = getApplication(applicationId);
         checkApplicationAccess(application, principal);
 
@@ -50,38 +47,30 @@ public class DocumentService {
             throw new ApplicationNotFoundException(applicationId);
         }
 
-        return documentRepository
-                .findByApplicationIdOrderByUploadedAtDesc(applicationId)
-                .stream()
-                .map(DocumentDto::from)
-                .toList();
+        return documentRepository.findByApplicationIdOrderByUploadedAtDesc(applicationId).stream().map(DocumentDto::from).toList();
 
     }
 
-    public DocumentDto uploadDocument(
-            Long applicationId,
-            String docType,
-            MultipartFile file,
-            UserPrincipal principal) {
+    public DocumentDto uploadDocument(Long applicationId, String docType, MultipartFile file, UserPrincipal principal) {
 
         validateFile(file);
 
-        // Hämta application
+
         Application application = getApplication(applicationId);
         checkApplicationAccess(application, principal);
 
-        // Hämta original filename
+
         String originalFilename = getOriginalFilename(file);
 
-        String storedFilename = createStoredFilename(applicationId, originalFilename);
+        String fileExtension = "pdf";
+        String storedFilename = createStoredFilename(applicationId, originalFilename, fileExtension);
 
-        String uuidFilename = createUuidFilename();
 
         File destinationFile = prepareDestination(storedFilename);
-        File uuidFile = prepareDestination(uuidFilename);
+
 
         saveFile(file, destinationFile);
-        saveFile(file, uuidFile);
+
 
         Document document = saveDocument(application, storedFilename, docType);
         updateApplicationStatus(application, docType);
@@ -112,10 +101,9 @@ public class DocumentService {
             throw new FileUploadException("Only PDF files are allowed.");
         }
     }
-        private Application getApplication(Long applicationId) {
-           return applicationRepository
-                .findById(applicationId)
-                .orElseThrow(() -> new ApplicationNotFoundException(applicationId));
+
+    private Application getApplication(Long applicationId) {
+        return applicationRepository.findById(applicationId).orElseThrow(() -> new ApplicationNotFoundException(applicationId));
     }
 
     private File prepareDestination(String storedFilename) {
@@ -134,69 +122,64 @@ public class DocumentService {
         }
     }
 
-    // Get original filename, if null or blank return default "upload.pdf"
+
     private String getOriginalFilename(MultipartFile file) {
 
         String filename = file.getOriginalFilename();
 
         if (filename == null || filename.isBlank()) {
-            return "upload.pdf";
+            throw new FileUploadException("File must have a name.");
         }
         return filename;
     }
 
 
-    private String createStoredFilename(Long applicationId,String originalFilename) {
-        String safe = (originalFilename == null || originalFilename.isBlank())
-                ? "document.pdf"
-                : originalFilename.replace('\\', '/');
+    private String createStoredFilename(Long applicationId, String originalFilename, String fileExtension) {
+        String safe = (originalFilename == null || originalFilename.isBlank()) ? "document.pdf" : originalFilename.replace('\\', '/');
 
         safe = safe.substring(safe.lastIndexOf('/') + 1);
         safe = safe.replaceAll("[^a-zA-Z0-9._-]", "_");
 
         if (safe.isBlank() || safe.equals(".") || safe.equals("..")) {
-            safe = "document.pdf";
+            safe = "document." + fileExtension;
         }
         if (!safe.toLowerCase(Locale.ROOT).endsWith(".pdf")) {
             safe += ".pdf";
+        }
+        String extension = fileExtension.startsWith(".") ? fileExtension : "." + fileExtension;
+
+        if (!safe.toLowerCase(Locale.ROOT).endsWith(extension.toLowerCase(Locale.ROOT))) {
+            safe += extension;
         }
 
         return applicationId + "_" + UUID.randomUUID() + "_" + safe;
     }
 
-    private String createUuidFilename() {
-        return UUID.randomUUID() + ".pdf";
-    }
 
-
-
-    // Save document to database
     private Document saveDocument(Application application, String storedFilename, String docType) {
         Document document = new Document(application, storedFilename, docType);
         return documentRepository.save(document);
     }
 
-    // Update application status based on document type
+
     private void updateApplicationStatus(Application application, String docType) {
-        if ("AnnualReview".equals(docType)
-                && application.getStatus() == ApplicationStatus.PENDING_DOCS) {
+        if ("AnnualReview".equals(docType) && application.getStatus() == ApplicationStatus.PENDING_DOCS) {
             application.setStatus(ApplicationStatus.UNDER_REVIEW);
         }
     }
 
-    // delete document
+
     public void deleteDocument(UUID documentId, UserPrincipal principal) {
-        Document document = (Document) documentRepository.findByUuid(documentId)
-                .orElseThrow(() -> new DocumentNotFoundException(documentId));
+        Document document = documentRepository.findByUuid(documentId).orElseThrow(() -> new DocumentNotFoundException(documentId));
         checkDocumentAccess(document, principal);
         documentRepository.delete(document);
     }
 
-    // Access control
+
     private void checkApplicationAccess(Application application, UserPrincipal principal) {
         boolean hasAccess = switch (principal) {
             case CompanyPrincipal companyPrincipal ->
-                application.getCompany().getOrgNumber().equals(companyPrincipal.orgNumber());
+                    application.getCompany().getOrgNumber().equals(companyPrincipal.orgNumber());
             case CaseWorkerPrincipal _ -> true;
         };
 
@@ -208,7 +191,7 @@ public class DocumentService {
     private void checkDocumentAccess(Document document, UserPrincipal principal) {
         boolean hasAccess = switch (principal) {
             case CompanyPrincipal companyPrincipal ->
-                document.getApplication().getCompany().getOrgNumber().equals(companyPrincipal.orgNumber());
+                    document.getApplication().getCompany().getOrgNumber().equals(companyPrincipal.orgNumber());
             case CaseWorkerPrincipal _ -> true;
         };
         if (!hasAccess) {
@@ -216,11 +199,5 @@ public class DocumentService {
         }
 
     }
-    private boolean isPdf(byte[] bytes) {
-        return bytes.length >= 4
-                && bytes[0] == '%'
-                && bytes[1] == 'P'
-                && bytes[2] == 'D'
-                && bytes[3] == 'F';
-    }
+
 }
