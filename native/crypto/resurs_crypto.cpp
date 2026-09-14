@@ -63,15 +63,15 @@ extern "C"
         }
     }
 
-    int resurs_encrypt_pii(const char *plaintext,
-                           const unsigned char *nonce, size_t nonce_len,
-                           unsigned char *ciphertext_out, size_t *ciphertext_len)
+    int resurs_encrypt_pii_raw(const unsigned char *data, size_t data_len,
+                               const unsigned char *nonce, size_t nonce_len,
+                               unsigned char *ciphertext_out, size_t *ciphertext_len)
     {
         if (!resurs::KeyManager::instance().isLoaded())
         {
             return RESURS_ERR_NOT_INIT;
         }
-        if (plaintext == nullptr || nonce == nullptr || ciphertext_len == nullptr)
+        if (data == nullptr || nonce == nullptr || ciphertext_len == nullptr)
         {
             return RESURS_ERR_INVALID_ARG;
         }
@@ -82,13 +82,12 @@ extern "C"
             return RESURS_ERR_INVALID_ARG;
         }
 
-        const size_t plain_len = std::strlen(plaintext);
-        if (plain_len > RESURS_MAX_PLAINTEXT_LEN)
+        if (data_len > RESURS_MAX_RAW_LEN)
         {
             return RESURS_ERR_INVALID_ARG;
         }
 
-        const size_t required = RESURS_KEY_VERSION_LEN + plain_len + RESURS_TAG_LEN;
+        const size_t required = RESURS_KEY_VERSION_LEN + data_len + RESURS_TAG_LEN;
         const int cap = check_out_capacity(ciphertext_out, ciphertext_len, required);
         if (cap != RESURS_OK)
         {
@@ -103,7 +102,7 @@ extern "C"
             resurs::Key key = resurs::KeyManager::instance().key();
 
             auto body = resurs::AesGcmCipher::encrypt(
-                std::string_view{plaintext, plain_len}, key, nonce_arr);
+                std::string_view{reinterpret_cast<const char *>(data), data_len}, key, nonce_arr);
 
             // Defensive: the cipher output must fit the capacity we just checked.
             if (RESURS_KEY_VERSION_LEN + body.size() > *ciphertext_len)
@@ -121,6 +120,28 @@ extern "C"
         {
             return RESURS_ERR_INTERNAL;
         }
+    }
+
+    int resurs_encrypt_pii(const char *plaintext,
+                           const unsigned char *nonce, size_t nonce_len,
+                           unsigned char *ciphertext_out, size_t *ciphertext_len)
+    {
+        if (plaintext == nullptr)
+        {
+            return RESURS_ERR_INVALID_ARG;
+        }
+        const size_t plain_len = std::strlen(plaintext);
+        // Keep the string API's contract tight even though _raw would allow much
+        // more (RESURS_MAX_RAW_LEN) — a NUL-terminated "PII string" should never
+        // legitimately be file-sized; catch that bug here instead of silently
+        // riding the file-upload allowance.
+        if (plain_len > RESURS_MAX_PLAINTEXT_LEN)
+        {
+            return RESURS_ERR_INVALID_ARG;
+        }
+        return resurs_encrypt_pii_raw(
+            reinterpret_cast<const unsigned char *>(plaintext), plain_len,
+            nonce, nonce_len, ciphertext_out, ciphertext_len);
     }
 
     int resurs_decrypt_pii(const unsigned char *nonce, size_t nonce_len,
@@ -146,8 +167,10 @@ extern "C"
             return RESURS_ERR_INVALID_ARG;
         }
         // Reject an oversized blob before allocating a buffer to copy it into.
+        // RESURS_MAX_RAW_LEN, not RESURS_MAX_PLAINTEXT_LEN: this ciphertext may
+        // have come from resurs_encrypt_pii_raw, which allows up to that much.
         if (ciphertext_len >
-            RESURS_KEY_VERSION_LEN + RESURS_MAX_PLAINTEXT_LEN + RESURS_TAG_LEN)
+            RESURS_KEY_VERSION_LEN + RESURS_MAX_RAW_LEN + RESURS_TAG_LEN)
         {
             return RESURS_ERR_INVALID_ARG;
         }
