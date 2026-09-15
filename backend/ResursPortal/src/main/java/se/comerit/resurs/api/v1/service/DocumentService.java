@@ -45,7 +45,10 @@ public class DocumentService {
         checkApplicationAccess(application, principal);
 
 
-        return documentRepository.findByApplicationIdOrderByUploadedAtDesc(applicationId).stream().map(DocumentDto::from).toList();
+        return documentRepository.findByApplicationIdOrderByUploadedAtDesc(applicationId)
+                .stream()
+                .map(DocumentDto::from)
+                .toList();
 
     }
 
@@ -53,40 +56,24 @@ public class DocumentService {
 
         validateFile(file);
 
+
         Application application = getApplication(applicationId);
         checkApplicationAccess(application, principal);
 
-        String originalFilename = getOriginalFilename(file);
+        Document document = new Document(application, getOriginalFilename(file), docType);
 
-        // Handles Windows-style paths
-        String safeFilename = originalFilename
-                .replace('\\', '/');
-
-        safeFilename = safeFilename.substring(
-                safeFilename.lastIndexOf('/') + 1
-        );
-
-        // Remove any characters that are not alphanumeric, period, underscore, or dash
-        safeFilename = safeFilename.replaceAll(
-                "[^a-zA-Z0-9._-]",
-                "_"
-        );
-
-        String storedFilename =
-                applicationId + "_" + safeFilename;
+        String storedFilename = document.getUuid() + ".pdf";
+        document.setFilename(storedFilename);
 
         File destinationFile = prepareDestination(storedFilename);
-
         saveFile(file, destinationFile);
 
-
-        Document document = saveDocument(application, storedFilename, docType);
+        document = documentRepository.save(document);
 
         updateApplicationStatus(application, docType);
         applicationRepository.save(application);
 
         return DocumentDto.from(document);
-
     }
 
 
