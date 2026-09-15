@@ -1,40 +1,44 @@
 .page {
-  min-height: 100%;
+  width: 100%;
+  padding: var(--spacing-2xl) 0 var(--spacing-3xl);
+
   background-color: var(--color-background);
 }
 
 .container {
-  max-width: 1170px;
+  width: 100%;
+  max-width: var(--container-width);
+
   margin: 0 auto;
-  padding: 32px var(--spacing-md);
+  padding: 0 var(--spacing-lg);
 }
 
+/* Page header */
+
 .pageHeader {
-  padding-bottom: 9px;
-  margin: 0 0 20px;
-  border-bottom: 1px solid var(--color-border);
+  margin-bottom: var(--spacing-xl);
 }
 
 .pageHeader h1 {
   margin: 0;
 
-  font-size: 36px;
-  font-weight: 300;
-  line-height: 1.1;
+  color: var(--color-text-strong);
 
-  color: var(--color-text);
+  font-size: var(--font-size-3xl);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-tight);
 }
 
+/* Empty/error state */
+
 .infoAlert {
-  padding: var(--spacing-md);
-  margin-bottom: 20px;
+  padding: var(--spacing-lg);
 
   color: var(--color-info-text);
-
   background-color: var(--color-info-bg);
 
   border: 1px solid var(--color-info-border);
-  border-radius: var(--radius);
+  border-radius: var(--radius-lg);
 }
 
 .infoAlert p {
@@ -47,123 +51,198 @@
   color: var(--color-primary);
 
   font: inherit;
+  font-weight: var(--font-weight-semibold);
 
   background: none;
   border: none;
 
   cursor: pointer;
 
-  text-decoration: none;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+
+  transition: color var(--transition-fast);
 }
 
 .createLink:hover {
-  text-decoration: underline;
+  color: var(--color-primary-hover);
 }
 
+.createLink:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 3px;
+
+  border-radius: var(--radius-sm);
+}
+
+/* New application */
+
 .primaryButton {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-sm);
 
-  margin-bottom: var(--spacing-md);
+  min-height: 46px;
 
-  padding: 6px 12px;
+  margin-bottom: var(--spacing-lg);
+  padding: 11px 22px;
 
-  color: var(--color-white);
+  color: var(--color-accent-text);
+  background-color: var(--color-accent);
 
-  font-size: var(--font-size-base);
+  border: 1px solid var(--color-accent);
+  border-radius: var(--radius-pill);
+
   font-family: inherit;
-  line-height: var(--line-height-base);
-
-  background-color: var(--color-primary);
-
-  border: 1px solid var(--color-primary);
-  border-radius: var(--radius);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  line-height: 1;
 
   cursor: pointer;
+
+  transition:
+    background-color var(--transition-fast),
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast),
+    transform var(--transition-fast);
 }
 
 .primaryButton:hover {
-  background-color: var(--color-primary-hover);
-  border-color: var(--color-primary-hover);
+  background-color: var(--color-accent-hover);
+  border-color: var(--color-accent-hover);
+
+  transform: translateY(-1px);
+}
+
+.primaryButton:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-input-focus);
+}
+
+.primaryButton:active {
+  transform: translateY(0);
 }
 
 .plusIcon {
-  font-size: 16px;
-  font-weight: 700;
+  font-size: 20px;
+  font-weight: var(--font-weight-bold);
+  line-height: 1;
 }
+
+/* Table wrapper */
+
+.tableWrapper {
+  width: 100%;
+
+  overflow-x: auto;
+
+  background-color: var(--color-white);
+
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+
+  box-shadow: var(--shadow-sm);
+
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Applications table */
 
 .applicationTable {
   width: 100%;
-
-  margin-bottom: 20px;
-
-  border-spacing: 0;
-  border-collapse: collapse;
+  margin: 0;
 
   background-color: var(--color-white);
+
+  border-collapse: collapse;
 }
 
-.applicationTable th {
-  padding: 8px;
+.applicationTable th,
+.applicationTable td {
+  padding: 14px var(--spacing-lg);
 
-  color: var(--color-white);
-
-  font-weight: 700;
   line-height: var(--line-height-base);
 
   text-align: left;
-  vertical-align: bottom;
+  vertical-align: middle;
 
-  background-color: var(--color-primary);
+  border-bottom: 1px solid var(--color-border);
+}
 
-  border: 1px solid var(--color-border);
+.applicationTable th {
+  color: var(--color-muted);
+  background-color: var(--color-surface-muted);
+
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+
+  white-space: nowrap;
 }
 
 .applicationTable td {
-  padding: 8px;
-
-  line-height: var(--line-height-base);
-
-  vertical-align: top;
-
-  border: 1px solid var(--color-border);
+  color: var(--color-text);
+  background-color: var(--color-white);
 }
 
-.applicationTable tbody tr:hover {
-  background-color: var(--color-background);
+.applicationTable tbody tr:last-child td {
+  border-bottom: none;
 }
+
+.applicationTable tbody tr {
+  transition: background-color var(--transition-fast);
+}
+
+.applicationTable tbody tr:hover td {
+  background-color: var(--color-primary-soft);
+}
+
+/* Status labels */
 
 .labelSuccess,
 .labelDanger,
 .labelWarning,
 .labelDefault {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
 
-  padding: 3px 7px;
+  padding: 5px 9px;
 
-  color: var(--color-white);
-
-  font-size: 12px;
-  font-weight: 700;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
   line-height: 1;
 
-  border-radius: 3px;
+  white-space: nowrap;
+
+  border: 1px solid transparent;
+  border-radius: var(--radius-pill);
 }
 
 .labelSuccess {
-  background-color: var(--color-success);
+  color: var(--color-success-text);
+  background-color: var(--color-success-bg);
+  border-color: var(--color-success-border);
 }
 
 .labelDanger {
-  background-color: var(--color-danger);
+  color: var(--color-danger-text);
+  background-color: var(--color-danger-bg);
+  border-color: var(--color-danger-border);
 }
 
 .labelWarning {
-  background-color: var(--color-warning);
+  color: var(--color-warning-text);
+  background-color: var(--color-warning-bg);
+  border-color: var(--color-warning-border);
 }
 
 .labelDefault {
-  background-color: var(--color-muted);
+  color: var(--color-muted);
+  background-color: var(--color-surface-muted);
+  border-color: var(--color-border);
 }
+
+/* Actions */
 
 .actionCell {
   white-space: nowrap;
@@ -171,41 +250,104 @@
 
 .viewButton,
 .documentButton {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 
-  margin-right: 5px;
-
-  padding: 3px 6px;
+  min-height: 34px;
+  padding: 7px 14px;
 
   font-family: inherit;
-  font-size: 12px;
-  line-height: 1.5;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  line-height: 1;
 
   cursor: pointer;
 
-  border-radius: 3px;
+  border-radius: var(--radius-pill);
+
+  transition:
+    background-color var(--transition-fast),
+    border-color var(--transition-fast),
+    color var(--transition-fast),
+    box-shadow var(--transition-fast),
+    transform var(--transition-fast);
 }
 
 .viewButton {
-  color: var(--color-white);
+  margin-right: var(--spacing-sm);
 
-  background-color: var(--color-info-text);
+  color: var(--color-primary);
+  background-color: var(--color-white);
 
-  border: 1px solid var(--color-info-text);
+  border: 1px solid var(--color-primary);
 }
 
 .viewButton:hover {
-  opacity: 0.9;
+  color: var(--color-white);
+  background-color: var(--color-primary);
+
+  transform: translateY(-1px);
 }
 
 .documentButton {
   color: var(--color-text);
-
   background-color: var(--color-white);
 
-  border: 1px solid var(--color-input-border);
+  border: 1px solid var(--color-border-strong);
 }
 
 .documentButton:hover {
-  background-color: var(--color-background);
+  color: var(--color-primary);
+  background-color: var(--color-primary-soft);
+
+  border-color: var(--color-primary);
+
+  transform: translateY(-1px);
+}
+
+.viewButton:focus-visible,
+.documentButton:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-input-focus);
+}
+
+.viewButton:active,
+.documentButton:active {
+  transform: translateY(0);
+}
+
+/* Responsive */
+
+@media (max-width: 768px) {
+  .page {
+    padding: var(--spacing-xl) 0 var(--spacing-2xl);
+  }
+
+  .container {
+    padding: 0 var(--spacing-md);
+  }
+
+  .pageHeader {
+    margin-bottom: var(--spacing-lg);
+  }
+
+  .pageHeader h1 {
+    font-size: var(--font-size-2xl);
+  }
+
+  .primaryButton {
+    width: 100%;
+  }
+
+  .applicationTable {
+    min-width: 760px;
+  }
+}
+
+@media (max-width: 480px) {
+  .applicationTable th,
+  .applicationTable td {
+    padding: 12px var(--spacing-md);
+  }
 }

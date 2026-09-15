@@ -1,7 +1,7 @@
 package se.comerit.resurs.api.v1.dto;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
@@ -27,9 +27,9 @@ public record ApplicationResponse(
     @Nullable 
     String scoringResult,
     @Nonnull
-    LocalDateTime createdAt,
+    Instant createdAt,
     @Nonnull
-    LocalDateTime updatedAt
+    Instant updatedAt
 ) {
     
 }

@@ -2,14 +2,14 @@ package se.comerit.resurs.api.v1.dto;
 
 import se.comerit.resurs.entity.Document;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 public record DocumentDto(
         java.util.UUID uuid,
         Long applicationId,
         String filename,
         String docType,
-        LocalDateTime uploadedAt
+        Instant uploadedAt
 ) {
     public static DocumentDto from(Document document) {
         return new DocumentDto(

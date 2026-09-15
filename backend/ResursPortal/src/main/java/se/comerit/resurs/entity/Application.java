@@ -1,8 +1,7 @@
 package se.comerit.resurs.entity;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
+import java.time.Instant;
 import java.util.List;
 
 import jakarta.annotation.Nonnull;
@@ -23,7 +22,6 @@ import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.DecimalMin;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
 @Entity
@@ -68,10 +66,6 @@ public class Application {
     @Nullable
     private String scoringResult;
 
-    @Column(name = "audit_log", columnDefinition = "TEXT")
-    @NotBlank
-    private String auditLog = "[]";
-
     @Convert(converter = PiiAttributeConverter.class)
     @Column(name = "financial_data", columnDefinition = "TEXT")
     @Nullable
@@ -81,23 +75,27 @@ public class Application {
     @OrderBy("uploadedAt DESC")
     private List<Document> documents;
 
+    @OneToMany(fetch = FetchType.LAZY, mappedBy = "application")
+    @OrderBy("timestamp DESC")
+    private List<AuditLog> auditLogs;
+
     @Column(name = "created_at")
     @Nullable
-    private LocalDateTime createdAt;
+    private Instant createdAt;
     
     @Column(name = "updated_at")
     @Nullable
-    private LocalDateTime updatedAt;
+    private Instant updatedAt;
 
     @PrePersist
     protected void onCreate() {
-        createdAt = LocalDateTime.now(ZoneId.of("UTC"));
-        updatedAt = LocalDateTime.now(ZoneId.of("UTC"));
+        createdAt = Instant.now();
+        updatedAt = Instant.now();
     }
 
     @PreUpdate
     protected void onUpdate() {
-        updatedAt = LocalDateTime.now(ZoneId.of("UTC"));
+        updatedAt = Instant.now();
     }
 
     public Application(@Nonnull Company company, @Nonnull BigDecimal requestedAmount, @Nonnull String purpose) {
@@ -108,7 +106,7 @@ public class Application {
 
     public Application(@Nonnull Company company, @Nonnull BigDecimal requestedAmount,
             @Nonnull String purpose, ApplicationStatus statusValue, Decision decision,
-            String decisionReason, String scoringResult, String auditLog) {
+            String decisionReason, String scoringResult) {
         this.company = company;
         this.requestedAmount = requestedAmount;
         this.purpose = purpose;
@@ -116,12 +114,11 @@ public class Application {
         this.decision = decision;
         this.decisionReason = decisionReason;
         this.scoringResult = scoringResult;
-        this.auditLog = auditLog;
     }
 
     public Application(@Nonnull Company company, @Nonnull BigDecimal requestedAmount,
             @Nonnull String purpose, ApplicationStatus statusValue, Decision decision,
-            String decisionReason, String scoringResult, String auditLog, String financialData) {
+            String decisionReason, String scoringResult, String financialData) {
         this.company = company;
         this.requestedAmount = requestedAmount;
         this.purpose = purpose;
@@ -129,7 +126,6 @@ public class Application {
         this.decision = decision;
         this.decisionReason = decisionReason;
         this.scoringResult = scoringResult;
-        this.auditLog = auditLog;
         this.financialData = financialData;
     }
 
@@ -205,15 +201,6 @@ public class Application {
         this.scoringResult = scoringResult;
     }
 
-    @Nonnull
-    public String getAuditLog() {
-        return auditLog;
-    }
-
-    public void setAuditLog(@Nonnull String auditLog) {
-        this.auditLog = auditLog;
-    }
-
     @Nullable
     public String getFinancialData() {
         return financialData;
@@ -228,13 +215,18 @@ public class Application {
         return documents;
     }
 
+    @Nonnull
+    public List<AuditLog> getAuditLogs() {
+        return auditLogs;
+    }
+
     @Nullable
-    public LocalDateTime getCreatedAt() {
+    public Instant getCreatedAt() {
         return createdAt;
     }
 
     @Nullable
-    public LocalDateTime getUpdatedAt() {
+    public Instant getUpdatedAt() {
         return updatedAt;
     }
 }
