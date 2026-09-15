@@ -123,7 +123,9 @@ class ApplicationLifecycleIntegrationTest {
                 .andReturn();
         long applicationId = Long.parseLong(submit.getResponse().getContentAsString());
 
-        // The freshly submitted application must sit in the manual-review bracket.
+        // Scoring runs asynchronously – wait for it to finish and update the status.
+        awaitStatus(applicationId, "UNDER_REVIEW");
+
         mockMvc.perform(get("/api/v1/applications/{id}", applicationId)
                         .header(HttpHeaders.AUTHORIZATION, bearer(companyToken))
                         .header("User-Agent", UA))
@@ -209,5 +211,16 @@ class ApplicationLifecycleIntegrationTest {
 
     private static String bearer(String token) {
         return "Bearer " + token;
+    }
+
+    private void awaitStatus(long applicationId, String expectedStatus) throws InterruptedException {
+        for (int i = 0; i < 50; i++) {
+            Application app = applicationRepository.findById(applicationId).orElse(null);
+            if (app != null && expectedStatus.equals(app.getStatus().name())) {
+                return;
+            }
+            Thread.sleep(200);
+        }
+        throw new AssertionError("Timed out waiting for application " + applicationId + " to reach status " + expectedStatus);
     }
 }
