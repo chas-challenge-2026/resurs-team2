@@ -30,7 +30,6 @@ public class DecisionController {
     public ResponseEntity<ApplicationResponse> decide(@PathVariable("id") Long id,
             @RequestBody @Valid DecisionRequest request,
             @AuthenticationPrincipal UserPrincipal principal) {
-        String caseWorker = principal.asCaseWorker().name();
-        return ResponseEntity.ok(service.decide(id, request, caseWorker));
+        return ResponseEntity.ok(service.decide(id, request, principal.asCaseWorker()));
     }
 }

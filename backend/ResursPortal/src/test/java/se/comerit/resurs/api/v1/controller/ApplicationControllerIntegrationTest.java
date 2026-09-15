@@ -274,6 +274,7 @@ class ApplicationControllerIntegrationTest {
                     .andExpect(jsonPath("$.application.orgNumber").value("556000-1234"))
                     .andExpect(jsonPath("$.application.purpose").value("Rörelsekapital"))
                     .andExpect(jsonPath("$.application.status").value("UNDER_REVIEW"))
+                    .andExpect(jsonPath("$.workerName").doesNotExist())
                     .andExpect(jsonPath("$.documents.length()").value(1))
                     .andExpect(jsonPath("$.documents[0].filename").value("bokaplan.pdf"))
                     .andExpect(jsonPath("$.documents[0].docType").value("BOKFORING"));
@@ -305,7 +306,9 @@ class ApplicationControllerIntegrationTest {
                 "DELETE FROM documents",
                 "DELETE FROM audit_log",
                 "DELETE FROM applications",
+                "DELETE FROM case_workers",
                 "DELETE FROM companies",
+                "INSERT INTO case_workers (id, name, email, email_index, password) VALUES (1, 'Karin Handläggare', 'karin@resurs.se', X'01', 'x')",
                 "INSERT INTO companies (id, org_number, org_number_index, company_name, authorized_signatory) VALUES (702, '556000-1234', X'dedd7d2467a47aac7cc703665899fded7d8013ddecbbbf69e0ff366fd4812ed7', 'Malmö Fastigheter AB', 'Test Person')",
                 "INSERT INTO applications (id, company_id, requested_amount, purpose, status, decision, decision_reason, scoring_result) VALUES (702, 702, 400000.00, 'Expansion', 'APPROVED', 'APPROVED', 'Godkänd', NULL)"
         })
@@ -319,6 +322,69 @@ class ApplicationControllerIntegrationTest {
                     .andExpect(jsonPath("$.application.decisionReason").value("Godkänd"))
                     .andExpect(jsonPath("$.workerName").value("Karin Handläggare"))
                     .andExpect(jsonPath("$.documents").isEmpty());
+        }
+
+        @Test
+        @WithCompany(orgNumber = "556000-1234")
+        @Sql(statements = {
+                "DELETE FROM documents",
+                "DELETE FROM audit_log",
+                "DELETE FROM applications",
+                "DELETE FROM companies",
+                "INSERT INTO companies (id, org_number, org_number_index, company_name, authorized_signatory) VALUES (703, '556000-1234', X'dedd7d2467a47aac7cc703665899fded7d8013ddecbbbf69e0ff366fd4812ed7', 'Malmö Fastigheter AB', 'Test Person')",
+                "INSERT INTO applications (id, company_id, requested_amount, purpose, status, decision, decision_reason, scoring_result) VALUES (703, 703, 400000.00, 'Expansion', 'REJECTED', 'REJECTED', 'Automatiskt avslag', NULL)"
+        })
+        void companyViewsOwnAutoRejectedApplicationHasNullWorkerName() throws Exception {
+            mockMvc.perform(get("/api/v1/applications/703"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.application.id").value(703))
+                    .andExpect(jsonPath("$.application.status").value("REJECTED"))
+                    .andExpect(jsonPath("$.workerName").doesNotExist());
+        }
+
+        @Test
+        @WithCaseWorker(name = "Karin Handläggare")
+        @Sql(statements = {
+                "DELETE FROM documents",
+                "DELETE FROM audit_log",
+                "DELETE FROM applications",
+                "DELETE FROM case_workers",
+                "DELETE FROM companies",
+                "INSERT INTO case_workers (id, name, email, email_index, password) VALUES (1, 'Karin Handläggare', 'karin@resurs.se', X'01', 'x')",
+                "INSERT INTO companies (id, org_number, org_number_index, company_name, authorized_signatory) VALUES (704, '556000-1234', X'dedd7d2467a47aac7cc703665899fded7d8013ddecbbbf69e0ff366fd4812ed7', 'Malmö Fastigheter AB', 'Test Person')",
+                "INSERT INTO applications (id, company_id, requested_amount, purpose, status) VALUES (704, 704, 400000.00, 'Expansion', 'UNDER_REVIEW')"
+        })
+        void firstViewerIsAssignedAndWorkerNameReturned() throws Exception {
+            mockMvc.perform(get("/api/v1/applications/704"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.workerName").value("Karin Handläggare"));
+
+            Application app = applicationRepository.findById(704L).orElseThrow();
+            assertThat(app.getCaseWorker()).isNotNull();
+            assertThat(app.getCaseWorker().getId()).isEqualTo(1L);
+        }
+
+        @Test
+        @WithCaseWorker(id = 2, name = "Oskar Granskare")
+        @Sql(statements = {
+                "DELETE FROM documents",
+                "DELETE FROM audit_log",
+                "DELETE FROM applications",
+                "DELETE FROM case_workers",
+                "DELETE FROM companies",
+                "INSERT INTO case_workers (id, name, email, email_index, password) VALUES (1, 'Karin Handläggare', 'karin@resurs.se', X'01', 'x')",
+                "INSERT INTO case_workers (id, name, email, email_index, password) VALUES (2, 'Oskar Granskare', 'oskar@resurs.se', X'02', 'x')",
+                "INSERT INTO companies (id, org_number, org_number_index, company_name, authorized_signatory) VALUES (705, '556000-1234', X'dedd7d2467a47aac7cc703665899fded7d8013ddecbbbf69e0ff366fd4812ed7', 'Malmö Fastigheter AB', 'Test Person')",
+                "INSERT INTO applications (id, company_id, case_worker_id, requested_amount, purpose, status) VALUES (705, 705, 1, 400000.00, 'Expansion', 'UNDER_REVIEW')"
+        })
+        void assignedWorkerIsNotReplacedBySecondViewer() throws Exception {
+            mockMvc.perform(get("/api/v1/applications/705"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.workerName").value("Karin Handläggare"));
+
+            Application app = applicationRepository.findById(705L).orElseThrow();
+            assertThat(app.getCaseWorker()).isNotNull();
+            assertThat(app.getCaseWorker().getId()).isEqualTo(1L);
         }
 
         @Test

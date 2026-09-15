@@ -13,21 +13,25 @@ import se.comerit.resurs.entity.ApplicationStatus;
 import se.comerit.resurs.exception.ApplicationAlreadyDecidedException;
 import se.comerit.resurs.exception.ApplicationNotFoundException;
 import se.comerit.resurs.repository.ApplicationRepository;
+import se.comerit.resurs.security.CaseWorkerPrincipal;
 
 @Service
 public class DecisionService {
 
     private final ApplicationRepository repository;
     private final AuditLogService auditLogService;
+    private final CaseWorkerAssignmentService caseWorkerAssignmentService;
 
-    public DecisionService(ApplicationRepository repository, AuditLogService auditLogService) {
+    public DecisionService(ApplicationRepository repository, AuditLogService auditLogService,
+            CaseWorkerAssignmentService caseWorkerAssignmentService) {
         this.repository = repository;
         this.auditLogService = auditLogService;
+        this.caseWorkerAssignmentService = caseWorkerAssignmentService;
     }
 
     @Transactional
     public @Nonnull ApplicationResponse decide(@Nonnull Long applicationId,
-            @Nonnull DecisionRequest request, @Nonnull String caseWorker) {
+            @Nonnull DecisionRequest request, @Nonnull CaseWorkerPrincipal caseWorker) {
         Application application = repository.findById(applicationId)
                 .orElseThrow(() -> new ApplicationNotFoundException(applicationId));
 
@@ -36,12 +40,14 @@ public class DecisionService {
             throw new ApplicationAlreadyDecidedException(applicationId);
         }
 
+        caseWorkerAssignmentService.assignIfUnassigned(application, caseWorker);
+
         application.setStatus(ApplicationMapper.toStatus(request.decision()));
         application.setDecision(request.decision());
         application.setDecisionReason(request.comment());
 
         auditLogService.append(application,
-                new ManualDecision(request.decision().name(), caseWorker, blankToNull(request.comment())));
+                new ManualDecision(request.decision().name(), caseWorker.name(), blankToNull(request.comment())));
 
         return ApplicationMapper.toResponse(repository.save(application));
     }

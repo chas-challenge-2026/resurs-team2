@@ -17,12 +17,14 @@ CREATE TABLE case_workers (
 CREATE TABLE applications (
     id SERIAL PRIMARY KEY,
     company_id INT REFERENCES companies(id),
+    case_worker_id INT REFERENCES case_workers(id),
     requested_amount VARCHAR(512),
     purpose TEXT,
     status VARCHAR(30) DEFAULT 'PENDING_DOCS', -- PENDING_DOCS, UNDER_REVIEW, APPROVED, REJECTED
     decision VARCHAR(20),
     decision_reason TEXT,
     scoring_result TEXT,
+    financial_data TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -34,6 +36,8 @@ CREATE TABLE documents (
     doc_type VARCHAR(50),
     uploaded_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 CREATE TABLE audit_log (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,

@@ -15,6 +15,7 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.OrderBy;
@@ -34,6 +35,11 @@ public class Application {
     @ManyToOne
     @NotNull
     private Company company;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "case_worker_id")
+    @Nullable
+    private CaseWorker caseWorker;
 
     @Convert(converter = AmountAttributeConverter.class)
     @Column(name = "requested_amount", length = 512)
@@ -145,6 +151,15 @@ public class Application {
 
     public void setCompany(@Nonnull Company company) {
         this.company = company;
+    }
+
+    @Nullable
+    public CaseWorker getCaseWorker() {
+        return caseWorker;
+    }
+
+    public void assignTo(@Nonnull CaseWorker caseWorker) {
+        this.caseWorker = caseWorker;
     }
 
     @Nonnull

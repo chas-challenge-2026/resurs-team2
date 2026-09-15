@@ -12,7 +12,8 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 @JsonSubTypes({
         @JsonSubTypes.Type(value = ApplicationCreated.class, name = "APPLICATION_CREATED"),
         @JsonSubTypes.Type(value = ScoringRun.class, name = "SCORING_RUN"),
-        @JsonSubTypes.Type(value = ManualDecision.class, name = "MANUAL_DECISION")
+        @JsonSubTypes.Type(value = ManualDecision.class, name = "MANUAL_DECISION"),
+        @JsonSubTypes.Type(value = WorkerAssigned.class, name = "WORKER_ASSIGNED")
 })
-public sealed interface AuditEntry permits ApplicationCreated, ScoringRun, ManualDecision {
+public sealed interface AuditEntry permits ApplicationCreated, ScoringRun, ManualDecision, WorkerAssigned {
 }

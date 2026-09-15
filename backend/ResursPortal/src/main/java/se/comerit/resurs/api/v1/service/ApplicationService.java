@@ -34,14 +34,17 @@ public class ApplicationService {
     private final ApplicationRepository applicationRepository;
     private final ScoringService scoringService;
     private final AuditLogService auditLogService;
+    private final CaseWorkerAssignmentService caseWorkerAssignmentService;
     private final ObjectMapper objectMapper;
 
     public ApplicationService(CompanyRepository companyRepository, ApplicationRepository applicationRepository,
-            ScoringService scoringService, AuditLogService auditLogService, ObjectMapper objectMapper) {
+            ScoringService scoringService, AuditLogService auditLogService,
+            CaseWorkerAssignmentService caseWorkerAssignmentService, ObjectMapper objectMapper) {
         this.companyRepository = companyRepository;
         this.applicationRepository = applicationRepository;
         this.scoringService = scoringService;
         this.auditLogService = auditLogService;
+        this.caseWorkerAssignmentService = caseWorkerAssignmentService;
         this.objectMapper = objectMapper;
     }
 
@@ -122,17 +125,20 @@ public class ApplicationService {
      */
     @Transactional(readOnly = true)
     public @Nonnull ApplicationDetailsResponse viewApplication(Long id, UserPrincipal principal) {
+        if (principal instanceof CaseWorkerPrincipal caseWorker) {
+            caseWorkerAssignmentService.ensureAssigned(id, caseWorker);
+            Application app = applicationRepository.findByIdWithDocuments(id)
+                    .orElseThrow(() -> new ApplicationNotFoundException(id));
+            return ApplicationMapper.toDetailsResponse(app);
+        }
+
         Application app = applicationRepository.findByIdWithDocuments(id)
                 .orElseThrow(() -> new ApplicationNotFoundException(id));
-
-        if (principal instanceof CaseWorkerPrincipal caseWorker) {
-            return ApplicationMapper.toDetailsResponse(app, caseWorker.name());
-        }
 
         String orgNumber = principal.asCompany().orgNumber();
         if (!app.getCompany().getOrgNumber().equals(orgNumber)) {
             throw new ApplicationNotFoundException(id);
         }
-        return ApplicationMapper.toDetailsResponse(app, app.getCompany().getName());
+        return ApplicationMapper.toDetailsResponse(app);
     }
 }
