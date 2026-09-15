@@ -24,6 +24,7 @@ CREATE TABLE applications (
     decision VARCHAR(20),
     decision_reason TEXT,
     scoring_result TEXT,
+    financial_data TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
