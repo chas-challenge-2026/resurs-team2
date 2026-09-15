@@ -35,6 +35,8 @@ CREATE TABLE documents (
     uploaded_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+
 CREATE TABLE audit_log (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     application_id INT NOT NULL REFERENCES applications(id),
