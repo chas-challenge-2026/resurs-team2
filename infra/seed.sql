@@ -17,6 +17,7 @@ CREATE TABLE case_workers (
 CREATE TABLE applications (
     id SERIAL PRIMARY KEY,
     company_id INT REFERENCES companies(id),
+    case_worker_id INT REFERENCES case_workers(id),
     requested_amount VARCHAR(512),
     purpose TEXT,
     status VARCHAR(30) DEFAULT 'PENDING_DOCS', -- PENDING_DOCS, UNDER_REVIEW, APPROVED, REJECTED
