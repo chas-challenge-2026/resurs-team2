@@ -1,12 +1,14 @@
 package se.comerit.resurs.api.v1.dto;
 
+import java.time.LocalDateTime;
+import java.util.UUID;
 import java.time.Instant;
 
 import jakarta.annotation.Nonnull;
 
 public record DocumentResponse(
     @Nonnull
-    Long id,
+    UUID uuid,
     @Nonnull
     String filename,
     @Nonnull

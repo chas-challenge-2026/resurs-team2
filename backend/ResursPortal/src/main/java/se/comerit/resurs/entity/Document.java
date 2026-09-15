@@ -1,5 +1,6 @@
 package se.comerit.resurs.entity;
 
+import java.util.UUID;
 import java.time.Instant;
 
 import jakarta.annotation.Nonnull;
@@ -7,8 +8,6 @@ import jakarta.annotation.Nullable;
 import jakarta.persistence.Column;
 import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
@@ -17,12 +16,15 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
+
+
 @Entity
 @Table(name = "documents")
 public class Document {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @Column(name = "uuid", nullable = false)
+
+    private UUID uuid = UUID.randomUUID();
 
     @ManyToOne
     @NotNull
@@ -38,13 +40,16 @@ public class Document {
     @NotBlank
     @Size(max = 50)
     private String docType;
-    
+
     @Column(name = "uploaded_at")
     @Nullable
     private Instant uploadedAt;
 
     @PrePersist
     protected void onCreate() {
+        if (uuid == null) {
+            uuid = UUID.randomUUID();
+        }
         uploadedAt = Instant.now();
     }
 
@@ -59,8 +64,11 @@ public class Document {
     }
 
     @Nullable
-    public Long getId() {
-        return id;
+    public UUID getUuid() {
+        return uuid;
+    }
+
+    public void setUuid(@Nonnull UUID uuid) {this.uuid = uuid;
     }
 
     @Nonnull

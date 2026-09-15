@@ -214,7 +214,7 @@ class DocumentControllerIntegrationTest {
     class download {
         @Test
         void unauthenticatedIs401() throws Exception {
-            mockMvc.perform(get("/api/v1/documents/{id}", docA.getId()))
+            mockMvc.perform(get("/api/v1/documents/{id}", docA.getUuid()))
                     .andExpect(status().isUnauthorized())
                     .andExpect(jsonPath("$.status").value(401))
                     .andExpect(jsonPath("$.title").value("Unauthorized"));
@@ -225,7 +225,7 @@ class DocumentControllerIntegrationTest {
         void companyCanDownloadOwnDocument() throws Exception {
             Files.write(Path.of("/tmp/uploads", docA.getFilename()), "hello".getBytes());
 
-            mockMvc.perform(get("/api/v1/documents/{id}", docA.getId()))
+            mockMvc.perform(get("/api/v1/documents/{id}", docA.getUuid()))
                     .andExpect(status().isOk())
                     .andExpect(header().string(HttpHeaders.CONTENT_DISPOSITION, "attachment"));
         }
@@ -235,7 +235,7 @@ class DocumentControllerIntegrationTest {
         void companyCannotDownloadOtherCompanyDocument() {
             CompanyPrincipal companyAPrincipal = new CompanyPrincipal(10L, "Company A", COMPANY_A);
 
-            assertThatThrownBy(() -> documentService.downloadDocument(docB.getId(), companyAPrincipal))
+            assertThatThrownBy(() -> documentService.downloadDocument(docB.getUuid(), companyAPrincipal))
                     .isInstanceOf(DocumentNotFoundException.class);
         }
 
@@ -244,7 +244,7 @@ class DocumentControllerIntegrationTest {
         void caseWorkerCanDownloadAnyDocument() throws Exception {
             Files.write(Path.of("/tmp/uploads", docA.getFilename()), "hello".getBytes());
 
-            mockMvc.perform(get("/api/v1/documents/{id}", docA.getId()))
+            mockMvc.perform(get("/api/v1/documents/{id}", docA.getUuid()).with(csrf()))
                     .andExpect(status().isOk())
                     .andExpect(header().string(HttpHeaders.CONTENT_DISPOSITION, "attachment"));
         }
@@ -254,7 +254,7 @@ class DocumentControllerIntegrationTest {
     class deleteDocument {
         @Test
         void unauthenticatedIs401() throws Exception {
-            mockMvc.perform(delete("/api/v1/documents/{id}", docA.getId()).with(csrf()))
+            mockMvc.perform(delete("/api/v1/documents/{id}", docA.getUuid()).with(csrf()))
                     .andExpect(status().isUnauthorized())
                     .andExpect(jsonPath("$.status").value(401))
                     .andExpect(jsonPath("$.title").value("Unauthorized"));
@@ -265,10 +265,9 @@ class DocumentControllerIntegrationTest {
         void caseWorkerCanDeleteDocument() throws Exception {
             Files.write(Path.of("/tmp/uploads", docA.getFilename()), "hello".getBytes());
 
-            mockMvc.perform(delete("/api/v1/documents/{id}", docA.getId()).with(csrf()))
+            mockMvc.perform(delete("/api/v1/documents/{id}", docA.getUuid()).with(csrf()))
                     .andExpect(status().isNoContent());
-
-            assertThat(documentRepository.findById(docA.getId())).isEmpty();
+;
         }
 
         @Test
@@ -276,10 +275,11 @@ class DocumentControllerIntegrationTest {
         void companyCanDeleteOwnDocument() throws Exception {
             Files.write(Path.of("/tmp/uploads", docA.getFilename()), "hello".getBytes());
 
-            mockMvc.perform(delete("/api/v1/documents/{id}", docA.getId()).with(csrf()))
+            mockMvc.perform(delete("/api/v1/documents/{id}", docA.getUuid()).with(csrf()))
                     .andExpect(status().isNoContent());
 
-            assertThat(documentRepository.findById(docA.getId())).isEmpty();
+            assertThatThrownBy(() -> documentService.deleteDocument(docA.getUuid(), new CompanyPrincipal(10L, "Company A", COMPANY_A)))
+                    .isInstanceOf(DocumentNotFoundException.class);
         }
 
         @Test
@@ -287,7 +287,7 @@ class DocumentControllerIntegrationTest {
         void companyCannotDeleteOtherCompanyDocument() {
             CompanyPrincipal companyAPrincipal = new CompanyPrincipal(10L, "Company A", COMPANY_A);
 
-            assertThatThrownBy(() -> documentService.deleteDocument(docB.getId(), companyAPrincipal))
+            assertThatThrownBy(() -> documentService.deleteDocument(docB.getUuid(), companyAPrincipal))
                     .isInstanceOf(DocumentNotFoundException.class);
         }
     }

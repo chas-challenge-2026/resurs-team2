@@ -89,7 +89,7 @@ public final class ApplicationMapper {
 
     public static DocumentResponse toDocumentResponse(Document document) {
         return new DocumentResponse(
-                document.getId(),
+                document.getUuid(),
                 document.getFilename(),
                 document.getDocType(),
                 document.getUploadedAt());

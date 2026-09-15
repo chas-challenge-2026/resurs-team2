@@ -15,6 +15,7 @@ import se.comerit.resurs.api.v1.service.DocumentService;
 import se.comerit.resurs.security.UserPrincipal;
 
 import java.util.List;
+import java.util.UUID;
 
 
 /**
@@ -53,9 +54,8 @@ public class DocumentController {
     @PostMapping(
             path = "applications/{id}/documents",
             consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-
     public ResponseEntity<DocumentDto> uploadDocument(
-            @RequestParam Long id,
+            @PathVariable Long id,
             @RequestParam String docType,
             @RequestParam MultipartFile file,
             @AuthenticationPrincipal UserPrincipal principal) {
@@ -75,7 +75,7 @@ public class DocumentController {
     @PreAuthorize("hasAnyRole('COMPANY', 'CASE_WORKER')")
     @GetMapping("/documents/{id}")
     public ResponseEntity<Resource> downloadDocument(
-            @PathVariable Long id,
+            @PathVariable UUID id,
             @AuthenticationPrincipal UserPrincipal principal) {
 
 
@@ -84,14 +84,14 @@ public class DocumentController {
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION,
                         "attachment")
-                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .contentType(MediaType.APPLICATION_PDF)
                 .body(resource);
     }
 
     @PreAuthorize("hasAnyRole('COMPANY', 'CASE_WORKER')")
     @DeleteMapping("/documents/{id}")
     public ResponseEntity<Void> deleteDocument(
-            @PathVariable Long id,
+            @PathVariable UUID id,
             @AuthenticationPrincipal UserPrincipal principal) {
 
 
