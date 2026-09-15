@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.internal.util.Primitives.defaultValue;
 
+import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Proxy;
 import java.math.BigDecimal;
@@ -13,6 +14,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 
 import org.junit.jupiter.api.Test;
+import org.springframework.core.io.Resource;
 import org.springframework.mock.web.MockMultipartFile;
 
 import se.comerit.resurs.api.v1.dto.DocumentDto;
@@ -170,7 +172,7 @@ class DocumentServiceTest {
     }
 
     @Test
-    void uploadDocument_twoFilesWithSameName() {
+    void uploadDocument_twoFilesWithSameName() throws IOException {
         Company company = company("556677-8899");
 
         Application application = application(company, "Rörelsekapital");
@@ -191,19 +193,25 @@ class DocumentServiceTest {
                         documentsByApplication,
                         nextDocumentId));
 
+        String content1 = "%PDF-1.4 first file";
+        String content2 = "%PDF-1.4 second file";
+
         MockMultipartFile file1 = new MockMultipartFile(
                 "file",
                 "report.pdf",
                 "application/pdf",
-                "%PDF-1.4 test file 1".getBytes(StandardCharsets.UTF_8)
+                content1.getBytes(StandardCharsets.UTF_8)
         );
 
         MockMultipartFile file2 = new MockMultipartFile(
                 "file",
                 "report.pdf",
                 "application/pdf",
-                "%PDF-1.4 test file 2".getBytes(StandardCharsets.UTF_8)
+                content2.getBytes(StandardCharsets.UTF_8)
         );
+
+        CompanyPrincipal principal =
+                new CompanyPrincipal(1L, "customer", "556677-8899");
 
         DocumentDto saved1 = service.uploadDocument(
                 7L,
@@ -218,16 +226,29 @@ class DocumentServiceTest {
                 new CompanyPrincipal(1L, "customer", "556677-8899"));
 
         assertThat(saved1.filename())
+                .isNotEqualTo(saved2.filename());
+
+        assertThat(saved1.filename())
                 .isEqualTo(saved1.uuid() + ".pdf");
 
         assertThat(saved2.filename())
                 .isEqualTo(saved2.uuid() + ".pdf");
 
-        assertThat(saved1.filename())
-                .isNotEqualTo(saved2.filename());
+        Resource downloaded1 =
+                service.downloadDocument(saved1.uuid(), principal);
 
-        assertThat(documentsByApplication.get(7L))
-                .hasSize(2);
+        Resource downloaded2 =
+                service.downloadDocument(saved2.uuid(), principal);
+
+        assertThat(new String(
+                downloaded1.getInputStream().readAllBytes(),
+                StandardCharsets.UTF_8))
+                .isEqualTo(content1);
+
+        assertThat(new String(
+                downloaded2.getInputStream().readAllBytes(),
+                StandardCharsets.UTF_8))
+                .isEqualTo(content2);
     }
 
 
