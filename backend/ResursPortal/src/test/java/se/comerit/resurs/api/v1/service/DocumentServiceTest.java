@@ -93,10 +93,17 @@ class DocumentServiceTest {
                 file,
                 new CompanyPrincipal(1L, "customer", "556677-8899"));
 
-        assertThat(saved.filename()).startsWith("7_").endsWith("_report.pdf");
-        assertThat(saved.docType()).isEqualTo("AnnualReview");
-        assertThat(application.getStatus()).isEqualTo(ApplicationStatus.UNDER_REVIEW);
-        assertThat(documentsByApplication.get(7L)).hasSize(1);
+        assertThat(saved.filename())
+                .isEqualTo(saved.uuid() + ".pdf");
+
+        assertThat(saved.docType())
+                .isEqualTo("AnnualReview");
+
+        assertThat(application.getStatus())
+                .isEqualTo(ApplicationStatus.UNDER_REVIEW);
+
+        assertThat(documentsByApplication.get(7L))
+                .hasSize(1);
     }
 
     @Test
@@ -161,6 +168,69 @@ class DocumentServiceTest {
                         new CompanyPrincipal(1L, "customer", "556677-8899")))
                 .isInstanceOf(DocumentNotFoundException.class);
     }
+
+    @Test
+    void uploadDocument_twoFilesWithSameName() {
+        Company company = company("556677-8899");
+
+        Application application = application(company, "Rörelsekapital");
+        setId(application);
+        application.setStatus(ApplicationStatus.PENDING_DOCS);
+
+        Map<Long, Application> applications = new HashMap<>();
+        applications.put(7L, application);
+
+        Map<UUID, Document> documentsById = new HashMap<>();
+        Map<Long, List<Document>> documentsByApplication = new HashMap<>();
+        AtomicLong nextDocumentId = new AtomicLong(1L);
+
+        DocumentService service = new DocumentService(
+                applicationRepository(applications, new AtomicLong(50)),
+                documentRepository(
+                        documentsById,
+                        documentsByApplication,
+                        nextDocumentId));
+
+        MockMultipartFile file1 = new MockMultipartFile(
+                "file",
+                "report.pdf",
+                "application/pdf",
+                "%PDF-1.4 test file 1".getBytes(StandardCharsets.UTF_8)
+        );
+
+        MockMultipartFile file2 = new MockMultipartFile(
+                "file",
+                "report.pdf",
+                "application/pdf",
+                "%PDF-1.4 test file 2".getBytes(StandardCharsets.UTF_8)
+        );
+
+        DocumentDto saved1 = service.uploadDocument(
+                7L,
+                "AnnualReview",
+                file1,
+                new CompanyPrincipal(1L, "customer", "556677-8899"));
+
+        DocumentDto saved2 = service.uploadDocument(
+                7L,
+                "AnnualReview",
+                file2,
+                new CompanyPrincipal(1L, "customer", "556677-8899"));
+
+        assertThat(saved1.filename())
+                .isEqualTo(saved1.uuid() + ".pdf");
+
+        assertThat(saved2.filename())
+                .isEqualTo(saved2.uuid() + ".pdf");
+
+        assertThat(saved1.filename())
+                .isNotEqualTo(saved2.filename());
+
+        assertThat(documentsByApplication.get(7L))
+                .hasSize(2);
+    }
+
+
 
     private static ApplicationRepository applicationRepository(
             Map<Long, Application> applications,
@@ -250,8 +320,7 @@ class DocumentServiceTest {
                     }
 
 
-                    if (args != null && args.length == 1 && args[0] instanceof UUID) {
-                        UUID id = (UUID) args[0];
+                    if (args != null && args.length == 1 && args[0] instanceof UUID id) {
                         return Optional.ofNullable(byId.get(id));
                     }
 
