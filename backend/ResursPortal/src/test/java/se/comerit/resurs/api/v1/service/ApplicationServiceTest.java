@@ -70,7 +70,14 @@ class ApplicationServiceTest {
         applicationService = new ApplicationService(
                 companyRepository, applicationRepository, scoringService, auditLogService,
                 caseWorkerAssignmentService, objectMapper,
-                emailService);
+                emailService, null);
+        try {
+            var field = ApplicationService.class.getDeclaredField("self");
+            field.setAccessible(true);
+            field.set(applicationService, applicationService);
+        } catch (ReflectiveOperationException e) {
+            throw new IllegalStateException("Failed to set self reference", e);
+        }
 
         company = new Company("556677-8899", "Testbolaget AB", "Kalle Kula");
 

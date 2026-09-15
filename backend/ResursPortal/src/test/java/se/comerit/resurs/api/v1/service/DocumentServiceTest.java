@@ -202,13 +202,15 @@ class DocumentServiceTest {
         Map<Long, List<Document>> documentsByApplication = new HashMap<>();
         AtomicLong nextDocumentId = new AtomicLong(1L);
 
+        EmailService emailService = mock(EmailService.class);
+
         DocumentService service = new DocumentService(
                 applicationRepository(applications, new AtomicLong(50)),
                 documentRepository(
                         documentsById,
                         documentsByApplication,
                         nextDocumentId),
-                    mock(EmailService.class));
+                emailService);
 
         String content1 = "%PDF-1.4 first file";
         String content2 = "%PDF-1.4 second file";

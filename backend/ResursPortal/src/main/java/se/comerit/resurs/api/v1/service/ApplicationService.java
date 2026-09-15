@@ -3,6 +3,9 @@ package se.comerit.resurs.api.v1.service;
 import java.util.List;
 import java.util.Optional;
 
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Lazy;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -34,11 +37,15 @@ public class ApplicationService {
     private final CaseWorkerAssignmentService caseWorkerAssignmentService;
     private final ObjectMapper objectMapper;
     private final EmailService emailService;
+    private final ApplicationService self;
+
+    @Value("${resurs.scoring.delay-ms:20000}")
+    private long scoringDelayMs;
 
     public ApplicationService(CompanyRepository companyRepository, ApplicationRepository applicationRepository,
             ScoringService scoringService, AuditLogService auditLogService,
             CaseWorkerAssignmentService caseWorkerAssignmentService, ObjectMapper objectMapper,
-            EmailService emailService) {
+            EmailService emailService, @Lazy ApplicationService self) {
         this.companyRepository = companyRepository;
         this.applicationRepository = applicationRepository;
         this.scoringService = scoringService;
@@ -46,6 +53,7 @@ public class ApplicationService {
         this.caseWorkerAssignmentService = caseWorkerAssignmentService;
         this.objectMapper = objectMapper;
         this.emailService = emailService;
+        this.self = self;
     }
 
     public Optional<Company> getCompany(String orgNumber) {
@@ -81,9 +89,21 @@ public class ApplicationService {
 
         auditLogService.append(app, new ApplicationCreated(orgNumber));
 
-        scoringService.scoreApplication(app.getId());
+        self.runScoringAsync(app.getId());
 
         return app.getId();
+    }
+
+    @Async
+    public void runScoringAsync(Long applicationId) {
+        try {
+            Thread.sleep(scoringDelayMs);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return;
+        }
+
+        scoringService.scoreApplication(applicationId);
     }
 
     /**
