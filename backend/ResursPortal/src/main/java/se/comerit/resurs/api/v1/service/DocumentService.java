@@ -25,6 +25,9 @@ import java.util.UUID;
 @Service
 public class DocumentService {
 
+    /** Return type pairing the file content with the user-facing original filename. */
+    public record DocumentDownload(org.springframework.core.io.Resource resource, String originalFilename) {}
+
     private final ApplicationRepository applicationRepository;
     private final DocumentRepository documentRepository;
     private final EmailService emailService;
@@ -72,7 +75,7 @@ public class DocumentService {
         return DocumentDto.from(document);
     }
 
-    public Resource downloadDocument(UUID uuid, UserPrincipal principal) {
+    public DocumentDownload downloadDocument(UUID uuid, UserPrincipal principal) {
         Document document = documentRepository
                 .findByUuid(uuid)
                 .orElseThrow(() -> new DocumentNotFoundException(uuid));
@@ -80,7 +83,8 @@ public class DocumentService {
         checkDocumentAccess(document, principal);
 
         try {
-            return fileStorageService.download(document.getFilename());
+            Resource resource = fileStorageService.download(document.getFilename());
+            return new DocumentDownload(resource, document.getOriginalFilename());
         } catch (IOException e) {
             throw new DocumentNotFoundException(uuid);
         }

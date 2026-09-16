@@ -3,6 +3,7 @@ package se.comerit.resurs.api.v1.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -226,7 +227,10 @@ class DocumentControllerIntegrationTest {
 
             mockMvc.perform(get("/api/v1/documents/{id}", docA.getUuid()))
                     .andExpect(status().isOk())
-                    .andExpect(header().string(HttpHeaders.CONTENT_DISPOSITION, "attachment"));
+                    .andExpect(header().string(HttpHeaders.CONTENT_DISPOSITION,
+                            containsString("attachment")))
+                    .andExpect(header().string(HttpHeaders.CONTENT_DISPOSITION,
+                            containsString("annual-review.pdf")));
         }
 
         @Test
@@ -245,7 +249,10 @@ class DocumentControllerIntegrationTest {
 
             mockMvc.perform(get("/api/v1/documents/{id}", docA.getUuid()).with(csrf()))
                     .andExpect(status().isOk())
-                    .andExpect(header().string(HttpHeaders.CONTENT_DISPOSITION, "attachment"));
+                    .andExpect(header().string(HttpHeaders.CONTENT_DISPOSITION,
+                            containsString("attachment")))
+                    .andExpect(header().string(HttpHeaders.CONTENT_DISPOSITION,
+                            containsString("annual-review.pdf")));
         }
     }
 

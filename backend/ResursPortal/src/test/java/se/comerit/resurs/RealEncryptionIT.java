@@ -28,10 +28,12 @@ import se.comerit.resurs.api.v1.service.ResursCryptoServiceImpl;
 import se.comerit.resurs.entity.Application;
 import se.comerit.resurs.entity.AuditLog;
 import se.comerit.resurs.entity.Company;
+import se.comerit.resurs.entity.Document;
 import se.comerit.resurs.exception.CryptoException;
 import se.comerit.resurs.repository.ApplicationRepository;
 import se.comerit.resurs.repository.AuditLogRepository;
 import se.comerit.resurs.repository.CompanyRepository;
+import se.comerit.resurs.repository.DocumentRepository;
 
 /**
  * Full-stack encryption test against the real native module.
@@ -88,6 +90,9 @@ class RealEncryptionIT {
 
     @Autowired
     private AuditLogRepository auditLogRepository;
+
+    @Autowired
+    private DocumentRepository documentRepository;
 
     @Autowired
     private ResursCryptoService cryptoService;
@@ -242,6 +247,33 @@ class RealEncryptionIT {
 
         // 3. Decrypts back to the original audit entry payload (AES-256-GCM, real key)
         assertThat(cryptoService.decryptPii(blob)).isEqualTo(plaintext);
+    }
+
+    @Test
+    void documentOriginalFilenameIsStoredEncryptedAtRest() {
+        Company company = companyRepository.save(
+                new Company("556000-9999", "Dokument AB", "Fil Test"));
+        Application application = applicationRepository.save(
+                new Application(company, new BigDecimal("120000.00"), "Rörelsekapital"));
+
+        String originalFilename = "Årsredovisning 2026.pdf";
+        Document document = new Document(application, originalFilename, "AnnualReview");
+        document.setFilename(document.getUuid() + ".pdf");
+        documentRepository.save(document);
+
+        String storedOriginal = jdbcTemplate.queryForObject(
+                "SELECT original_filename FROM documents WHERE uuid = ?",
+                String.class, document.getUuid());
+
+        // 1. Not plaintext, and 2. exactly [12 nonce][1 key version][N plaintext][16 tag]
+        assertThat(storedOriginal).isNotEqualTo(originalFilename);
+        byte[] originalBlob = Base64.getDecoder().decode(storedOriginal);
+        assertThat(originalBlob)
+                .hasSize(NONCE_LEN + KEY_VERSION_LEN + originalFilename.getBytes(StandardCharsets.UTF_8).length + TAG_LEN);
+        assertThat(originalBlob[NONCE_LEN]).isEqualTo((byte) 1);
+
+        // 3. Decrypts back to the original file name (AES-256-GCM, real key)
+        assertThat(cryptoService.decryptPii(originalBlob)).isEqualTo(originalFilename);
     }
 
     private static Path writeTempKeyFile() {

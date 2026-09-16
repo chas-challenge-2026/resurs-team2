@@ -132,7 +132,7 @@ class DocumentServiceTest {
                 new CompanyPrincipal(1L, "customer", "556677-8899"));
 
         assertThat(saved.filename())
-                .isEqualTo(saved.uuid() + ".pdf");
+                .isEqualTo("report.pdf");
 
         assertThat(saved.docType())
                 .isEqualTo("AnnualReview");
@@ -271,25 +271,35 @@ class DocumentServiceTest {
                 new CompanyPrincipal(1L, "customer", "556677-8899"));
 
         assertThat(saved1.filename())
-                .isNotEqualTo(saved2.filename());
-
-        assertThat(saved1.filename())
-                .isEqualTo(saved1.uuid() + ".pdf");
+                .isEqualTo("report.pdf");
 
         assertThat(saved2.filename())
-                .isEqualTo(saved2.uuid() + ".pdf");
+                .isEqualTo("report.pdf");
 
-        Resource downloaded1 = service.downloadDocument(saved1.uuid(), principal);
+        // Same original filename must not collide on disk: storage keys stay distinct
+        List<Document> stored = documentsByApplication.get(7L);
+        assertThat(stored).hasSize(2);
+        assertThat(stored.get(0).getFilename())
+                .isNotEqualTo(stored.get(1).getFilename());
 
-        Resource downloaded2 = service.downloadDocument(saved2.uuid(), principal);
+        DocumentService.DocumentDownload downloaded1 =
+                service.downloadDocument(saved1.uuid(), principal);
+
+        DocumentService.DocumentDownload downloaded2 =
+                service.downloadDocument(saved2.uuid(), principal);
+
+        assertThat(downloaded1.originalFilename())
+                .isEqualTo("report.pdf");
+        assertThat(downloaded2.originalFilename())
+                .isEqualTo("report.pdf");
 
         assertThat(new String(
-                downloaded1.getInputStream().readAllBytes(),
+                downloaded1.resource().getInputStream().readAllBytes(),
                 StandardCharsets.UTF_8))
                 .isEqualTo(content1);
 
         assertThat(new String(
-                downloaded2.getInputStream().readAllBytes(),
+                downloaded2.resource().getInputStream().readAllBytes(),
                 StandardCharsets.UTF_8))
                 .isEqualTo(content2);
     }

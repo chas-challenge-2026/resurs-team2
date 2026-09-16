@@ -1,6 +1,7 @@
 package se.comerit.resurs.api.v1.controller;
 
 import org.springframework.core.io.Resource;
+import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -81,14 +82,16 @@ public class DocumentController {
             @PathVariable UUID id,
             @AuthenticationPrincipal UserPrincipal principal) {
 
+        DocumentService.DocumentDownload download = documentService.downloadDocument(id, principal);
 
-        Resource resource = documentService.downloadDocument(id,principal);
+        ContentDisposition contentDisposition = ContentDisposition.attachment()
+                .filename(download.originalFilename())
+                .build();
 
         return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION,
-                        "attachment")
+                .header(HttpHeaders.CONTENT_DISPOSITION, contentDisposition.toString())
                 .contentType(MediaType.APPLICATION_PDF)
-                .body(resource);
+                .body(download.resource());
     }
 
     @PreAuthorize("hasAnyRole('COMPANY', 'CASE_WORKER')")
