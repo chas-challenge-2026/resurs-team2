@@ -129,7 +129,7 @@ public class ApplicationService {
             caseWorkerAssignmentService.ensureAssigned(id, caseWorker);
             Application app = applicationRepository.findByIdWithDocuments(id)
                     .orElseThrow(() -> new ApplicationNotFoundException(id));
-            return ApplicationMapper.toDetailsResponse(app);
+            return ApplicationMapper.toDetailsResponse(app, app.getFinancialData());
         }
 
         Application app = applicationRepository.findByIdWithDocuments(id)
