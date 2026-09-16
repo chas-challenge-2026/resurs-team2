@@ -25,10 +25,12 @@ import java.util.UUID;
  * TODO: implement PDF parsing in v2 (see native/README.md)
  * <p>
  * Anti-patterns:
- * - Filer sparas i /tmp/uploads — rensas vid omstart
  * - Ingen validering av filtyp (accepterar vad som helst)
  * - Audit log uppdateras via JSON string manipulation
  * - Session check copy-pasteat
+ * <p>
+ * Lagring: filer sparas via FileStorageService (local disk eller S3),
+ * se storage.type i application.properties.
  */
 @RestController
 @RequestMapping("/api/v1")

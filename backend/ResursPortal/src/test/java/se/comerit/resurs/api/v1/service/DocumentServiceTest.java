@@ -4,8 +4,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.internal.util.Primitives.defaultValue;
+import static org.mockito.Mockito.when;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.lang.reflect.Field;
 import java.lang.reflect.Proxy;
 import java.math.BigDecimal;
@@ -13,8 +16,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;
 
-
 import org.junit.jupiter.api.Test;
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
 import org.springframework.mock.web.MockMultipartFile;
 
@@ -32,6 +35,33 @@ import se.comerit.resurs.security.CompanyPrincipal;
 
 class DocumentServiceTest {
 
+    private static FileStorageService stubStorage() {
+        return new FileStorageService() {
+            private final Map<String, byte[]> files = new HashMap<>();
+
+            @Override
+            public String upload(java.util.UUID documentId, String originalFilename, InputStream inputStream, long size)
+                    throws IOException {
+                String key = documentId + ".pdf";
+                files.put(key, inputStream.readAllBytes());
+                return key;
+            }
+
+            @Override
+            public Resource download(String storedFilename) throws IOException {
+                byte[] content = files.get(storedFilename);
+                if (content == null)
+                    throw new java.io.FileNotFoundException(storedFilename);
+                return new ByteArrayResource(content);
+            }
+
+            @Override
+            public void delete(String storedFilename) throws IOException {
+                files.remove(storedFilename);
+            }
+        };
+    }
+
     @Test
     void getDocuments_returnsDocumentsForMatchingApplication() {
         Company company = company("556677-8899");
@@ -41,14 +71,12 @@ class DocumentServiceTest {
         Document older = new Document(application, "older.pdf", "AnnualReview");
         Document newer = new Document(application, "newer.pdf", "BankStatement");
 
-
         Map<Long, Application> applications = new HashMap<>();
         applications.put(7L, application);
 
         Map<UUID, Document> byId = new HashMap<>();
-        byId.put(new UUID(0L,11L), older);
-
-        byId.put(new UUID(0L,12L), newer);
+        byId.put(new UUID(0L, 11L), older);
+        byId.put(new UUID(0L, 12L), newer);
 
         Map<Long, List<Document>> byApplication = new HashMap<>();
         byApplication.put(7L, List.of(newer, older));
@@ -58,7 +86,8 @@ class DocumentServiceTest {
         DocumentService service = new DocumentService(
                 applicationRepository(applications, new AtomicLong(100)),
                 documentRepository(byId, byApplication, new AtomicLong(1000)),
-                emailService);
+                emailService,
+                stubStorage());
 
         List<DocumentDto> result = service.getDocuments(
                 7L,
@@ -87,14 +116,14 @@ class DocumentServiceTest {
         DocumentService service = new DocumentService(
                 applicationRepository(applications, new AtomicLong(50)),
                 documentRepository(documentsById, documentsByApplication, nextDocumentId),
-                emailService);
+                emailService,
+                stubStorage());
 
         MockMultipartFile file = new MockMultipartFile(
                 "file",
                 "report.pdf",
                 "application/pdf",
-                "%PDF-1.4\n1 0 obj\n<<>>\nendobj\ntrailer\n<<>>\n%%EOF".getBytes(StandardCharsets.UTF_8)
-        );
+                "%PDF-1.4\n1 0 obj\n<<>>\nendobj\ntrailer\n<<>>\n%%EOF".getBytes(StandardCharsets.UTF_8));
 
         DocumentDto saved = service.uploadDocument(
                 7L,
@@ -122,7 +151,8 @@ class DocumentServiceTest {
         DocumentService service = new DocumentService(
                 applicationRepository(new HashMap<>(), new AtomicLong(1L)),
                 documentRepository(new HashMap<>(), new HashMap<>(), new AtomicLong(1L)),
-                emailService);
+                emailService,
+                stubStorage());
 
         MockMultipartFile emptyFile = new MockMultipartFile(
                 "file",
@@ -130,9 +160,8 @@ class DocumentServiceTest {
                 "application/pdf",
                 new byte[0]);
 
-        assertThatThrownBy(() ->
-                service.uploadDocument(7L, "AnnualReview", emptyFile,
-                        new CompanyPrincipal(1L, "customer", "556677-8899")))
+        assertThatThrownBy(() -> service.uploadDocument(7L, "AnnualReview", emptyFile,
+                new CompanyPrincipal(1L, "customer", "556677-8899")))
                 .isInstanceOf(EmptyFileException.class);
     }
 
@@ -150,10 +179,10 @@ class DocumentServiceTest {
         DocumentService service = new DocumentService(
                 applicationRepository(applications, new AtomicLong(1L)),
                 documentRepository(new HashMap<>(), new HashMap<>(), new AtomicLong(1L)),
-                emailService);
+                emailService,
+                stubStorage());
 
-        assertThatThrownBy(() ->
-                service.getDocuments(7L, new CompanyPrincipal(1L, "customer", "556677-8899")))
+        assertThatThrownBy(() -> service.getDocuments(7L, new CompanyPrincipal(1L, "customer", "556677-8899")))
                 .isInstanceOf(ApplicationNotFoundException.class);
     }
 
@@ -171,19 +200,18 @@ class DocumentServiceTest {
         applications.put(7L, application);
 
         Map<UUID, Document> byId = new HashMap<>();
-        byId.put(new UUID(0L,21L), document);
-
+        byId.put(new UUID(0L, 21L), document);
 
         EmailService emailService = mock(EmailService.class);
 
         DocumentService service = new DocumentService(
                 applicationRepository(applications, new AtomicLong(1L)),
                 documentRepository(byId, Map.of(7L, List.of(document)), new AtomicLong(1L)),
-                emailService);
+                emailService,
+                stubStorage());
 
-        assertThatThrownBy(() ->
-                service.downloadDocument(new UUID(0L,21L),
-                        new CompanyPrincipal(1L, "customer", "556677-8899")))
+        assertThatThrownBy(() -> service.downloadDocument(new UUID(0L, 21L),
+                new CompanyPrincipal(1L, "customer", "556677-8899")))
                 .isInstanceOf(DocumentNotFoundException.class);
     }
 
@@ -210,7 +238,8 @@ class DocumentServiceTest {
                         documentsById,
                         documentsByApplication,
                         nextDocumentId),
-                emailService);
+                emailService,
+                stubStorage());
 
         String content1 = "%PDF-1.4 first file";
         String content2 = "%PDF-1.4 second file";
@@ -219,18 +248,15 @@ class DocumentServiceTest {
                 "file",
                 "report.pdf",
                 "application/pdf",
-                content1.getBytes(StandardCharsets.UTF_8)
-        );
+                content1.getBytes(StandardCharsets.UTF_8));
 
         MockMultipartFile file2 = new MockMultipartFile(
                 "file",
                 "report.pdf",
                 "application/pdf",
-                content2.getBytes(StandardCharsets.UTF_8)
-        );
+                content2.getBytes(StandardCharsets.UTF_8));
 
-        CompanyPrincipal principal =
-                new CompanyPrincipal(1L, "customer", "556677-8899");
+        CompanyPrincipal principal = new CompanyPrincipal(1L, "customer", "556677-8899");
 
         DocumentDto saved1 = service.uploadDocument(
                 7L,
@@ -253,11 +279,9 @@ class DocumentServiceTest {
         assertThat(saved2.filename())
                 .isEqualTo(saved2.uuid() + ".pdf");
 
-        Resource downloaded1 =
-                service.downloadDocument(saved1.uuid(), principal);
+        Resource downloaded1 = service.downloadDocument(saved1.uuid(), principal);
 
-        Resource downloaded2 =
-                service.downloadDocument(saved2.uuid(), principal);
+        Resource downloaded2 = service.downloadDocument(saved2.uuid(), principal);
 
         assertThat(new String(
                 downloaded1.getInputStream().readAllBytes(),
@@ -269,8 +293,6 @@ class DocumentServiceTest {
                 StandardCharsets.UTF_8))
                 .isEqualTo(content2);
     }
-
-
 
     private static ApplicationRepository applicationRepository(
             Map<Long, Application> applications,
@@ -316,22 +338,19 @@ class DocumentServiceTest {
 
         return (DocumentRepository) Proxy.newProxyInstance(
                 DocumentRepository.class.getClassLoader(),
-                new Class<?>[]{DocumentRepository.class},
+                new Class<?>[] { DocumentRepository.class },
                 (proxy, method, args) -> {
                     String name = method.getName();
-
 
                     if ("findById".equals(name) || "findByUuid".equals(name)) {
                         UUID id = (UUID) args[0];
                         return Optional.ofNullable(byId.get(id));
                     }
 
-
                     if ("findByApplicationId".equals(name) || "findByApplicationIdOrderByUploadedAtDesc".equals(name)) {
                         Long appId = (Long) args[0];
                         return byApplication.getOrDefault(appId, List.of());
                     }
-
 
                     if ("save".equals(name)) {
                         Document document = (Document) args[0];
@@ -345,20 +364,19 @@ class DocumentServiceTest {
                         return document;
                     }
 
-
                     if ("delete".equals(name)) {
                         Document document = (Document) args[0];
                         byId.remove(document.getUuid());
                         Long appId = document.getApplication().getId();
                         List<Document> list = byApplication.get(appId);
-                        if (list != null) list.remove(document);
+                        if (list != null)
+                            list.remove(document);
                         return null;
                     }
 
                     if ("hashCode".equals(name)) {
                         return System.identityHashCode(proxy);
                     }
-
 
                     if (args != null && args.length == 1 && args[0] instanceof UUID id) {
                         return Optional.ofNullable(byId.get(id));
@@ -368,8 +386,27 @@ class DocumentServiceTest {
                 });
     }
 
-
-
+    private static Object defaultValue(Class<?> type) {
+        if (type.isPrimitive()) {
+            if (type == boolean.class)
+                return false;
+            if (type == int.class)
+                return 0;
+            if (type == long.class)
+                return 0L;
+            if (type == double.class)
+                return 0.0;
+            if (type == float.class)
+                return 0.0f;
+            if (type == short.class)
+                return (short) 0;
+            if (type == byte.class)
+                return (byte) 0;
+            if (type == char.class)
+                return '\0';
+        }
+        return null;
+    }
 
     private static Company company(String orgNumber) {
 
@@ -390,7 +427,6 @@ class DocumentServiceTest {
         }
     }
 
-
     private static void setUuid(Object target, Long uuid) {
         try {
             Field field = target.getClass().getDeclaredField("uuid");
@@ -401,6 +437,8 @@ class DocumentServiceTest {
                 field.set(target, new java.util.UUID(0L, uuid));
             }
         } catch (ReflectiveOperationException e) {
-            throw new IllegalStateException("Failed to assign uuid", e);     } }
+            throw new IllegalStateException("Failed to assign uuid", e);
+        }
+    }
 
 }
