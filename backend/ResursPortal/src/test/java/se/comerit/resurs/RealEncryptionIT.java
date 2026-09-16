@@ -175,6 +175,39 @@ class RealEncryptionIT {
     }
 
     @Test
+    void rawBlobRoundTripsBinaryDataThroughNativeEncryptPiiRaw() {
+        // Binary content including NUL bytes - the string path would truncate at
+        // the first 0x00, the raw path must not.
+        byte[] raw = new byte[300];
+        for (int i = 0; i < raw.length; i++) {
+            raw[i] = (byte) (i % 256);
+        }
+
+        byte[] blob = cryptoService.encryptRaw(raw);
+
+        // layout [12 nonce][1 version][N raw][16 tag]
+        assertThat(blob).hasSize(NONCE_LEN + KEY_VERSION_LEN + raw.length + TAG_LEN);
+        assertThat(blob[NONCE_LEN]).isEqualTo((byte) 1);
+        assertThat(blob).isNotEqualTo(raw);
+
+        assertThat(cryptoService.decryptRaw(blob)).isEqualTo(raw);
+    }
+
+    @Test
+    void rawEncryptionUsesARandomNoncePerCall() {
+        byte[] raw = "recurring raw payload".getBytes(StandardCharsets.UTF_8);
+
+        byte[] first = cryptoService.encryptRaw(raw);
+        byte[] second = cryptoService.encryptRaw(raw);
+
+        assertThat(first).isNotEqualTo(second);
+        assertThat(Arrays.copyOfRange(first, 0, NONCE_LEN))
+                .isNotEqualTo(Arrays.copyOfRange(second, 0, NONCE_LEN));
+        assertThat(cryptoService.decryptRaw(first)).isEqualTo(raw);
+        assertThat(cryptoService.decryptRaw(second)).isEqualTo(raw);
+    }
+
+    @Test
     void seededDemoCompanyIsStoredEncrypted() {
         Company seeded = companyRepository.findByOrgNumber("556000-1234").orElseThrow();
         assertThat(seeded.getName()).isEqualTo("Malmö Fastigheter AB");

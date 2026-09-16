@@ -21,4 +21,17 @@ public interface ResursCryptoService {
     byte[] blindIndex(String value);
 
     byte[] generateNonce();
+
+    /**
+     * Encrypts arbitrary binary data (not necessarily a NUL-terminated string).
+     * Produces a blob in the same {@code [nonce:12][key_version:1][ciphertext][tag:16]}
+     * layout as {@link #encryptPii(String)} but safe for file-sized payloads.
+     */
+    byte[] encryptRaw(byte[] data);
+
+    /**
+     * Decrypts a blob produced by {@link #encryptRaw(byte[])} (or the raw
+     * decrypt path of the native library) back into the original bytes.
+     */
+    byte[] decryptRaw(byte[] blob);
 }
