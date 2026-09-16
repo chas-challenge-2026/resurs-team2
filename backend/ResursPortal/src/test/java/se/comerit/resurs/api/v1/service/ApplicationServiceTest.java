@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -22,6 +23,7 @@ import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 
 
+import se.comerit.resurs.api.v1.dto.ApplicationDetailsResponse;
 import se.comerit.resurs.api.v1.dto.ApplicationRequest;
 import se.comerit.resurs.entity.Application;
 import se.comerit.resurs.entity.ApplicationStatus;
@@ -36,10 +38,13 @@ import se.comerit.resurs.rating.ScoringResult;
 import se.comerit.resurs.repository.ApplicationRepository;
 import se.comerit.resurs.repository.AuditLogRepository;
 import se.comerit.resurs.repository.CompanyRepository;
+import se.comerit.resurs.security.CaseWorkerPrincipal;
+import se.comerit.resurs.security.CompanyPrincipal;
 import tools.jackson.databind.ObjectMapper;
 
 /**
- * Unit tests for {@link ApplicationService#submitApplication}.
+ * Unit tests for {@link ApplicationService#submitApplication} and
+ * {@link ApplicationService#viewApplication}.
  *
  * <p>Repositories and the {@link ScoringService} are mocked, while a real
  * {@link AuditLogService} is used so the resulting audit log JSON can be
@@ -120,6 +125,32 @@ class ApplicationServiceTest {
         } catch (ReflectiveOperationException e) {
             throw new IllegalStateException("Failed to assign application id", e);
         }
+    }
+
+    // Application#documents is populated by JPA; make it an empty list so the
+    // mapper can be exercised on a plain unit-test instance.
+    private static void setEmptyDocuments(Application app) {
+        try {
+            var field = Application.class.getDeclaredField("documents");
+            field.setAccessible(true);
+            field.set(app, List.of());
+        } catch (ReflectiveOperationException e) {
+            throw new IllegalStateException("Failed to assign documents", e);
+        }
+    }
+
+    private Application applicationWithFinancialData(Company owner, String financialData) {
+        Application app = new Application(
+                owner,
+                new BigDecimal("300000"),
+                "Rörelsekapital",
+                ApplicationStatus.UNDER_REVIEW,
+                null,
+                null,
+                null,
+                financialData);
+        setEmptyDocuments(app);
+        return app;
     }
 
     @Nested
@@ -317,5 +348,42 @@ class ApplicationServiceTest {
                     && app.getDecision() == null
                     && app.getStatus() == ApplicationStatus.UNDER_REVIEW));
         }
+    }
+
+    @Nested
+    @DisplayName("View application financial data")
+    class ViewApplicationFinancialData {
+
+        @Test
+        @DisplayName("Case worker receives the stored financial data")
+        void caseWorkerReceivesFinancialData() {
+            Application app = applicationWithFinancialData(company, FINANCIAL_DATA);
+            when(applicationRepository.findByIdWithDocuments(42L)).thenReturn(Optional.of(app));
+
+            ApplicationDetailsResponse response = applicationService.viewApplication(
+                    42L,
+                    new CaseWorkerPrincipal(1L, "Karin Handläggare", "karin@resurs.se"));
+
+            assertThat(response.financialData()).isEqualTo(FINANCIAL_DATA);
+            verify(caseWorkerAssignmentService)
+                    .ensureAssigned(eq(42L), any(CaseWorkerPrincipal.class));
+        }
+
+        @Test
+        @DisplayName("Company does not receive financial data on its own application")
+        void companyDoesNotReceiveFinancialData() {
+            Application app = applicationWithFinancialData(company, FINANCIAL_DATA);
+            when(applicationRepository.findByIdWithDocuments(42L)).thenReturn(Optional.of(app));
+
+            ApplicationDetailsResponse response = applicationService.viewApplication(
+                    42L,
+                    new CompanyPrincipal(7L, "Testbolaget AB", "556677-8899"));
+
+            assertThat(response.financialData()).isNull();
+        }
+
+        private static final String FINANCIAL_DATA =
+                "{\"equity\":500000.0,\"totalCapital\":1000000.0,\"netRevenue\":1000000.0,"
+                + "\"requestedAmount\":300000,\"industry\":\"IT\"}";
     }
 }
