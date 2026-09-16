@@ -30,7 +30,8 @@ import java.util.UUID;
  * - Session check copy-pasteat
  * <p>
  * Lagring: filer sparas via FileStorageService (local disk eller S3),
- * se storage.type i application.properties.
+ * se storage.type i application.properties. Filer krypteras i vila via
+ * EncryptedFileStorageService (nativ AES-256-GCM) om storage.encryption.enabled=true.
  */
 @RestController
 @RequestMapping("/api/v1")
