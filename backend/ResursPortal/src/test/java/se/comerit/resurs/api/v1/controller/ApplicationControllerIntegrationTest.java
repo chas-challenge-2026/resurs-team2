@@ -91,6 +91,10 @@ class ApplicationControllerIntegrationTest {
                 """.formatted(amount);
     }
 
+    private static final String FINANCIAL_DATA =
+            "{\"equity\":500000.0,\"totalCapital\":1000000.0,\"netRevenue\":1000000.0,"
+            + "\"requestedAmount\":300000,\"industry\":\"IT\"}";
+
     @Nested
     @DisplayName("POST submit application")
     class Submit {
@@ -336,6 +340,61 @@ class ApplicationControllerIntegrationTest {
                     .andExpect(jsonPath("$.application.decisionReason").value("Godkänd"))
                     .andExpect(jsonPath("$.workerName").value("Karin Handläggare"))
                     .andExpect(jsonPath("$.documents").isEmpty());
+        }
+
+        @Test
+        @WithCaseWorker(name = "Karin Handläggare")
+        @Sql(statements = {
+                "DELETE FROM documents",
+                "DELETE FROM audit_log",
+                "DELETE FROM applications",
+                "DELETE FROM case_workers",
+                "DELETE FROM companies",
+                "INSERT INTO case_workers (id, name, email, email_index, password) VALUES (1, 'Karin Handläggare', 'karin@resurs.se', X'01', 'x')",
+                "INSERT INTO companies (id, org_number, org_number_index, company_name, authorized_signatory) VALUES (760, '556000-1234', X'dedd7d2467a47aac7cc703665899fded7d8013ddecbbbf69e0ff366fd4812ed7', 'Malmö Fastigheter AB', 'Test Person')",
+                "INSERT INTO applications (id, company_id, requested_amount, purpose, status, financial_data) VALUES (760, 760, 300000.00, 'Rörelsekapital', 'UNDER_REVIEW', '" + FINANCIAL_DATA + "')"
+        })
+        void caseWorkerCanSeeFinancialData() throws Exception {
+            mockMvc.perform(get("/api/v1/applications/760"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.application.id").value(760))
+                    .andExpect(jsonPath("$.financialData").value(FINANCIAL_DATA));
+        }
+
+        @Test
+        @WithCompany(orgNumber = "556000-1234")
+        @Sql(statements = {
+                "DELETE FROM documents",
+                "DELETE FROM audit_log",
+                "DELETE FROM applications",
+                "DELETE FROM companies",
+                "INSERT INTO companies (id, org_number, org_number_index, company_name, authorized_signatory) VALUES (770, '556000-1234', X'dedd7d2467a47aac7cc703665899fded7d8013ddecbbbf69e0ff366fd4812ed7', 'Malmö Fastigheter AB', 'Test Person')",
+                "INSERT INTO applications (id, company_id, requested_amount, purpose, status, financial_data) VALUES (770, 770, 300000.00, 'Rörelsekapital', 'UNDER_REVIEW', '" + FINANCIAL_DATA + "')"
+        })
+        void companyCannotSeeFinancialData() throws Exception {
+            mockMvc.perform(get("/api/v1/applications/770"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.application.id").value(770))
+                    .andExpect(jsonPath("$.financialData").doesNotExist());
+        }
+
+        @Test
+        @WithCaseWorker(name = "Karin Handläggare")
+        @Sql(statements = {
+                "DELETE FROM documents",
+                "DELETE FROM audit_log",
+                "DELETE FROM applications",
+                "DELETE FROM case_workers",
+                "DELETE FROM companies",
+                "INSERT INTO case_workers (id, name, email, email_index, password) VALUES (1, 'Karin Handläggare', 'karin@resurs.se', X'01', 'x')",
+                "INSERT INTO companies (id, org_number, org_number_index, company_name, authorized_signatory) VALUES (780, '556000-1234', X'dedd7d2467a47aac7cc703665899fded7d8013ddecbbbf69e0ff366fd4812ed7', 'Malmö Fastigheter AB', 'Test Person')",
+                "INSERT INTO applications (id, company_id, requested_amount, purpose, status) VALUES (780, 780, 300000.00, 'Rörelsekapital', 'UNDER_REVIEW')"
+        })
+        void caseWorkerSeesNoFinancialDataWhenNoneStored() throws Exception {
+            mockMvc.perform(get("/api/v1/applications/780"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.application.id").value(780))
+                    .andExpect(jsonPath("$.financialData").doesNotExist());
         }
 
         @Test

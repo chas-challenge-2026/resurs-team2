@@ -11,7 +11,9 @@ public record ApplicationDetailsResponse(
     @Nullable
     String workerName,
     @Nonnull
-    List<DocumentResponse> documents
+    List<DocumentResponse> documents,
+    @Nullable
+    String financialData
 ) {
     
 }
