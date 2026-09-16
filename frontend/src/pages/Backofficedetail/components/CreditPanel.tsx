@@ -13,21 +13,13 @@ import styles from "./CreditPanel.module.css";
 
 interface CreditPanelProps {
   application: Application;
+  financialMetrics: FinancialMetricsData;
 }
 
-export const CreditPanel: React.FC<CreditPanelProps> = ({ application }) => {
+export const CreditPanel: React.FC<CreditPanelProps> = ({ application, financialMetrics }) => {
   const [showFinancialMetrics, setShowFinancialMetrics] = useState(false);
   const financialMetricsRef = useRef<HTMLDivElement>(null);
 
-  const mockFinancialMetrics: FinancialMetricsData = {
-    equity: 2500000,
-    totalCapital: 5000000,
-    currentAssets: 1200000,
-    currentLiabilities: 800000,
-    totalLiabilities: 2500000,
-    operatingIncome: 700000,
-    netRevenue: 8000000,
-  };
   return (
     <Panel title="Kreditdetaljer">
       <p>
@@ -54,7 +46,6 @@ export const CreditPanel: React.FC<CreditPanelProps> = ({ application }) => {
         {formatDateTime(application.updatedAt)}
       </p>
 
-      <strong>
         <button
           type="button"
           className={`btn btn-default ${styles.financialMetricsButton} ${
@@ -90,10 +81,9 @@ export const CreditPanel: React.FC<CreditPanelProps> = ({ application }) => {
             ref={financialMetricsRef}
             className={styles.financialMetricsContainer}
           >
-            <FinancialMetricsPanel financialMetrics={mockFinancialMetrics} />
+            <FinancialMetricsPanel financialMetrics={financialMetrics} />
           </div>
         )}
-      </strong>
     </Panel>
   );
 };
