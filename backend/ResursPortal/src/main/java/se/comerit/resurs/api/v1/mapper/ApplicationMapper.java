@@ -3,6 +3,7 @@ package se.comerit.resurs.api.v1.mapper;
 import java.util.List;
 import java.util.Map;
 
+import jakarta.annotation.Nullable;
 import se.comerit.resurs.api.v1.dto.AuditLogResponse;
 import se.comerit.resurs.api.v1.dto.ApplicationDetailsResponse;
 import se.comerit.resurs.api.v1.dto.ApplicationRequest;
@@ -59,11 +60,16 @@ public final class ApplicationMapper {
     }
 
     public static ApplicationDetailsResponse toDetailsResponse(Application app) {
+        return toDetailsResponse(app, null);
+    }
+
+    public static ApplicationDetailsResponse toDetailsResponse(Application app, @Nullable String financialData) {
         String workerName = app.getCaseWorker() != null ? app.getCaseWorker().getName() : null;
         return new ApplicationDetailsResponse(
                 toResponse(app),
                 workerName,
-                app.getDocuments().stream().map(ApplicationMapper::toDocumentResponse).toList());
+                app.getDocuments().stream().map(ApplicationMapper::toDocumentResponse).toList(),
+            financialData);
     }
 
     public static AuditLogResponse toAuditLogResponse(AuditLog log) {
