@@ -131,6 +131,8 @@ class ApplicationControllerIntegrationTest {
                     .content(VALID_REQUEST_JSON))
                     .andExpect(status().isOk());
 
+            awaitScoringComplete();
+
             assertThat(applicationRepository.findAll()).hasSize(1);
             Application app = applicationRepository.findAll().get(0);
             assertThat(app.getCompany().getOrgNumber()).isEqualTo(COMPANY_ORG);
@@ -150,6 +152,18 @@ class ApplicationControllerIntegrationTest {
 
             // A decision/reason should be produced by scoring.
             assertThat(app.getDecisionReason()).isNotBlank();
+        }
+
+        private void awaitScoringComplete() throws InterruptedException {
+            for (int i = 0; i < 50; i++) {
+                boolean scoringRun = auditLogRepository.findAll().stream()
+                        .map(AuditLog::getEntry)
+                        .anyMatch(entry -> entry.contains("SCORING_RUN"));
+                if (scoringRun) {
+                    return;
+                }
+                Thread.sleep(200);
+            }
         }
 
         @Test

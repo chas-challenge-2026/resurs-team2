@@ -2,6 +2,7 @@ package se.comerit.resurs.api.v1.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.mock;
 import static org.mockito.internal.util.Primitives.defaultValue;
 
 import java.io.IOException;
@@ -52,9 +53,12 @@ class DocumentServiceTest {
         Map<Long, List<Document>> byApplication = new HashMap<>();
         byApplication.put(7L, List.of(newer, older));
 
+        EmailService emailService = mock(EmailService.class);
+
         DocumentService service = new DocumentService(
                 applicationRepository(applications, new AtomicLong(100)),
-                documentRepository(byId, byApplication, new AtomicLong(1000)));
+                documentRepository(byId, byApplication, new AtomicLong(1000)),
+                emailService);
 
         List<DocumentDto> result = service.getDocuments(
                 7L,
@@ -78,9 +82,12 @@ class DocumentServiceTest {
         Map<Long, List<Document>> documentsByApplication = new HashMap<>();
         AtomicLong nextDocumentId = new AtomicLong(1L);
 
+        EmailService emailService = mock(EmailService.class);
+
         DocumentService service = new DocumentService(
                 applicationRepository(applications, new AtomicLong(50)),
-                documentRepository(documentsById, documentsByApplication, nextDocumentId));
+                documentRepository(documentsById, documentsByApplication, nextDocumentId),
+                emailService);
 
         MockMultipartFile file = new MockMultipartFile(
                 "file",
@@ -110,9 +117,12 @@ class DocumentServiceTest {
 
     @Test
     void uploadDocument_rejectsEmptyFile() {
+        EmailService emailService = mock(EmailService.class);
+
         DocumentService service = new DocumentService(
                 applicationRepository(new HashMap<>(), new AtomicLong(1L)),
-                documentRepository(new HashMap<>(), new HashMap<>(), new AtomicLong(1L)));
+                documentRepository(new HashMap<>(), new HashMap<>(), new AtomicLong(1L)),
+                emailService);
 
         MockMultipartFile emptyFile = new MockMultipartFile(
                 "file",
@@ -135,9 +145,12 @@ class DocumentServiceTest {
         Map<Long, Application> applications = new HashMap<>();
         applications.put(7L, application);
 
+        EmailService emailService = mock(EmailService.class);
+
         DocumentService service = new DocumentService(
                 applicationRepository(applications, new AtomicLong(1L)),
-                documentRepository(new HashMap<>(), new HashMap<>(), new AtomicLong(1L)));
+                documentRepository(new HashMap<>(), new HashMap<>(), new AtomicLong(1L)),
+                emailService);
 
         assertThatThrownBy(() ->
                 service.getDocuments(7L, new CompanyPrincipal(1L, "customer", "556677-8899")))
@@ -161,9 +174,12 @@ class DocumentServiceTest {
         byId.put(new UUID(0L,21L), document);
 
 
+        EmailService emailService = mock(EmailService.class);
+
         DocumentService service = new DocumentService(
                 applicationRepository(applications, new AtomicLong(1L)),
-                documentRepository(byId, Map.of(7L, List.of(document)), new AtomicLong(1L)));
+                documentRepository(byId, Map.of(7L, List.of(document)), new AtomicLong(1L)),
+                emailService);
 
         assertThatThrownBy(() ->
                 service.downloadDocument(new UUID(0L,21L),
@@ -186,12 +202,15 @@ class DocumentServiceTest {
         Map<Long, List<Document>> documentsByApplication = new HashMap<>();
         AtomicLong nextDocumentId = new AtomicLong(1L);
 
+        EmailService emailService = mock(EmailService.class);
+
         DocumentService service = new DocumentService(
                 applicationRepository(applications, new AtomicLong(50)),
                 documentRepository(
                         documentsById,
                         documentsByApplication,
-                        nextDocumentId));
+                        nextDocumentId),
+                emailService);
 
         String content1 = "%PDF-1.4 first file";
         String content2 = "%PDF-1.4 second file";

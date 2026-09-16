@@ -21,12 +21,14 @@ public class DecisionService {
     private final ApplicationRepository repository;
     private final AuditLogService auditLogService;
     private final CaseWorkerAssignmentService caseWorkerAssignmentService;
+    private final EmailService emailService;
 
     public DecisionService(ApplicationRepository repository, AuditLogService auditLogService,
-            CaseWorkerAssignmentService caseWorkerAssignmentService) {
+            CaseWorkerAssignmentService caseWorkerAssignmentService, EmailService emailService) {
         this.repository = repository;
         this.auditLogService = auditLogService;
         this.caseWorkerAssignmentService = caseWorkerAssignmentService;
+        this.emailService = emailService;
     }
 
     @Transactional
@@ -49,7 +51,11 @@ public class DecisionService {
         auditLogService.append(application,
                 new ManualDecision(request.decision().name(), caseWorker.name(), blankToNull(request.comment())));
 
-        return ApplicationMapper.toResponse(repository.save(application));
+        Application saved = repository.save(application);
+
+        emailService.sendDecision(saved);
+
+        return ApplicationMapper.toResponse(saved);
     }
 
     private static String blankToNull(String value) {
