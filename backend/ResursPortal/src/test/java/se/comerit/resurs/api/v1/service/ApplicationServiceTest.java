@@ -11,6 +11,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -24,6 +25,7 @@ import tools.jackson.databind.ObjectMapper;
 import se.comerit.resurs.api.v1.dto.ApplicationDetailsResponse;
 import se.comerit.resurs.api.v1.dto.ApplicationRequest;
 import se.comerit.resurs.entity.Application;
+import se.comerit.resurs.entity.ApplicationStatus;
 import se.comerit.resurs.entity.AuditLog;
 import se.comerit.resurs.entity.Company;
 import se.comerit.resurs.exception.CompanyNotFoundException;
@@ -32,7 +34,6 @@ import se.comerit.resurs.repository.AuditLogRepository;
 import se.comerit.resurs.repository.CompanyRepository;
 import se.comerit.resurs.security.CaseWorkerPrincipal;
 import se.comerit.resurs.security.CompanyPrincipal;
-import tools.jackson.databind.ObjectMapper;
 
 /**
  * Unit tests for {@link ApplicationService#submitApplication} and
