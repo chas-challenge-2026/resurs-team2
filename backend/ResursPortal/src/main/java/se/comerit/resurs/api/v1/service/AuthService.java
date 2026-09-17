@@ -13,7 +13,6 @@ import se.comerit.resurs.security.AuthTokens;
 import se.comerit.resurs.security.CaseWorkerPrincipal;
 import se.comerit.resurs.security.CompanyPrincipal;
 import se.comerit.resurs.security.SessionTokenStore;
-import se.comerit.resurs.security.UserPrincipal;
 
 @Service
 public class AuthService {
@@ -61,8 +60,15 @@ public class AuthService {
                 .orElseThrow(() -> InvalidCredentialsException.unauthorized("Invalid or revoked token"));
     }
 
-    public void logout(UserPrincipal principal) {
-        tokenStore.revokeAllForUser(principal);
+    /**
+     * Log out by revoking only the session that presented the access token.
+     * Other active sessions for the same user (e.g. a second browser) stay
+     * logged in — the caller is only terminating its own session.
+     *
+     * @param accessToken bearer token of the session being logged out
+     */
+    public void logout(String accessToken) {
+        tokenStore.revoke(accessToken);
     }
 
     private boolean verifyCaseWorker(CaseWorker cw, String password) {

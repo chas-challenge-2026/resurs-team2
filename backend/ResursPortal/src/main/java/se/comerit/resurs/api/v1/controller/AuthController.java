@@ -1,16 +1,16 @@
 package se.comerit.resurs.api.v1.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -22,7 +22,6 @@ import se.comerit.resurs.api.v1.dto.RefreshRequest;
 import se.comerit.resurs.api.v1.service.AuthService;
 import se.comerit.resurs.security.AuthTokens;
 import se.comerit.resurs.security.SessionFingerprint;
-import se.comerit.resurs.security.UserPrincipal;
 
 @RestController
 @RequestMapping("/api/v1/auth")
@@ -78,14 +77,18 @@ public class AuthController {
     @PostMapping("/logout")
     @Operation(
         summary = "Log out",
-        description = "Invalidate the current session and revoke all tokens issued for it.",
+        description = "Invalidate the current session by revoking the bearer token used to log out.",
         security = @SecurityRequirement(name = "Bearer Authentication"))
     @ApiResponse(responseCode = "204", description = "Logged out successfully")
     @ApiResponse(responseCode = "401", description = "Missing or invalid bearer token")
     @ApiResponse(responseCode = "403", description = "Caller does not have the COMPANY or CASE_WORKER role")
     @ApiResponse(responseCode = "500", description = "Unexpected internal error")
-    public ResponseEntity<Void> logout(@Parameter(hidden = true) @AuthenticationPrincipal UserPrincipal principal) {
-        service.logout(principal);
+    public ResponseEntity<Void> logout(@RequestHeader(HttpHeaders.AUTHORIZATION) String authorization) {
+        service.logout(bearerToken(authorization));
         return ResponseEntity.noContent().build();
+    }
+
+    private static String bearerToken(String authorization) {
+        return authorization.startsWith("Bearer ") ? authorization.substring("Bearer ".length()) : authorization;
     }
 }
