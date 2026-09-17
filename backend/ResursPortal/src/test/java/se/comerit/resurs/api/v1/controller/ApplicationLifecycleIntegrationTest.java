@@ -206,7 +206,7 @@ class ApplicationLifecycleIntegrationTest {
 
     private String readToken(MvcResult result) throws java.io.IOException {
         JsonNode body = objectMapper.readTree(result.getResponse().getContentAsString());
-        return body.get("accessToken").asString();
+        return body.get("accessToken").asText();
     }
 
     private static String bearer(String token) {

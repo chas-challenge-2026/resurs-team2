@@ -208,10 +208,10 @@ class AuthEndpointIntegrationTest {
     private AuthTokens readTokens(MvcResult result) throws java.io.IOException {
         JsonNode body = objectMapper.readTree(result.getResponse().getContentAsString());
         return new AuthTokens(
-                body.get("accessToken").asString(),
-                body.get("refreshToken").asString(),
+                body.get("accessToken").asText(),
+                body.get("refreshToken").asText(),
                 se.comerit.resurs.security.PrincipalRole.valueOf(body.get("role").asText()),
-                body.get("name").asString());
+                body.get("name").asText());
     }
 
     private static String bearer(String token) {
