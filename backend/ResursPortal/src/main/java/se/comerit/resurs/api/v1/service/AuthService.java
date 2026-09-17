@@ -13,6 +13,7 @@ import se.comerit.resurs.security.AuthTokens;
 import se.comerit.resurs.security.CaseWorkerPrincipal;
 import se.comerit.resurs.security.CompanyPrincipal;
 import se.comerit.resurs.security.SessionTokenStore;
+import se.comerit.resurs.security.UserPrincipal;
 
 @Service
 public class AuthService {
@@ -69,6 +70,17 @@ public class AuthService {
      */
     public void logout(String accessToken) {
         tokenStore.revoke(accessToken);
+    }
+
+    /**
+     * Log the principal out of every active session (all devices/browsers).
+     * Unlike {@link #logout(String)} this wipes all tokens of the user, for
+     * example to clear stale logins after a suspected compromise.
+     *
+     * @param principal the user whose sessions are all revoked
+     */
+    public void logoutAll(UserPrincipal principal) {
+        tokenStore.revokeAllForUser(principal);
     }
 
     private boolean verifyCaseWorker(CaseWorker cw, String password) {

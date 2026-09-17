@@ -7,6 +7,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -22,6 +23,7 @@ import se.comerit.resurs.api.v1.dto.RefreshRequest;
 import se.comerit.resurs.api.v1.service.AuthService;
 import se.comerit.resurs.security.AuthTokens;
 import se.comerit.resurs.security.SessionFingerprint;
+import se.comerit.resurs.security.UserPrincipal;
 
 @RestController
 @RequestMapping("/api/v1/auth")
@@ -85,6 +87,21 @@ public class AuthController {
     @ApiResponse(responseCode = "500", description = "Unexpected internal error")
     public ResponseEntity<Void> logout(@RequestHeader(HttpHeaders.AUTHORIZATION) String authorization) {
         service.logout(bearerToken(authorization));
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/logout/all")
+    @Operation(
+        summary = "Log out everywhere",
+        description = "Revoke every active session for the authenticated user (current device and all "
+                + "other devices/browsers). Use to clear stale logins, e.g. after a suspected compromise.",
+        security = @SecurityRequirement(name = "Bearer Authentication"))
+    @ApiResponse(responseCode = "204", description = "All sessions revoked")
+    @ApiResponse(responseCode = "401", description = "Missing or invalid bearer token")
+    @ApiResponse(responseCode = "403", description = "Caller does not have the COMPANY or CASE_WORKER role")
+    @ApiResponse(responseCode = "500", description = "Unexpected internal error")
+    public ResponseEntity<Void> logoutAll(@AuthenticationPrincipal UserPrincipal principal) {
+        service.logoutAll(principal);
         return ResponseEntity.noContent().build();
     }
 

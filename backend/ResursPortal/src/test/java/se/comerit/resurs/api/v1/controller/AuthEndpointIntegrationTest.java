@@ -178,14 +178,65 @@ class AuthEndpointIntegrationTest {
                             .content("{\"refreshToken\":\"" + sessionA.refreshToken() + "\"}"))
                     .andExpect(status().isUnauthorized());
 
-            // BUG: Session B must still be active — logging out from browser A should
-            // not destroy browser B's session.  Currently this assertion FAILS because
-            // AuthService.logout() calls revokeAllForUser() instead of revoke(accessToken),
-            // which wipes every session for the same principal.
+            // Session B must still be active — the session-scoped logout only revokes
+            // the session that presented the token (AuthService.logout -> revoke),
+            // leaving all other sessions of the same user untouched.
             mockMvc.perform(get("/api/v1/companies/me")
                             .header(HttpHeaders.AUTHORIZATION, bearer(sessionB.accessToken()))
                             .header("User-Agent", browserB))
                     .andExpect(status().isOk());
+        }
+
+        @Test
+        @DisplayName("Log out everywhere revokes every active session of the user")
+        void logoutAllRevokesEverySessionOfTheUser() throws Exception {
+            String browserA = "Mozilla/5.0 (X11; Linux x86_64; rv:128.0) Gecko/20100101 Firefox/128.0";
+            String browserB = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/131.0";
+
+            AuthTokens sessionA = loginCompanyWithUA(browserA);
+            AuthTokens sessionB = loginCompanyWithUA(browserB);
+
+            // Both sessions are valid initially.
+            mockMvc.perform(get("/api/v1/companies/me")
+                            .header(HttpHeaders.AUTHORIZATION, bearer(sessionA.accessToken()))
+                            .header("User-Agent", browserA))
+                    .andExpect(status().isOk());
+            mockMvc.perform(get("/api/v1/companies/me")
+                            .header(HttpHeaders.AUTHORIZATION, bearer(sessionB.accessToken()))
+                            .header("User-Agent", browserB))
+                    .andExpect(status().isOk());
+
+            // Browser A asks to log out EVERYWHERE.
+            mockMvc.perform(post("/api/v1/auth/logout/all")
+                            .header(HttpHeaders.AUTHORIZATION, bearer(sessionA.accessToken()))
+                            .header("User-Agent", browserA))
+                    .andExpect(status().isNoContent());
+
+            // Session A is dead — access and refresh.
+            mockMvc.perform(get("/api/v1/companies/me")
+                            .header(HttpHeaders.AUTHORIZATION, bearer(sessionA.accessToken()))
+                            .header("User-Agent", browserA))
+                    .andExpect(status().isUnauthorized());
+
+            // And session B is dead too — unlike the session-scoped /auth/logout,
+            // /auth/logout/all wipes every session of the principal.
+            mockMvc.perform(get("/api/v1/companies/me")
+                            .header(HttpHeaders.AUTHORIZATION, bearer(sessionB.accessToken()))
+                            .header("User-Agent", browserB))
+                    .andExpect(status().isUnauthorized());
+            mockMvc.perform(post("/api/v1/auth/refresh")
+                            .header("User-Agent", browserB)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"refreshToken\":\"" + sessionB.refreshToken() + "\"}"))
+                    .andExpect(status().isUnauthorized());
+        }
+
+        @Test
+        @DisplayName("Log out everywhere requires an authenticated caller")
+        void logoutAllRequiresAuthentication() throws Exception {
+            mockMvc.perform(post("/api/v1/auth/logout/all")
+                            .header("User-Agent", UA))
+                    .andExpect(status().isUnauthorized());
         }
     }
 
