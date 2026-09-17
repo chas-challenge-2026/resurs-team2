@@ -1,4 +1,4 @@
-package se.comerit.resurs.api.v1.dto.validation;
+package se.comerit.resurs.api.v1.dto;
 
 import java.util.List;
 
