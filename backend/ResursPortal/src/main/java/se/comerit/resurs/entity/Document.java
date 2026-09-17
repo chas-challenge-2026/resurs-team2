@@ -36,6 +36,12 @@ public class Document {
     @Size(max = 512)
     private String filename;
 
+    @Convert(converter = PiiAttributeConverter.class)
+    @Column(name = "original_filename", length = 512)
+    @NotBlank
+    @Size(max = 512)
+    private String originalFilename;
+
     @Column(name = "doc_type", length = 50)
     @NotBlank
     @Size(max = 50)
@@ -53,9 +59,11 @@ public class Document {
         uploadedAt = Instant.now();
     }
 
-    public Document(@Nonnull Application application, @Nonnull String filename, @Nonnull String docType) {
+    public Document(@Nonnull Application application, @Nonnull String originalFilename, @Nonnull String docType) {
         this.application = application;
-        this.filename = filename;
+        // Storage key; DocumentService overwrites it with the opaque <uuid>.pdf key after upload.
+        this.filename = originalFilename;
+        this.originalFilename = originalFilename;
         this.docType = docType;
     }
 
@@ -87,6 +95,15 @@ public class Document {
 
     public void setFilename(@Nonnull String filename) {
         this.filename = filename;
+    }
+
+    @Nonnull
+    public String getOriginalFilename() {
+        return originalFilename;
+    }
+
+    public void setOriginalFilename(@Nonnull String originalFilename) {
+        this.originalFilename = originalFilename;
     }
 
     @Nonnull

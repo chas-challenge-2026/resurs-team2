@@ -1,6 +1,5 @@
 package se.comerit.resurs.api.v1.service;
 
-import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
@@ -19,56 +18,54 @@ import se.comerit.resurs.security.CaseWorkerPrincipal;
 import se.comerit.resurs.security.CompanyPrincipal;
 import se.comerit.resurs.security.UserPrincipal;
 
-import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.List;
 import java.util.UUID;
 
 @Service
 public class DocumentService {
 
-    private static final String UPLOAD_DIR = "/tmp/uploads";
-
+    /** Return type pairing the file content with the user-facing original filename. */
+    public record DocumentDownload(org.springframework.core.io.Resource resource, String originalFilename) {}
 
     private final ApplicationRepository applicationRepository;
     private final DocumentRepository documentRepository;
     private final EmailService emailService;
+    private final FileStorageService fileStorageService;
 
-    public DocumentService(ApplicationRepository applicationRepository, DocumentRepository documentRepository, EmailService emailService) {
+    public DocumentService(ApplicationRepository applicationRepository, DocumentRepository documentRepository,
+            EmailService emailService, FileStorageService fileStorageService) {
         this.applicationRepository = applicationRepository;
         this.documentRepository = documentRepository;
         this.emailService = emailService;
+        this.fileStorageService = fileStorageService;
     }
 
-    public List<DocumentDto> getDocuments (Long applicationId, UserPrincipal principal) {
+    public List<DocumentDto> getDocuments(Long applicationId, UserPrincipal principal) {
         Application application = getApplication(applicationId);
         checkApplicationAccess(application, principal);
-
 
         return documentRepository.findByApplicationIdOrderByUploadedAtDesc(applicationId)
                 .stream()
                 .map(DocumentDto::from)
                 .toList();
-
     }
 
-    public DocumentDto uploadDocument (Long applicationId, String docType, MultipartFile file, UserPrincipal principal) {
-
+    public DocumentDto uploadDocument(Long applicationId, String docType, MultipartFile file, UserPrincipal principal) {
         validateFile(file);
-
 
         Application application = getApplication(applicationId);
         checkApplicationAccess(application, principal);
 
         Document document = new Document(application, getOriginalFilename(file), docType);
 
-        String storedFilename = document.getUuid() + ".pdf";
-        document.setFilename(storedFilename);
-
-        File destinationFile = prepareDestination(storedFilename);
-        saveFile(file, destinationFile);
+        try {
+            String storedFilename = fileStorageService.upload(document.getUuid(), getOriginalFilename(file),
+                    file.getInputStream(), file.getSize());
+            document.setFilename(storedFilename);
+        } catch (IOException e) {
+            throw new FileUploadException("Upload failed.");
+        }
 
         document = documentRepository.save(document);
 
@@ -78,24 +75,22 @@ public class DocumentService {
         return DocumentDto.from(document);
     }
 
-
-
-    public Resource downloadDocument (UUID uuid, UserPrincipal principal) {
+    public DocumentDownload downloadDocument(UUID uuid, UserPrincipal principal) {
         Document document = documentRepository
                 .findByUuid(uuid)
                 .orElseThrow(() -> new DocumentNotFoundException(uuid));
 
         checkDocumentAccess(document, principal);
 
-        File file = new File(UPLOAD_DIR, document.getFilename());
-
-        if (!file.exists()) {
+        try {
+            Resource resource = fileStorageService.download(document.getFilename());
+            return new DocumentDownload(resource, document.getOriginalFilename());
+        } catch (IOException e) {
             throw new DocumentNotFoundException(uuid);
         }
-        return new FileSystemResource(file);
     }
 
-    private void validateFile (MultipartFile file) {
+    private void validateFile(MultipartFile file) {
         if (file == null || file.isEmpty()) {
             throw new EmptyFileException();
         }
@@ -110,45 +105,25 @@ public class DocumentService {
         }
     }
 
-    private Application getApplication (Long applicationId) {
-        return applicationRepository.findById(applicationId).orElseThrow(() -> new ApplicationNotFoundException(applicationId));
+    private Application getApplication(Long applicationId) {
+        return applicationRepository.findById(applicationId)
+                .orElseThrow(() -> new ApplicationNotFoundException(applicationId));
     }
 
-    private File prepareDestination (String storedFilename) {
-        File uploadDir = new File(UPLOAD_DIR);
-        if (!uploadDir.exists() && !uploadDir.mkdirs()) {
-            throw new FileUploadException("Could not create upload directory.");
-        }
-        return new File(uploadDir, storedFilename);
-    }
-
-    private void saveFile (MultipartFile file, File destination) {
-        try {
-            file.transferTo(destination);
-        } catch (IOException _) {
-            throw new FileUploadException("Upload failed.");
-        }
-    }
-
-
-    private String getOriginalFilename (MultipartFile file) {
-
+    private String getOriginalFilename(MultipartFile file) {
         String filename = file.getOriginalFilename();
-
         if (filename == null || filename.isBlank()) {
             throw new FileUploadException("File must have a name.");
         }
         return filename;
     }
 
-
-    private Document saveDocument (Application application, String storedFilename, String docType) {
+    private Document saveDocument(Application application, String storedFilename, String docType) {
         Document document = new Document(application, storedFilename, docType);
         return documentRepository.save(document);
     }
 
-
-    private void updateApplicationStatus (Application application, String docType) {
+    private void updateApplicationStatus(Application application, String docType) {
         if ("AnnualReview".equals(docType)
                 && application.getStatus() == ApplicationStatus.PENDING_DOCS) {
 
@@ -159,21 +134,15 @@ public class DocumentService {
         }
     }
 
-
-    public void deleteDocument (UUID documentId, UserPrincipal principal) {
+    public void deleteDocument(UUID documentId, UserPrincipal principal) {
         Document document = documentRepository
                 .findByUuid(documentId)
                 .orElseThrow(() -> new DocumentNotFoundException(documentId));
 
         checkDocumentAccess(document, principal);
 
-        Path filePath = Path.of(
-                UPLOAD_DIR,
-                document.getFilename()
-        );
-
         try {
-            Files.deleteIfExists(filePath);
+            fileStorageService.delete(document.getFilename());
         } catch (IOException e) {
             throw new FileUploadException("Could not delete file.");
         }
@@ -181,13 +150,12 @@ public class DocumentService {
         documentRepository.delete(document);
     }
 
-
-    private void checkApplicationAccess (Application application, UserPrincipal principal) {
+    private void checkApplicationAccess(Application application, UserPrincipal principal) {
         boolean hasAccess = switch (principal) {
             case CompanyPrincipal companyPrincipal -> application
-                            .getCompany()
-                            .getOrgNumber()
-                            .equals(companyPrincipal
+                    .getCompany()
+                    .getOrgNumber()
+                    .equals(companyPrincipal
                             .orgNumber());
             case CaseWorkerPrincipal _ -> true;
         };
@@ -197,20 +165,18 @@ public class DocumentService {
         }
     }
 
-    private void checkDocumentAccess (Document document, UserPrincipal principal) {
+    private void checkDocumentAccess(Document document, UserPrincipal principal) {
         boolean hasAccess = switch (principal) {
-            case CompanyPrincipal companyPrincipal ->document
+            case CompanyPrincipal companyPrincipal -> document
                     .getApplication()
                     .getCompany()
                     .getOrgNumber()
                     .equals(companyPrincipal
-                    .orgNumber());
+                            .orgNumber());
             case CaseWorkerPrincipal _ -> true;
         };
         if (!hasAccess) {
             throw new DocumentNotFoundException(document.getUuid());
         }
-
     }
-
 }
