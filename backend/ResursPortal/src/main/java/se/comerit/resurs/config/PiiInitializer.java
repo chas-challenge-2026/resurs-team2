@@ -9,6 +9,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.annotation.Profile;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.argon2.Argon2PasswordEncoder;
@@ -16,11 +17,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import se.comerit.resurs.api.v1.service.ResursCryptoService;
-import se.comerit.resurs.entity.Application;
-import se.comerit.resurs.entity.ApplicationStatus;
-import se.comerit.resurs.entity.AuditLog;
-import se.comerit.resurs.entity.CaseWorker;
-import se.comerit.resurs.entity.Company;
+import se.comerit.resurs.entity.*;
 import se.comerit.resurs.repository.ApplicationRepository;
 import se.comerit.resurs.repository.AuditLogRepository;
 import se.comerit.resurs.repository.CaseWorkerRepository;
@@ -153,7 +150,7 @@ public class PiiInitializer implements ApplicationRunner {
                     codec.encode(DEMO_SCORING_RESULT),
                     rawId.get());
             log.info("Encrypted seed demo application for {}", SEED[0].orgNumber());
-        } else if (applicationRepository.findByCompanyId(company.getId()).isEmpty()) {
+        } else if (applicationRepository.findByCompanyId(company.getId(), PageRequest.of(0,1)).isEmpty()) {
             applicationRepository.save(new Application(
                     company,
                     new BigDecimal(DEMO_REQUESTED_AMOUNT),
@@ -165,7 +162,7 @@ public class PiiInitializer implements ApplicationRunner {
             log.info("Seeded demo application for {}", SEED[0].orgNumber());
         }
 
-        applicationRepository.findByCompanyId(company.getId()).stream().findFirst()
+        applicationRepository.findByCompanyId(company.getId(),PageRequest.of(0,1)).stream().findFirst()
                 .ifPresent(this::seedAuditLog);
     }
 
