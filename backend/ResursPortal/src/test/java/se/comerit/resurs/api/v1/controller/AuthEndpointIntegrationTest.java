@@ -188,6 +188,55 @@ class AuthEndpointIntegrationTest {
         }
 
         @Test
+        @DisplayName("Logout must not invalidate a second session with the SAME fingerprint (normal + incognito window)")
+        void logoutDoesNotKillSessionsWithIdenticalFingerprint() throws Exception {
+            // Regression: a normal browser and an incognito window of the same
+            // browser share the User-Agent (and IP), so both sessions carry the
+            // IDENTICAL fingerprint. Logging out in one window must still only
+            // revoke that window's session — not the other one.
+            AuthTokens sessionA = loginCompanyWithUA(UA);
+            AuthTokens sessionB = loginCompanyWithUA(UA);
+
+            // Both sessions are valid.
+            mockMvc.perform(get("/api/v1/companies/me")
+                            .header(HttpHeaders.AUTHORIZATION, bearer(sessionA.accessToken()))
+                            .header("User-Agent", UA))
+                    .andExpect(status().isOk());
+            mockMvc.perform(get("/api/v1/companies/me")
+                            .header(HttpHeaders.AUTHORIZATION, bearer(sessionB.accessToken()))
+                            .header("User-Agent", UA))
+                    .andExpect(status().isOk());
+
+            // The incognito window logs out.
+            mockMvc.perform(post("/api/v1/auth/logout")
+                            .header(HttpHeaders.AUTHORIZATION, bearer(sessionA.accessToken()))
+                            .header("User-Agent", UA))
+                    .andExpect(status().isNoContent());
+
+            // Session A is dead — access and refresh.
+            mockMvc.perform(get("/api/v1/companies/me")
+                            .header(HttpHeaders.AUTHORIZATION, bearer(sessionA.accessToken()))
+                            .header("User-Agent", UA))
+                    .andExpect(status().isUnauthorized());
+            mockMvc.perform(post("/api/v1/auth/refresh")
+                            .header("User-Agent", UA)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"refreshToken\":\"" + sessionA.refreshToken() + "\"}"))
+                    .andExpect(status().isUnauthorized());
+
+            // The normal window's session B is untouched — access AND refresh.
+            mockMvc.perform(get("/api/v1/companies/me")
+                            .header(HttpHeaders.AUTHORIZATION, bearer(sessionB.accessToken()))
+                            .header("User-Agent", UA))
+                    .andExpect(status().isOk());
+            mockMvc.perform(post("/api/v1/auth/refresh")
+                            .header("User-Agent", UA)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"refreshToken\":\"" + sessionB.refreshToken() + "\"}"))
+                    .andExpect(status().isOk());
+        }
+
+        @Test
         @DisplayName("Log out everywhere revokes every active session of the user")
         void logoutAllRevokesEverySessionOfTheUser() throws Exception {
             String browserA = "Mozilla/5.0 (X11; Linux x86_64; rv:128.0) Gecko/20100101 Firefox/128.0";
