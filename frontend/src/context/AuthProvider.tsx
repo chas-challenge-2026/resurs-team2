@@ -8,7 +8,7 @@ import {
 
 import { authApi } from "../api/authApi";
 import { tokenStorage } from "../api/tokenStorage";
-import { onSessionExpired } from "../api/tokenRefresher";
+import { onSessionExpired, refreshTokens } from "../api/tokenRefresher";
 import { AuthContext } from "./AuthContext";
 
 import type {
@@ -46,17 +46,18 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   useEffect(() => {
     const restoreSession = async () => {
-      const refreshToken = tokenStorage.getRefreshToken();
-
-      if (!refreshToken) {
-        setIsLoading(false);
-        return;
-      }
-
+      // Restore goes through the SAME single-flight refresher as the 401
+      // interceptor: the refresh token is single-use, and StrictMode double-
+      // invokes this effect in dev — presenting it twice concurrently would
+      // make one presentation lose the race and log the user out on reload.
       try {
-        const tokens = await authApi.refresh(refreshToken);
+        const tokens = await refreshTokens();
 
-        saveTokens(tokens.accessToken, tokens.refreshToken);
+        if (tokens === null) {
+          // No token, or the session is over — refreshTokens already cleared
+          // storage and fired the session-expired listeners (user = null).
+          return;
+        }
 
         if (tokens.role === "COMPANY") {
           const company = await authApi.getCurrentCompany(
@@ -94,7 +95,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     };
 
     void restoreSession();
-  }, [clearSession, saveTokens]);
+  }, [clearSession]);
 
   const loginCompany = useCallback(
     async (credentials: CompanyCredentials) => {

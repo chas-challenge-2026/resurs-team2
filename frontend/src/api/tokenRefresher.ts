@@ -1,5 +1,6 @@
 import { authApi } from "./authApi";
 import { tokenStorage } from "./tokenStorage";
+import type { AuthTokens } from "../context/auth.types";
 
 type SessionExpiredListener = () => void;
 
@@ -17,7 +18,7 @@ const sessionExpiredListeners = new Set<SessionExpiredListener>();
  * the same one (single-flight). Reset to null once settled so the next expiry
  * starts a fresh rotation.
  */
-let inFlight: Promise<boolean> | null = null;
+let inFlight: Promise<AuthTokens | null> | null = null;
 
 /** Register a listener called when the session expires. Returns an unsubscribe. */
 export function onSessionExpired(listener: SessionExpiredListener): () => void {
@@ -38,12 +39,16 @@ function notifySessionExpired(): void {
 }
 
 /**
- * Rotate the session with the stored refresh token, single-flight.
+ * Rotate the session with the stored refresh token, single-flight. Every caller
+ * (the 401 retry interceptor AND the AuthProvider session restore) goes through
+ * this one function, so the single-use refresh token is never presented more
+ * than once — even when restore and a 401 race, or StrictMode double-invokes
+ * the restore effect.
  *
- * @returns `true` if rotation succeeded (new tokens are stored), `false` if the
+ * @returns the rotated tokens (already stored) on success, or `null` if the
  *          session is over (tokens cleared, session-expired listeners fired).
  */
-export function refreshTokens(): Promise<boolean> {
+export function refreshTokens(): Promise<AuthTokens | null> {
   const existing = inFlight;
   if (existing !== null) {
     return existing;
@@ -54,19 +59,19 @@ export function refreshTokens(): Promise<boolean> {
     // No session to rotate — treat as expired so callers reject cleanly.
     tokenStorage.clearTokens();
     notifySessionExpired();
-    return Promise.resolve(false);
+    return Promise.resolve(null);
   }
 
   inFlight = authApi
     .refresh(refreshToken)
     .then((tokens) => {
       tokenStorage.setTokens(tokens.accessToken, tokens.refreshToken);
-      return true;
+      return tokens;
     })
     .catch(() => {
       tokenStorage.clearTokens();
       notifySessionExpired();
-      return false;
+      return null;
     })
     .finally(() => {
       inFlight = null;

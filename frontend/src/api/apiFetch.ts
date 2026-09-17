@@ -34,9 +34,9 @@ async function requestWithAuth(
   });
 
   if (response.status === 401 && !alreadyRetried) {
-    const refreshed = await refreshTokens();
+    const tokens = await refreshTokens();
 
-    if (refreshed) {
+    if (tokens !== null) {
       // The tokens were rotated — retry once with the fresh access token.
       return requestWithAuth(url, options, true);
     }
