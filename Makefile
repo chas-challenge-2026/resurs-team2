@@ -16,7 +16,8 @@ BACKEND_DIR  := backend/ResursPortal
 TARGET_DIR   := target
 
 .PHONY: clean build test test_frontend test_backend test_native test-encryption dev \
-        build-frontend build-backend build-native package dev-vite dev-spring
+        build-frontend build-backend build-native package dev-vite dev-spring \
+		playwrite-e2e
         # build-native
 
 # ── Aggregate targets ─────────────────────────────────────────────
@@ -57,6 +58,14 @@ test_native:
 
 test-encryption: build-native
 	cd $(BACKEND_DIR) && ./mvnw -Dtest=RealEncryptionIT test
+
+playwrite-e2e:
+	@trap 'fuser -k 8083/tcp 2>/dev/null || true' EXIT; \
+	$(MAKE) dev-spring & \
+	echo "Waiting on backend"; \
+	until nc -z localhost 8083; do sleep 1; done; \
+	echo "Backend is up"; \
+	cd $(FRONTEND_DIR) && npx playwright test
 
 clean:
 	rm -rf $(TARGET_DIR)
