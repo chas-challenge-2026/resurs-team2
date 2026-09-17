@@ -58,6 +58,17 @@ test_native:
 test-encryption: build-native
 	cd $(BACKEND_DIR) && ./mvnw -Dtest=RealEncryptionIT test
 
+playwrite-e2e:
+	$(MAKE) dev-spring & \
+	BACKEND_PID=$$!;\
+	echo "Waiting on backend"; \
+	until nc -z localhost 8083; do \
+	sleep 1; \
+	done; \
+	echo "Backend is up"; \
+	cd $(FRONTEND_DIR) && npx playwright test; \
+	kill $$BACKEND_PID
+
 clean:
 	rm -rf $(TARGET_DIR)
 	rm -rf $(FRONTEND_DIR)/dist
