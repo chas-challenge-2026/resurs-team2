@@ -54,12 +54,22 @@ public class SessionTokenStore {
     }
 
     public AuthTokens issue(UserPrincipal principal, String fingerprint) {
+        return issue(principal, fingerprint, clock.instant());
+    }
+
+    /**
+     * Issue a token pair anchored to a specific login time. Rotation reuses the
+     * ORIGINAL session's login time so the absolute expiration cap keeps
+     * bounding the session lifetime across token rotations — a session cannot
+     * be kept alive past its cap by repeatedly rotating.
+     */
+    private AuthTokens issue(UserPrincipal principal, String fingerprint, Instant loginTime) {
         String access = randomToken();
         String refresh = randomToken();
         Instant now = clock.instant();
-        Instant expiresAt = computeExpiry(now, now);
+        Instant expiresAt = computeExpiry(loginTime, now);
         SessionToken st = new SessionToken(hash(access), hash(refresh), fingerprint,
-                principal, now, expiresAt);
+                principal, loginTime, expiresAt);
         sessionsByAccess.put(st.accessTokenHash, st);
         sessionsByRefresh.put(st.refreshTokenHash, st);
         return new AuthTokens(access, refresh, st.principal.role(), st.principal.name());
@@ -131,7 +141,9 @@ public class SessionTokenStore {
         // old access half of the session.
         usedTokens.put(st.refreshTokenHash, st);
         sessionsByAccess.remove(st.accessTokenHash);
-        return Optional.of(issue(st.principal, fingerprint));
+        // Anchor the fresh pair to the session's ORIGINAL login time so the
+        // absolute expiration cap keeps binding across rotations.
+        return Optional.of(issue(st.principal, fingerprint, st.loginTime));
     }
 
     /**
