@@ -120,8 +120,6 @@ public class DocumentController {
                        example = "550e8400-e29b-41d4-a716-446655440000")
             @PathVariable UUID id,
             @Parameter(hidden = true) @AuthenticationPrincipal UserPrincipal principal) {
-            @AuthenticationPrincipal UserPrincipal principal) {
-
         DocumentService.DocumentDownload download = documentService.downloadDocument(id, principal);
 
         ContentDisposition contentDisposition = ContentDisposition.attachment()
