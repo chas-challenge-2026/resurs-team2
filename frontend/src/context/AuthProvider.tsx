@@ -7,6 +7,8 @@ import {
 } from "react";
 
 import { authApi } from "../api/authApi";
+import { tokenStorage } from "../api/tokenStorage";
+import { onSessionExpired } from "../api/tokenRefresher";
 import { AuthContext } from "./AuthContext";
 
 import type {
@@ -15,9 +17,6 @@ import type {
   CompanyCredentials,
   User,
 } from "./auth.types";
-
-const ACCESS_TOKEN_KEY = "accessToken";
-const REFRESH_TOKEN_KEY = "refreshToken";
 
 interface AuthProviderProps {
   children: ReactNode;
@@ -29,21 +28,25 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   const saveTokens = useCallback(
     (accessToken: string, refreshToken: string) => {
-      sessionStorage.setItem(ACCESS_TOKEN_KEY, accessToken);
-      sessionStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+      tokenStorage.setTokens(accessToken, refreshToken);
     },
     [],
   );
 
   const clearSession = useCallback(() => {
-    sessionStorage.removeItem(ACCESS_TOKEN_KEY);
-    sessionStorage.removeItem(REFRESH_TOKEN_KEY);
+    tokenStorage.clearTokens();
     setUser(null);
   }, []);
 
+  // Automatic rotation (tokenRefresher) logs the user out when the refresh
+  // token can no longer be used, so ProtectedRoute redirects to the login page.
+  useEffect(() => {
+    return onSessionExpired(() => clearSession());
+  }, [clearSession]);
+
   useEffect(() => {
     const restoreSession = async () => {
-      const refreshToken = sessionStorage.getItem(REFRESH_TOKEN_KEY);
+      const refreshToken = tokenStorage.getRefreshToken();
 
       if (!refreshToken) {
         setIsLoading(false);
@@ -150,7 +153,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const logout = useCallback(async () => {
     setIsLoading(true);
 
-    const accessToken = sessionStorage.getItem(ACCESS_TOKEN_KEY);
+    const accessToken = tokenStorage.getAccessToken();
 
     try {
       if (accessToken) {
