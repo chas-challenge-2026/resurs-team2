@@ -4,20 +4,23 @@ import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Contact;
 import io.swagger.v3.oas.models.info.Info;
-import io.swagger.v3.oas.models.security.SecurityRequirement;
 import io.swagger.v3.oas.models.security.SecurityScheme;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 
+import se.comerit.resurs.security.SessionCookie;
+
 @Configuration
 @Profile("local")
 public class OpenApiConfig {
 
+    /** Name of the security scheme used by the {@code @SecurityRequirement} annotations. */
+    private static final String SECURITY_SCHEME_NAME = "Session Cookie";
+
     @Bean
     public OpenAPI resursPortalOpenAPI() {
-        final String securitySchemeName = "Bearer Authentication";
         return new OpenAPI()
                 .info(new Info()
                         .title("Resurs Portal API")
@@ -27,11 +30,14 @@ public class OpenApiConfig {
                         .contact(new Contact()
                                 .name("Resurs Team")))
                 .components(new Components()
-                        .addSecuritySchemes(securitySchemeName,
+                        .addSecuritySchemes(SECURITY_SCHEME_NAME,
                                 new SecurityScheme()
-                                        .name(securitySchemeName)
-                                        .type(SecurityScheme.Type.HTTP)
-                                        .scheme("bearer")
-                                        .bearerFormat("Session Token")));
+                                        .type(SecurityScheme.Type.APIKEY)
+                                        .in(SecurityScheme.In.COOKIE)
+                                        .name(SessionCookie.ACCESS)
+                                        .description("HttpOnly session cookie set by the login "
+                                                + "endpoints. The server rotates the "
+                                                + "access/refresh cookie pair transparently; "
+                                                + "no Authorization header is used.")));
     }
 }

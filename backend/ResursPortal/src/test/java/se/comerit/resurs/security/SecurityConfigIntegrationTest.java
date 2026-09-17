@@ -50,7 +50,7 @@ class SecurityConfigIntegrationTest {
     void protectedEndpointWithValidTokenIs200() throws Exception {
         AuthTokens tokens = issueCompany();
         mockMvc.perform(get("/api/v1/test/ping")
-                        .header("Authorization", "Bearer " + tokens.accessToken())
+                        .cookie(SessionCookie.access(tokens.accessToken()))
                         .header("User-Agent", UA))
                 .andExpect(status().isOk())
                 .andExpect(content().string("pong"));
@@ -59,7 +59,7 @@ class SecurityConfigIntegrationTest {
     @Test
     void protectedEndpointWithInvalidTokenIs401() throws Exception {
         mockMvc.perform(get("/api/v1/test/ping")
-                        .header("Authorization", "Bearer definitely-not-a-token")
+                        .cookie(SessionCookie.access("definitely-not-a-token"))
                         .header("User-Agent", UA))
                 .andExpect(status().isUnauthorized());
     }
@@ -78,7 +78,7 @@ class SecurityConfigIntegrationTest {
         // /api/v1/backoffice/** requires ROLE_CASE_WORKER -> company gets 403.
         AuthTokens tokens = issueCompany();
         mockMvc.perform(get("/api/v1/backoffice/anything")
-                        .header("Authorization", "Bearer " + tokens.accessToken())
+                        .cookie(SessionCookie.access(tokens.accessToken()))
                         .header("User-Agent", UA))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.status").value(403))
@@ -89,7 +89,7 @@ class SecurityConfigIntegrationTest {
     void principalRoleExposedToController() throws Exception {
         AuthTokens tokens = issueCompany();
         mockMvc.perform(get("/api/v1/test/role")
-                        .header("Authorization", "Bearer " + tokens.accessToken())
+                        .cookie(SessionCookie.access(tokens.accessToken()))
                         .header("User-Agent", UA))
                 .andExpect(status().isOk())
                 .andExpect(content().string("COMPANY"));
@@ -99,7 +99,7 @@ class SecurityConfigIntegrationTest {
     void apiRequestDoesNotCreateHttpSession() throws Exception {
         AuthTokens tokens = issueCompany();
         var result = mockMvc.perform(get("/api/v1/test/ping")
-                        .header("Authorization", "Bearer " + tokens.accessToken())
+                        .cookie(SessionCookie.access(tokens.accessToken()))
                         .header("User-Agent", UA))
                 .andExpect(status().isOk())
                 .andReturn();
@@ -110,9 +110,10 @@ class SecurityConfigIntegrationTest {
 
     @Test
     void apiResponsesAreNotCached() throws Exception {
-        // Regression for MED-3: bearer tokens and any echoed credentials must never
-        // be persisted by browsers/intermediaries — Spring Security's default cache
-        // control header must include no-store, even on error responses.
+        // Regression for MED-3: session tokens and any echoed credentials must
+        // never be persisted by browsers/intermediaries — Spring Security's
+        // default cache control header must include no-store, even on error
+        // responses.
         mockMvc.perform(get("/api/v1/test/ping"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(header().string("Cache-Control", containsString("no-store")));
@@ -126,7 +127,7 @@ class SecurityConfigIntegrationTest {
         store.revoke(tokens.accessToken());
 
         mockMvc.perform(get("/api/v1/test/ping")
-                        .header("Authorization", "Bearer " + tokens.accessToken())
+                        .cookie(SessionCookie.access(tokens.accessToken()))
                         .header("User-Agent", UA))
                 .andExpect(status().isUnauthorized());
     }

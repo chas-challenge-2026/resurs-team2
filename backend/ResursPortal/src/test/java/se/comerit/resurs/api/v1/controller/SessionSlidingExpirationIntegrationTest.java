@@ -4,8 +4,6 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,14 +12,17 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
+import jakarta.servlet.http.Cookie;
 import se.comerit.resurs.security.AuthTokens;
+import se.comerit.resurs.security.PrincipalRole;
+import se.comerit.resurs.security.SessionCookie;
 import se.comerit.resurs.security.SessionTokenStore;
 
 /**
@@ -67,9 +68,6 @@ class SessionSlidingExpirationIntegrationTest {
 
     @Autowired
     private MockMvc mockMvc;
-
-    @Autowired
-    private ObjectMapper objectMapper;
 
     @Test
     @DisplayName("Interaction slides the window forward; inactivity beyond the idle window invalidates the session")
@@ -117,29 +115,33 @@ class SessionSlidingExpirationIntegrationTest {
                 .andExpect(status().isOk())
                 .andReturn();
 
-        JsonNode body = objectMapper.readTree(result.getResponse().getContentAsString());
         return new AuthTokens(
-                body.get("accessToken").asText(),
-                body.get("refreshToken").asText(),
-                se.comerit.resurs.security.PrincipalRole.valueOf(body.get("role").asText()),
-                body.get("name").asText());
+                cookieValue(result.getResponse(), SessionCookie.ACCESS),
+                cookieValue(result.getResponse(), SessionCookie.REFRESH),
+                PrincipalRole.COMPANY,
+                "Malmö Fastigheter AB");
+    }
+
+    private static String cookieValue(MockHttpServletResponse response, String name) {
+        for (Cookie cookie : response.getCookies()) {
+            if (name.equals(cookie.getName())) {
+                return cookie.getValue();
+            }
+        }
+        throw new AssertionError("Expected cookie '" + name + "' in the response");
     }
 
     private void assertOk(AuthTokens tokens) throws Exception {
         mockMvc.perform(get("/api/v1/companies/me")
-                        .header(HttpHeaders.AUTHORIZATION, bearer(tokens.accessToken()))
+                        .cookie(SessionCookie.access(tokens.accessToken()))
                         .header("User-Agent", UA))
                 .andExpect(status().isOk());
     }
 
     private void assertUnauthorized(AuthTokens tokens) throws Exception {
         mockMvc.perform(get("/api/v1/companies/me")
-                        .header(HttpHeaders.AUTHORIZATION, bearer(tokens.accessToken()))
+                        .cookie(SessionCookie.access(tokens.accessToken()))
                         .header("User-Agent", UA))
                 .andExpect(status().isUnauthorized());
-    }
-
-    private static String bearer(String token) {
-        return "Bearer " + token;
     }
 }
