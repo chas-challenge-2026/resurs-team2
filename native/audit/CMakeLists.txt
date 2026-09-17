@@ -34,3 +34,10 @@ add_executable(audit_sandbox_test
 target_link_libraries(audit_sandbox_test PRIVATE OpenSSL::Crypto)
 add_test(NAME audit_sandbox_test COMMAND audit_sandbox_test)
 
+# --- Local ABI test (links against libresurs_audit.so) ---
+
+add_executable(audit_abi_test audit_abi_test.c)
+
+target_link_libraries(audit_abi_test PRIVATE resurs_audit)
+add_test(NAME audit_abi_test COMMAND audit_abi_test)
+
