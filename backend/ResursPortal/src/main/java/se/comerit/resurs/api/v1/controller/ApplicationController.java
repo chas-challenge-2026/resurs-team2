@@ -7,6 +7,9 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -23,11 +26,12 @@ import jakarta.validation.Valid;
 import se.comerit.resurs.api.v1.dto.ApplicationDetailsResponse;
 import se.comerit.resurs.api.v1.dto.ApplicationRequest;
 import se.comerit.resurs.api.v1.dto.ApplicationResponse;
+import se.comerit.resurs.api.v1.dto.PaginatedResponse;
 import se.comerit.resurs.api.v1.service.ApplicationService;
 import se.comerit.resurs.entity.ApplicationStatus;
 import se.comerit.resurs.security.UserPrincipal;
 
-import java.util.List;
+
 
 @RestController
 @RequestMapping("api/v1/applications")
@@ -95,11 +99,15 @@ public class ApplicationController {
     @ApiResponse(responseCode = "401", description = "Missing or invalid bearer token")
     @ApiResponse(responseCode = "403", description = "Caller does not have the COMPANY or CASE_WORKER role")
     @ApiResponse(responseCode = "500", description = "Unexpected internal error")
-    public ResponseEntity<List<ApplicationResponse>> listApplications(
+    public ResponseEntity<PaginatedResponse<ApplicationResponse>> listApplications(
             @Parameter(hidden = true) @AuthenticationPrincipal UserPrincipal principal,
             @Parameter(description = "Filter by application status",
                        schema = @Schema(implementation = ApplicationStatus.class))
-            @RequestParam(required = false) ApplicationStatus status) {
-        return ResponseEntity.ok(service.listApplications(principal, status));
+            @RequestParam(required = false) ApplicationStatus status,
+            @Parameter(hidden = true)
+            @PageableDefault(size = 20,
+            sort = "createdAt",
+            direction = Sort.Direction.DESC) Pageable pageable) {
+        return ResponseEntity.ok(service.listApplications(principal, status,pageable));
     }
 }
