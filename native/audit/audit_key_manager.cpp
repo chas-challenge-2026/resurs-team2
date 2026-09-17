@@ -1,4 +1,5 @@
 #include "audit_key_manager.hpp"
+#include "signer.hpp"
 
 #include <memory>
 #include <stdexcept>

@@ -1,10 +1,6 @@
 #ifndef RESURS_AUDIT_H
 #define RESURS_AUDIT_H
 
-// STATUS: skeleton only. All four functions below are stubs 
-// that return RESURS_AUDIT_ERR_NOT_INIT  
-// do nothing - no hashing, signing or key loading is implemented yet.
-
 #include <stddef.h>
 
 #if defined(_WIN32)
