@@ -2,6 +2,7 @@ package se.comerit.resurs.api.v1.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 import org.springframework.http.ResponseEntity;
@@ -107,6 +108,7 @@ public class AuthController {
     @ApiResponse(responseCode = "200", description = "Current principal")
     @ApiResponse(responseCode = "401", description = "No valid session")
     @ApiResponse(responseCode = "500", description = "Unexpected internal error")
+    @SecurityRequirement(name = "Session Cookie")
     public ResponseEntity<PrincipalResponse> me(@AuthenticationPrincipal UserPrincipal principal) {
         return ResponseEntity.ok(PrincipalResponse.from(principal));
     }
@@ -120,6 +122,7 @@ public class AuthController {
     @ApiResponse(responseCode = "401", description = "Missing or invalid session")
     @ApiResponse(responseCode = "403", description = "Caller does not have the COMPANY or CASE_WORKER role")
     @ApiResponse(responseCode = "500", description = "Unexpected internal error")
+    @SecurityRequirement(name = "Session Cookie")
     public ResponseEntity<Void> logout(
             @CookieValue(name = SessionCookie.ACCESS, required = false) String accessToken,
             HttpServletResponse res) {
@@ -141,6 +144,7 @@ public class AuthController {
     @ApiResponse(responseCode = "401", description = "Missing or invalid session")
     @ApiResponse(responseCode = "403", description = "Caller does not have the COMPANY or CASE_WORKER role")
     @ApiResponse(responseCode = "500", description = "Unexpected internal error")
+    @SecurityRequirement(name = "Session Cookie")
     public ResponseEntity<Void> logoutAll(@AuthenticationPrincipal UserPrincipal principal,
             HttpServletResponse res) {
         service.logoutAll(principal);
