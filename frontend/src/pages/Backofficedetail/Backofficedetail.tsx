@@ -22,6 +22,7 @@ export const Backofficedetail = () => {
 
   const {
     application,
+    financialMetrics,
     documents,
     auditLogs,
     workerName,
@@ -66,6 +67,16 @@ export const Backofficedetail = () => {
     );
   }
 
+  if (!financialMetrics) {
+  return (
+    <main className="backoffice-detail-page">
+      <p className="text-muted">
+        Kunde inte hämta ekonomiska nyckeltal.
+      </p>
+    </main>
+  );
+}
+
   return (
     <main className="backoffice-detail-page">
       <header className="backoffice-detail-header">
@@ -107,7 +118,8 @@ export const Backofficedetail = () => {
             workerName={workerName}
           />
 
-          <CreditPanel application={application} />
+          <CreditPanel application={application} financialMetrics={financialMetrics} />
+          
 
           <ScoringPanel scoringResult={application.scoringResult} />
         </div>
