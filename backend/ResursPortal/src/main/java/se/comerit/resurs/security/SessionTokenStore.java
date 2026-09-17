@@ -119,9 +119,18 @@ public class SessionTokenStore {
             revokeAllForUser(st.principal);
             return Optional.empty();
         }
-        // Single-use: mark this refresh as spent so a replay is detected as empty.
+        // Single-use must be claimed atomically: only the caller that actually
+        // removes the refresh mapping from the active map may issue a fresh
+        // pair. A racing presentation of the same token (concurrent replay)
+        // loses here and is rejected — otherwise a stolen refresh token could
+        // be double-spent by an attacker and the victim racing each other.
+        if (!sessionsByRefresh.remove(hash(refreshToken), st)) {
+            return Optional.empty();
+        }
+        // Record the spent hash for theft/replay forensics, then retire the
+        // old access half of the session.
         usedTokens.put(st.refreshTokenHash, st);
-        remove(st);
+        sessionsByAccess.remove(st.accessTokenHash);
         return Optional.of(issue(st.principal, fingerprint));
     }
 
