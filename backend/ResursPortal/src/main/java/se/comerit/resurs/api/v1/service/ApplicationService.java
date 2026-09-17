@@ -8,6 +8,8 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import tools.jackson.databind.ObjectMapper;
 
@@ -89,9 +91,30 @@ public class ApplicationService {
 
         auditLogService.append(app, new ApplicationCreated(orgNumber));
 
-        self.runScoringAsync(app.getId());
+        scheduleScoringAfterCommit(app.getId());
 
         return app.getId();
+    }
+
+    /**
+     * Runs the (asynchronous) scoring only after the surrounding transaction
+     * has committed. Starting it inside the transaction is racy: the scoring
+     * thread reads the application in its own transaction and could see nothing
+     * if the insert has not been committed yet, silently skipping the scoring
+     * for that application. When no transaction is active the scoring is
+     * scheduled immediately.
+     */
+    private void scheduleScoringAfterCommit(Long applicationId) {
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    self.runScoringAsync(applicationId);
+                }
+            });
+        } else {
+            self.runScoringAsync(applicationId);
+        }
     }
 
     @Async

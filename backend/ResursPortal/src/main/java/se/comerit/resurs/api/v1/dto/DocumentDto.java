@@ -7,6 +7,13 @@ import java.time.Instant;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 @Schema(description = "Metadata for a document uploaded to an application")
+/**
+ * Document DTO.
+ * <p>
+ * {@code filename} is the user-facing original file name (e.g. "annual-report.pdf").
+ * The opaque storage key ({@code <uuid>.pdf}) stays internal to the service layer
+ * and is never exposed to clients.
+ */
 public record DocumentDto(
         @Schema(description = "Unique document identifier",
                 example = "550e8400-e29b-41d4-a716-446655440000")
@@ -24,7 +31,7 @@ public record DocumentDto(
         return new DocumentDto(
                 document.getUuid(),
                 document.getApplication().getId(),
-                document.getFilename(),
+                document.getOriginalFilename(),
                 document.getDocType(),
                 document.getUploadedAt()
         );

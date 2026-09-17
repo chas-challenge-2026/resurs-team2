@@ -33,6 +33,7 @@ CREATE TABLE documents (
     uuid uuid PRIMARY KEY,
     application_id INT REFERENCES applications(id),
     filename VARCHAR(512),
+    original_filename VARCHAR(512),
     doc_type VARCHAR(50),
     uploaded_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );

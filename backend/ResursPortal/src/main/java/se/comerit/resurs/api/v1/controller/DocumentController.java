@@ -7,6 +7,7 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 import org.springframework.core.io.Resource;
+import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -31,10 +32,13 @@ import java.util.UUID;
  * TODO: implement PDF parsing in v2 (see native/README.md)
  * <p>
  * Anti-patterns:
- * - Filer sparas i /tmp/uploads — rensas vid omstart
  * - Ingen validering av filtyp (accepterar vad som helst)
  * - Audit log uppdateras via JSON string manipulation
  * - Session check copy-pasteat
+ * <p>
+ * Lagring: filer sparas via FileStorageService (local disk eller S3),
+ * se storage.type i application.properties. Filer krypteras i vila via
+ * EncryptedFileStorageService (nativ AES-256-GCM) om storage.encryption.enabled=true.
  */
 @RestController
 @RequestMapping("/api/v1")
@@ -116,14 +120,18 @@ public class DocumentController {
                        example = "550e8400-e29b-41d4-a716-446655440000")
             @PathVariable UUID id,
             @Parameter(hidden = true) @AuthenticationPrincipal UserPrincipal principal) {
+            @AuthenticationPrincipal UserPrincipal principal) {
 
-        Resource resource = documentService.downloadDocument(id,principal);
+        DocumentService.DocumentDownload download = documentService.downloadDocument(id, principal);
+
+        ContentDisposition contentDisposition = ContentDisposition.attachment()
+                .filename(download.originalFilename())
+                .build();
 
         return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION,
-                        "attachment")
+                .header(HttpHeaders.CONTENT_DISPOSITION, contentDisposition.toString())
                 .contentType(MediaType.APPLICATION_PDF)
-                .body(resource);
+                .body(download.resource());
     }
 
     @PreAuthorize("hasAnyRole('COMPANY', 'CASE_WORKER')")
