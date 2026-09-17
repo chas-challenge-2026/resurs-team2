@@ -343,6 +343,23 @@ class SessionTokenStoreTest {
     }
 
     @Test
+    void rotateRetainsSpentRefreshHashForForensics() {
+        SessionTokenStore store = store(true, 10_000, 60_000);
+
+        AuthTokens original = store.issue(company, FP);
+        store.rotate(original.refreshToken(), FP).orElseThrow();
+
+        // The spent hash is evicted from the active map (replay would fail)…
+        assertThat(store.sessionsByRefresh.containsKey(store.hash(original.refreshToken())))
+                .as("spent refresh token must no longer be accepted as active")
+                .isFalse();
+        // …but retained in the evidence log for theft/replay forensics.
+        assertThat(store.usedTokens.containsKey(store.hash(original.refreshToken())))
+                .as("spent refresh hash must be retained for forensic inspection")
+                .isTrue();
+    }
+
+    @Test
     void rotationDoesNotResetTheAbsoluteExpirationCap() {
         // Idle is long, so only the absolute 200ms cap (from the ORIGINAL login) matters.
         SessionTokenStore store = store(true, 10_000, 200);

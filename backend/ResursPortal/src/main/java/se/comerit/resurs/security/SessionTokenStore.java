@@ -26,6 +26,12 @@ public class SessionTokenStore {
     // package-private for tests (se.comerit.resurs.security); not part of the API
     final ConcurrentHashMap<String, SessionToken> sessionsByAccess = new ConcurrentHashMap<>();
     final ConcurrentHashMap<String, SessionToken> sessionsByRefresh = new ConcurrentHashMap<>();
+    /**
+     * Evidence log of spent refresh tokens (retained past expiry for theft/replay
+     * forensics). Never consulted for authorization — replay rejection comes from
+     * the atomic removal of the refresh mapping in {@link #rotate} (Step 2), and
+     * revoke wipes the active maps, so a blocked replay never reaches this map.
+     */
     final ConcurrentHashMap<String, SessionToken> usedTokens = new ConcurrentHashMap<>();
 
     private final boolean slidingExpirationEnabled;
@@ -89,7 +95,7 @@ public class SessionTokenStore {
      */
     public Optional<UserPrincipal> validateAccess(String token, String fingerprint) {
         SessionToken st = sessionsByAccess.get(hash(token));
-        if (st == null || st.revoked)
+        if (st == null)
             return Optional.empty();
         if (st.expiresAt.isBefore(clock.instant())) {
             remove(st);
@@ -117,7 +123,7 @@ public class SessionTokenStore {
      */
     public Optional<AuthTokens> rotate(String refreshToken, String fingerprint) {
         SessionToken st = sessionsByRefresh.get(hash(refreshToken));
-        if (st == null || st.revoked) {
+        if (st == null) {
             return Optional.empty();
         }
         if (st.expiresAt.isBefore(clock.instant())) {
