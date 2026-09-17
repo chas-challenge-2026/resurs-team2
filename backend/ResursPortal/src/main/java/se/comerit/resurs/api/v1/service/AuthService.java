@@ -57,6 +57,9 @@ public class AuthService {
     }
 
     public AuthTokens refresh(String refreshToken, String fingerprint) {
+        if (refreshToken == null || refreshToken.isBlank()) {
+            throw InvalidCredentialsException.unauthorized("Invalid or revoked token");
+        }
         return tokenStore.rotate(refreshToken, fingerprint)
                 .orElseThrow(() -> InvalidCredentialsException.unauthorized("Invalid or revoked token"));
     }
