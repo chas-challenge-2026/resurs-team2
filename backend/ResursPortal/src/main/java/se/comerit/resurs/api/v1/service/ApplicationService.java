@@ -5,6 +5,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,6 +29,7 @@ import se.comerit.resurs.security.CaseWorkerPrincipal;
 import se.comerit.resurs.security.UserPrincipal;
 import tools.jackson.databind.ObjectMapper;
 
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -137,17 +139,16 @@ public class ApplicationService {
      * everything.
      */
     @Transactional(readOnly = true)
-    public @Nonnull PaginatedResponse<ApplicationResponse> listApplications (UserPrincipal principal,
-                                                                             ApplicationStatus status,
-                                                                             Pageable pageable) {
+    public @Nonnull List<ApplicationResponse> listApplications (UserPrincipal principal,
+                                                                ApplicationStatus status,
+                                                                Pageable pageable) {
         if (principal instanceof CaseWorkerPrincipal) {
             ApplicationStatus effective = status != null ? status : ApplicationStatus.UNDER_REVIEW;
 
             Page<Application> applications = applicationRepository.findByStatus(effective, pageable);
 
-            Page<ApplicationResponse> response = applications.map(ApplicationMapper::toResponse);
 
-            return PaginatedResponse.from(response);
+            return applications.map(ApplicationMapper::toResponse).getContent();
 
 
         }
@@ -171,10 +172,9 @@ public class ApplicationService {
             );
         }
 
-        Page<ApplicationResponse> responses =
-                applications.map(ApplicationMapper::toResponse);
 
-        return PaginatedResponse.from(responses);
+
+        return applications.map(ApplicationMapper::toResponse).getContent();
     }
 
     /**
