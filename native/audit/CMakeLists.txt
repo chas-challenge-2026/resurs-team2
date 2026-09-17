@@ -41,3 +41,8 @@ add_executable(audit_abi_test audit_abi_test.c)
 target_link_libraries(audit_abi_test PRIVATE resurs_audit)
 add_test(NAME audit_abi_test COMMAND audit_abi_test)
 
+# --- Narrated demo (not a test - run manually to see the flow) ---
+
+add_executable(audit_demo audit_demo.c)
+target_link_libraries(audit_demo PRIVATE resurs_audit)
+
