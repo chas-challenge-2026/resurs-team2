@@ -43,6 +43,21 @@ public class DummyCryptoService implements ResursCryptoService {
     }
 
     @Override
+    public byte[] encryptRaw(byte[] data) {
+        byte[] nonce = generateNonce();
+
+        byte[] blob = new byte[nonce.length + data.length];
+        System.arraycopy(nonce, 0, blob, 0, nonce.length);
+        System.arraycopy(data, 0, blob, nonce.length, data.length);
+        return blob;
+    }
+
+    @Override
+    public byte[] decryptRaw(byte[] blob) {
+        return Arrays.copyOfRange(blob, NONCE_LEN, blob.length);
+    }
+
+    @Override
     public byte[] blindIndex(String value) {
         try {
             return MessageDigest.getInstance(SHA_256)

@@ -7,6 +7,8 @@ import {
 } from "react";
 
 import { authApi } from "../api/authApi";
+import { tokenStorage } from "../api/tokenStorage";
+import { onSessionExpired, refreshTokens } from "../api/tokenRefresher";
 import { AuthContext } from "./AuthContext";
 
 import type {
@@ -15,9 +17,6 @@ import type {
   CompanyCredentials,
   User,
 } from "./auth.types";
-
-const ACCESS_TOKEN_KEY = "accessToken";
-const REFRESH_TOKEN_KEY = "refreshToken";
 
 interface AuthProviderProps {
   children: ReactNode;
@@ -29,31 +28,36 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   const saveTokens = useCallback(
     (accessToken: string, refreshToken: string) => {
-      sessionStorage.setItem(ACCESS_TOKEN_KEY, accessToken);
-      sessionStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+      tokenStorage.setTokens(accessToken, refreshToken);
     },
     [],
   );
 
   const clearSession = useCallback(() => {
-    sessionStorage.removeItem(ACCESS_TOKEN_KEY);
-    sessionStorage.removeItem(REFRESH_TOKEN_KEY);
+    tokenStorage.clearTokens();
     setUser(null);
   }, []);
 
+  // Automatic rotation (tokenRefresher) logs the user out when the refresh
+  // token can no longer be used, so ProtectedRoute redirects to the login page.
+  useEffect(() => {
+    return onSessionExpired(() => clearSession());
+  }, [clearSession]);
+
   useEffect(() => {
     const restoreSession = async () => {
-      const refreshToken = sessionStorage.getItem(REFRESH_TOKEN_KEY);
-
-      if (!refreshToken) {
-        setIsLoading(false);
-        return;
-      }
-
+      // Restore goes through the SAME single-flight refresher as the 401
+      // interceptor: the refresh token is single-use, and StrictMode double-
+      // invokes this effect in dev — presenting it twice concurrently would
+      // make one presentation lose the race and log the user out on reload.
       try {
-        const tokens = await authApi.refresh(refreshToken);
+        const tokens = await refreshTokens();
 
-        saveTokens(tokens.accessToken, tokens.refreshToken);
+        if (tokens === null) {
+          // No token, or the session is over — refreshTokens already cleared
+          // storage and fired the session-expired listeners (user = null).
+          return;
+        }
 
         if (tokens.role === "COMPANY") {
           const company = await authApi.getCurrentCompany(
@@ -91,7 +95,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     };
 
     void restoreSession();
-  }, [clearSession, saveTokens]);
+  }, [clearSession]);
 
   const loginCompany = useCallback(
     async (credentials: CompanyCredentials) => {
@@ -150,7 +154,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const logout = useCallback(async () => {
     setIsLoading(true);
 
-    const accessToken = sessionStorage.getItem(ACCESS_TOKEN_KEY);
+    const accessToken = tokenStorage.getAccessToken();
 
     try {
       if (accessToken) {

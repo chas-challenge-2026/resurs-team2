@@ -61,7 +61,25 @@ public class AuthService {
                 .orElseThrow(() -> InvalidCredentialsException.unauthorized("Invalid or revoked token"));
     }
 
-    public void logout(UserPrincipal principal) {
+    /**
+     * Log out by revoking only the session that presented the access token.
+     * Other active sessions for the same user (e.g. a second browser) stay
+     * logged in — the caller is only terminating its own session.
+     *
+     * @param accessToken bearer token of the session being logged out
+     */
+    public void logout(String accessToken) {
+        tokenStore.revoke(accessToken);
+    }
+
+    /**
+     * Log the principal out of every active session (all devices/browsers).
+     * Unlike {@link #logout(String)} this wipes all tokens of the user, for
+     * example to clear stale logins after a suspected compromise.
+     *
+     * @param principal the user whose sessions are all revoked
+     */
+    public void logoutAll(UserPrincipal principal) {
         tokenStore.revokeAllForUser(principal);
     }
 

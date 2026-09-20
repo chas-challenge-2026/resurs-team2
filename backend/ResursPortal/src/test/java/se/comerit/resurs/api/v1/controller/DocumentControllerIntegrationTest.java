@@ -3,6 +3,7 @@ package se.comerit.resurs.api.v1.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -13,6 +14,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.io.IOException;
+import java.io.ByteArrayInputStream;
 import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -32,6 +34,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 import se.comerit.resurs.api.v1.service.DocumentService;
+import se.comerit.resurs.api.v1.service.FileStorageService;
 import se.comerit.resurs.entity.Application;
 import se.comerit.resurs.entity.Company;
 import se.comerit.resurs.entity.Document;
@@ -59,6 +62,9 @@ class DocumentControllerIntegrationTest {
     private DocumentService documentService;
 
     @Autowired
+    private FileStorageService fileStorageService;
+
+    @Autowired
     private CompanyRepository companyRepository;
 
     @Autowired
@@ -79,27 +85,11 @@ class DocumentControllerIntegrationTest {
     private Document docB;
 
     @BeforeEach
-    void setUp() throws IOException {
+    void setUp() throws Exception {
         documentRepository.deleteAll();
         auditLogRepository.deleteAll();
         applicationRepository.deleteAll();
         companyRepository.deleteAll();
-
-        Path uploadDir = Path.of("/tmp/uploads");
-        if (Files.exists(uploadDir)) {
-            try (var paths = Files.walk(uploadDir)) {
-                paths.filter(Files::isRegularFile)
-                        .sorted(Comparator.reverseOrder())
-                        .forEach(path -> {
-                            try {
-                                Files.deleteIfExists(path);
-                            } catch (IOException e) {
-                                throw new IllegalStateException("Failed cleaning upload dir", e);
-                            }
-                        });
-            }
-        }
-        Files.createDirectories(uploadDir);
 
         Company companyA = companyRepository.save(new Company(COMPANY_A, "Company A", "Signer A"));
         Company companyB = companyRepository.save(new Company(COMPANY_B, "Company B", "Signer B"));
@@ -107,8 +97,18 @@ class DocumentControllerIntegrationTest {
         appA = applicationRepository.save(new Application(companyA, new BigDecimal("250000.00"), "A working capital"));
         appB = applicationRepository.save(new Application(companyB, new BigDecimal("350000.00"), "B working capital"));
 
-        docA = documentRepository.save(new Document(appA, "annual-review-" + appA.getId() + ".pdf", "AnnualReview"));
-        docB = documentRepository.save(new Document(appB, "annual-review-" + appB.getId() + ".pdf", "AnnualReview"));
+        docA = new Document(appA, "annual-review.pdf", "AnnualReview");
+        docA.setFilename(docA.getUuid() + ".pdf");
+        docA = documentRepository.save(docA);
+
+        docB = new Document(appB, "annual-review.pdf", "AnnualReview");
+        docB.setFilename(docB.getUuid() + ".pdf");
+        docB = documentRepository.save(docB);
+    }
+
+    private void storeFile(Document doc, byte[] content) throws IOException {
+        fileStorageService.upload(doc.getUuid(), doc.getFilename(),
+                new ByteArrayInputStream(content), content.length);
     }
 
     @Nested
@@ -223,11 +223,14 @@ class DocumentControllerIntegrationTest {
         @Test
         @WithCompany(orgNumber = COMPANY_A)
         void companyCanDownloadOwnDocument() throws Exception {
-            Files.write(Path.of("/tmp/uploads", docA.getFilename()), "hello".getBytes());
+            storeFile(docA, "hello".getBytes());
 
             mockMvc.perform(get("/api/v1/documents/{id}", docA.getUuid()))
                     .andExpect(status().isOk())
-                    .andExpect(header().string(HttpHeaders.CONTENT_DISPOSITION, "attachment"));
+                    .andExpect(header().string(HttpHeaders.CONTENT_DISPOSITION,
+                            containsString("attachment")))
+                    .andExpect(header().string(HttpHeaders.CONTENT_DISPOSITION,
+                            containsString("annual-review.pdf")));
         }
 
         @Test
@@ -242,11 +245,14 @@ class DocumentControllerIntegrationTest {
         @Test
         @WithCaseWorker
         void caseWorkerCanDownloadAnyDocument() throws Exception {
-            Files.write(Path.of("/tmp/uploads", docA.getFilename()), "hello".getBytes());
+            storeFile(docA, "hello".getBytes());
 
             mockMvc.perform(get("/api/v1/documents/{id}", docA.getUuid()).with(csrf()))
                     .andExpect(status().isOk())
-                    .andExpect(header().string(HttpHeaders.CONTENT_DISPOSITION, "attachment"));
+                    .andExpect(header().string(HttpHeaders.CONTENT_DISPOSITION,
+                            containsString("attachment")))
+                    .andExpect(header().string(HttpHeaders.CONTENT_DISPOSITION,
+                            containsString("annual-review.pdf")));
         }
     }
 
@@ -263,17 +269,16 @@ class DocumentControllerIntegrationTest {
         @Test
         @WithCaseWorker
         void caseWorkerCanDeleteDocument() throws Exception {
-            Files.write(Path.of("/tmp/uploads", docA.getFilename()), "hello".getBytes());
+            storeFile(docA, "hello".getBytes());
 
             mockMvc.perform(delete("/api/v1/documents/{id}", docA.getUuid()).with(csrf()))
                     .andExpect(status().isNoContent());
-;
         }
 
         @Test
         @WithCompany(orgNumber = COMPANY_A)
         void companyCanDeleteOwnDocument() throws Exception {
-            Files.write(Path.of("/tmp/uploads", docA.getFilename()), "hello".getBytes());
+            storeFile(docA, "hello".getBytes());
 
             mockMvc.perform(delete("/api/v1/documents/{id}", docA.getUuid()).with(csrf()))
                     .andExpect(status().isNoContent());
