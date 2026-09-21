@@ -18,7 +18,7 @@ dist/
 *.local
 
 # Native C++
-native/build/
+**/build/
 
 # Local file uploads (created by application-local profile)
 uploads/

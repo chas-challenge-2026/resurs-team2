@@ -1,143 +1,102 @@
-# native/, C/C++ Moduler för v2
+# native/ – C/C++-moduler för v2
 
-Denna katalog innehåller (i v2) C/C++ nativmodulerna som anropas från Java via JNA (Java Native Access).
+Denna katalog innehåller den nativa C/C++-modulen `libresurs_crypto.so` som anropas från
+Java via JNA (Java Native Access). Modulen byggs med CMake (`native/Makefile`) och
+produceras av `make build-native` i repo-roten till `target/libs/`.
 
-## Planerade moduler
+> Senast uppdaterad: 2026-09-21 · **Status:** PII-krypteringsmodulen är **implementerad och
+> testad**. Audit-signeringsmodulen är **planerad, ej byggd** (Java-sidan har en stub —
+> se nedan).
 
-### 1. PII-kryptering: `libresurs_crypto.so`
+## 1. PII-kryptering: `libresurs_crypto.so` ✅ implementerad
 
-AES-256-GCM kryptering av känsliga uppgifter (org.nr, personuppgifter, finansiell info) på hot path.
+AES-256-GCM-kryptering av känsliga uppgifter (org.nr, företagsnamn, firmatecknare,
+finansiell info) på hot path, samt HMAC-SHA256-baserade blind index för uppslag utan
+klartext.
 
-**Syfte:** I v1 lagras firmanamn, organisationsnummer och firmatecknare i klartext (`ApplicationController.java`, kommentar: `// TODO: encrypt PII before go-live`). Nyckeln ska lagras separat från databasen, inte i samma förvaringsutrymme som ciphertext.
+**Blob-layout:** `[nonce:12][key_version:1][ciphertext][tag:16]` – krypteras till base64 i
+textkolumnen av `PiiAttributeConverter` / `AmountAttributeConverter`.
+Filer krypteras med `encryptRaw` (samma layout) via `EncryptedFileStorageService`.
 
-**Funktioner:**
+**C-snitt (deklarerade i `ResursCryptoLibrary.java`):**
+
 ```c
-// Kryptera PII-sträng
-int resurs_encrypt_pii(
-    const char* plaintext,
-    const unsigned char* key,       // 32 bytes (AES-256)
-    const unsigned char* nonce,     // 12 bytes (GCM)
-    unsigned char* ciphertext_out,
-    size_t* ciphertext_len
-);
-
-// Dekryptera PII-sträng
-int resurs_decrypt_pii(
-    const unsigned char* ciphertext,
-    size_t ciphertext_len,
-    const unsigned char* key,
-    const unsigned char* nonce,
-    char* plaintext_out,
-    size_t* plaintext_len
-);
+int resurs_crypto_init(const char* keyFilePath);      // ladda 64-byte nyckelfil
+int resurs_encrypt_pii(const char* plaintext, ...);    // AES-256-GCM
+int resurs_encrypt_pii_raw(const void* data, size_t dataLen, ...); // binär data (filer)
+int resurs_decrypt_pii(const void* nonce, size_t nonceLen, const void* ciphertext, ...);
+int resurs_hmac_sha256(const void* data, size_t dataLen, ...);      // blind index
+void resurs_crypto_shutdown();
 ```
 
-**JNA Bridge (Java):**
-```java
-public interface ResursCryptoLibrary extends Library {
-    ResursCryptoLibrary INSTANCE = Native.load("resurs_crypto", ResursCryptoLibrary.class);
-
-    int resurs_encrypt_pii(
-        String plaintext,
-        byte[] key,
-        byte[] nonce,
-        byte[] ciphertextOut,
-        IntByReference ciphertextLen
-    );
-}
-```
+**Implementering (C/C++):** `native/crypto/`
+- `aes_gcm_cipher.cpp`   – OpenSSL `EVP_aes_256_gcm`, per-operation-nonce
+- `key_manager.cpp`      – mutex-skyddad singleton, nyckel i "key not loaded"-tillstånd,
+  `OPENSSL_cleanse` vid nedrivning
+- `hmac_sha256.cpp`      – HMAC-SHA256 för blind index
+- `resurs_crypto.cpp`    – exekverbart grensitt mot JNA
+- `abi_test.c` / `sandbox_test.cpp` – inhemska tester (`make test_native`)
 
 **Nyckellagring:**
-- Nyckel lagras separat från databasen (HashiCorp Vault eller AWS KMS)
-- Nonce genereras per krypteringsoperation och lagras tillsammans med ciphertext
+- Nyckelfilen är exakt **64 byte**: `[0..32)` AES-256, `[32..64)` HMAC-nyckel.
+- Genereras med `cd infra && make keys` (vägrar skriva över befintlig; halv-rotation med
+  `make key-aes` / `make key-hmac`).
+- Monteras i Docker som secret `/run/secrets/resurs_crypto_key`, nås av appen via
+  `RESURS_CRYPTO_KEY_PATH=${resurs.jna.key.path}`.
+- Nonce genereras per operation och lagras med ciphertext.
+- Nycklar **får inte** ligga i samma förvaringsutrymme som ciphertext (databas).
 
-### 2. Audit-signering: `libresurs_audit.so`
+**Fail-closed:** `ResursCryptoConfig` vägrar starta om en produktionsdatabas (Postgres) är
+konfigurerad utan att den nativa modulen går att ladda. Lokalt/test använder
+`DummyCryptoService` + `PlainPiiCodec` (test-profiler).
+
+## 2. Audit-signering: hashkedja ❌ ej implementerad (planerad)
 
 Säker signering av audit-loggen med hashkedjor, för att upptäcka manipulation i efterhand.
 
-**Syfte:** I v1 är audit-loggen osignerad (JSON-blob i en kolumn utan index). En rad kan ändras eller raderas i efterhand utan att det syns. I v2 ska varje audit-post hashas ihop med föregående posts hash (hashkedja) och signeras, så att manipulation av en enskild post eller av kedjans ordning går att upptäcka vid verifiering.
+**Syfte:** I v1 var audit-loggen osignerad (JSON-blob utan index). Målet är att varje
+audit-post hashas ihop med föregående posts hash så att manipulation av en enskild post
+eller av kedjans ordning upptäcks vid verifiering.
 
-**Funktioner:**
-```c
-// Beräkna hash för en audit-post och kedja den till föregående post
-int resurs_audit_chain_entry(
-    const unsigned char* prev_hash,     // 32 bytes, SHA-256 av föregående post (NULL för första posten i kedjan)
-    const char* entry_json,             // audit-postens innehåll: tidsstämpel, regel-ID, indata, utfall
-    size_t entry_len,
-    unsigned char* hash_out,            // 32 bytes, SHA-256(prev_hash || entry_json)
-    unsigned char* signature_out,       // digital signatur av hash_out
-    size_t* signature_len
-);
+**Status idag:**
+- Databassidan finns: separat `audit_log`-tabell med `sequence_number`, `hash`,
+  `previous_hash`, `entry`, `timestamp` (se `schema.sql` / `infra/seed.sql`).
+- Java-sidan är en **stub**: `AuditLogService.computeHash(...)` returnerar `""`
+  (`// TODO: Implement actual hash computation`). Samtliga `hash`/`previous_hash`-rader
+  är därmed tomma.
+- **Ingen** `libresurs_audit.so` är byggd och inga `resurs_audit_*`-funktioner finns i C.
 
-// Verifiera en kedja av audit-poster, hittar första manipulerade posten om någon
-int resurs_audit_verify_chain(
-    const unsigned char* hashes,        // entry_count * 32 bytes, hashkedjan i ordning
-    const unsigned char* signatures,    // signaturer i samma ordning
-    const size_t* signature_lens,
-    size_t entry_count,
-    const unsigned char* public_key,
-    int* first_invalid_index            // -1 om kedjan är giltig, annars index på första manipulerade posten
-);
-```
-
-**JNA Bridge (Java):**
-```java
-public interface ResursAuditLibrary extends Library {
-    ResursAuditLibrary INSTANCE = Native.load("resurs_audit", ResursAuditLibrary.class);
-
-    int resurs_audit_chain_entry(
-        byte[] prevHash,
-        String entryJson,
-        int entryLen,
-        byte[] hashOut,
-        byte[] signatureOut,
-        IntByReference signatureLen
-    );
-
-    int resurs_audit_verify_chain(
-        byte[] hashes,
-        byte[] signatures,
-        int[] signatureLens,
-        int entryCount,
-        byte[] publicKey,
-        IntByReference firstInvalidIndex
-    );
-}
-```
-
-**Nyckellagring:**
-- Signeringsnyckeln (privat nyckel) lagras separat från databasen, samma princip som för PII-kryptering
-- Publik nyckel kan distribueras fritt för verifiering, t.ex. till revisor eller tillsynsmyndighet
+**När det byggs:** planera en C-modul med `resurs_audit_chain_entry(prev_hash, entry_json)`
+(HMAC/SHA-256 av `prev_hash || entry_json`) och en verifieringsfunktion, exponerad via en
+JNA-bridge. Nyckelhantering enligt samma princip som PII-krypteringen (separat
+förvaring). Se `docs/backend-audit.md` (H1) för rekommenderad åtgärd.
 
 ## Kompilering
 
+Modulen byggs via `native/Makefile` (CMake), inte som ad-hoc `gcc`-kommandon:
+
 ```bash
-# PII-kryptering (kräver libssl-dev)
-gcc -shared -fPIC -o libresurs_crypto.so resurs_crypto.c -lssl -lcrypto
-
-# Audit-signering (kräver libssl-dev)
-gcc -shared -fPIC -o libresurs_audit.so resurs_audit.c -lssl -lcrypto
+# från repo-roten:
+make build-native        # → target/libs/libresurs_crypto.so
+make test_native         # kör C/C++-tester (abi_test, sandbox_test)
+make test-encryption     # kör Java RealEncryptionIT mot den nativa modulen
 ```
 
-## JNA Integration Guide
+Kräver `cmake`, `gcc/g++` och `libssl-dev`.
 
-1. Lägg till JNA i pom.xml:
-```xml
-<dependency>
-    <groupId>net.java.dev.jna</groupId>
-    <artifactId>jna</artifactId>
-    <version>5.13.0</version>
-</dependency>
-```
+## JNA-integration (Java)
 
-2. Placera `.so`-filer i `/usr/local/lib/` eller ange sökväg via `-Djna.library.path`
+- `config/JnaConfig.java` – sätter `jna.library.path` från `resurs.jna.library.path`
+  (default `target/libs`, relativt arbetskatalogen).
+- `config/ResursCryptoLibrary.java` – JNA-interface som `extends Library`.
+- `api/v1/service/ResursCryptoServiceImpl.java` – konkret service; `ResursCryptoService`
+  är gränssnittet som resten av appen använder.
+- `config/ResursCryptoConfig.java` – komposition + fail-closed vid saknad modul.
 
-3. Definiera Java-interface som extends `Library`
+## Status (sammanfattning)
 
-4. Anropa via `Native.load("resurs_crypto", ResursCryptoLibrary.class)` respektive `Native.load("resurs_audit", ResursAuditLibrary.class)`
-
-## Status
-
-- [ ] libresurs_crypto.so, ej implementerad (v2)
-- [ ] libresurs_audit.so, ej implementerad (v2)
-- [ ] JNA bridge, ej implementerad (v2)
+- [x] `libresurs_crypto.so` – **implementerad och testad** (AES-256-GCM, HMAC blind index)
+- [x] JNA-bridge (`ResursCryptoLibrary`) – **implementerad**
+- [x] Fält- och filkryptering i vila via modulen – **implementerad**
+- [ ] `libresurs_audit.so` / audit-signering – **ej byggd**; Java-sidan är en stub
+  (`AuditLogService.computeHash`), se `docs/backend-audit.md` H1

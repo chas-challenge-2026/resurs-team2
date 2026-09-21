@@ -4,7 +4,7 @@ B2B-kreditansökningsportal för Resurs Bank. Företag ansöker om kredit, ladda
 
 ## Snabbstart
 
-Projektet byggs med en **enhetlig Makefile** som orkestrerar React-frontenden (Vite/npm), Spring Boot-backenden (Maven/`./mvnw`) och den framtida C++-modulen (CMake). Alla artefakter kopieras till en gemensam `target/`-katalog.
+Projektet byggs med en **enhetlig Makefile** som orkestrerar React-frontenden (Vite/npm), Spring Boot-backenden (Maven/`./mvnw`) och den nativa C/C++-modulen (CMake). Alla artefakter kopieras till en gemensam `target/`-katalog.
 
 > Alla kommandon körs från **repo-roten**.
 
@@ -101,16 +101,21 @@ Dockerfile                   ← bygger hela projektet via `make package`
 frontend/                    ← React + TypeScript + Vite (SPA)
   src/pages/                 ← Login, Backoffice, Documents, m.m.
 
-backend/ResursPortal/        ← Spring Boot 3.5 Maven-projekt
+backend/ResursPortal/        ← Spring Boot 4.1 Maven-projekt (Java 25)
   src/main/java/se/comerit/resurs/
     ResursPortalApplication.java
-    api/v1/controller/       ← ny REST-API (SPA använder /api/v1/...)
-    controller/              ← legacy Thymeleaf (avstängd i `v2`-profilen)
-    config/                  ← JnaConfig, SpaFallbackController
-    security/                ← SecurityConfig (api-/v2-kedjor)
+    api/v1/controller/       ← REST-API (SPA använder /api/v1/...)
+    api/v1/service/          ← affärslogik (@Transactional)
+    api/v1/dto/              ← DTO:er
+    security/                ← session-tokens, filterkedja, principaler
+    config/                  ← PII-kryptering (JNA), PiiCodec, storage, Swagger
+    entity/                  ← JPA-entiteter (krypterande converters, blind index)
+    repository/              ← Spring Data-repositories
+    rating/                  ← ScoringService, ScoringCheck, DecisionEngine
+    audit/                   ← audit-event-typer
   src/main/resources/
-    application.properties   ← `v2`-profil aktiv som default
-    application-local.properties
+    application.properties   ← default-konfiguration
+    application-local.properties  ← H2 + Swagger (läge: `local`)
 
 infra/
   docker-compose.yml         ← PostgreSQL + Spring Boot
@@ -120,28 +125,28 @@ native/
   README.md                  ← v2 C/C++ moduler (PII-kryptering, audit-signering)
 
 docs/
-  architecture.md
-  known-bugs.md
-  README-pain-points.md
-  v2-targets.md
+  architecture.md            ← arkitektur (nuläge)
+  backend-audit.md           ← säkerhets-/spårbarhetsgranskning (2026)
+  known-bugs.md              ← kända problem v1 → status
+  README-pain-points.md      ← pain points v1 → status
+  v2-targets.md              ← v2-mål och status
 ```
 
-## Avsiktliga anti-patterns (pedagogiska)
+## Status: v1 → v2 (genomfört)
 
-Detta är en **v1 spaghetti-kodbas** avsedd för studenter att refaktorera till v2.
+Kodbasen har refaktoriserats från v1 (Thymeleaf + JdbcTemplate + klartext-PII) till v2
+(React-SPA + REST + JPA + krypterad PII). De kända problemen från v1 och deras status
+finns i `docs/known-bugs.md`; målbilden med status finns i `docs/v2-targets.md`.
+Arkitekturen i dag beskrivs i `docs/architecture.md`.
 
-Se `docs/known-bugs.md` för fullständig lista. Highlights:
+Höjdpunkter i nuvarande arkitektur:
 
-1. BankID mock som hårdkodad if-sats
-2. 800+ raders scoring-metod inline i controller
-3. ~~SQL injection i handläggare-login~~
-4. Audit log som JSON-blob (ingen separat tabell)
-5. ~~JdbcTemplate direkt i varje controller~~
-6. PDF sparas men parsas aldrig
-7. PII i klartext
-8. Ingen transaktion vid ansökningsskapande
-9. Session-check copy-pastad i varje metod
+1. React-SPA + REST-API (`/api/v1/**`) bakom en Spring Security-filterkedja
+2. PII krypterat i vila (AES-256-GCM via nativ C/C++-modul + JNA) med blind index
+3. Opaqua session-tokens med rotation, expiry och stölddetektering
+4. Argon2 för lösenord (MD5/BCrypt borttaget)
+5. Separat audit_log-tabell med sekvensnummer
+6. Konfigurerbara scoring-trösklar (`resurs.scoring.*`)
 
-## Vad ska ni bygga
-
-Se `docs/v2-targets.md`.
+Kända öppna punkter finns i `docs/backend-audit.md` (audit-hashkedja ej implementerad,
+seedade demo-credentials, ingen beräknad färdigställandetid, m.m.).
