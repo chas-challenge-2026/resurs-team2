@@ -14,6 +14,7 @@ import se.comerit.resurs.api.v1.dto.ApplicationDetailsResponse;
 import se.comerit.resurs.api.v1.dto.ApplicationRequest;
 import se.comerit.resurs.api.v1.dto.ApplicationResponse;
 import se.comerit.resurs.api.v1.mapper.ApplicationMapper;
+import se.comerit.resurs.audit.ApplicationCreated;
 import se.comerit.resurs.entity.Application;
 import se.comerit.resurs.entity.ApplicationStatus;
 import se.comerit.resurs.entity.Company;
@@ -24,6 +25,10 @@ import se.comerit.resurs.repository.ApplicationRepository;
 import se.comerit.resurs.repository.CompanyRepository;
 import se.comerit.resurs.security.CaseWorkerPrincipal;
 import se.comerit.resurs.security.UserPrincipal;
+import tools.jackson.databind.ObjectMapper;
+
+import java.util.List;
+import java.util.Optional;
 
 
 @Service
