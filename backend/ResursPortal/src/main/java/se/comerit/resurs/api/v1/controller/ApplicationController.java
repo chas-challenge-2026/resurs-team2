@@ -26,7 +26,6 @@ import jakarta.validation.Valid;
 import se.comerit.resurs.api.v1.dto.ApplicationDetailsResponse;
 import se.comerit.resurs.api.v1.dto.ApplicationRequest;
 import se.comerit.resurs.api.v1.dto.ApplicationResponse;
-import se.comerit.resurs.api.v1.dto.PaginatedResponse;
 import se.comerit.resurs.api.v1.service.ApplicationService;
 import se.comerit.resurs.entity.ApplicationStatus;
 import se.comerit.resurs.security.UserPrincipal;
