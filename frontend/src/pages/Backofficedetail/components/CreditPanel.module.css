@@ -1,0 +1,7 @@
+.financialMetricsButtonActive  {
+  transform: translateY(-10px);
+}
+
+.financialMetricsContainer {
+  scroll-margin-top: 20px;
+}
