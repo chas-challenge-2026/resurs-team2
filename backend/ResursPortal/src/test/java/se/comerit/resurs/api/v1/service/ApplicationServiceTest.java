@@ -234,7 +234,8 @@ class ApplicationServiceTest {
             assertThatThrownBy(() ->
                     applicationService.submitApplication("unknown", validRequest))
                     .isInstanceOf(CompanyNotFoundException.class)
-                    .hasMessageContaining("unknown");
+                    .hasMessage("Company not found")
+                    .hasMessageNotContaining("unknown");
 
             verify(applicationRepository, never()).save(any(Application.class));
             verify(scoringService, never()).scoreApplication(any());
