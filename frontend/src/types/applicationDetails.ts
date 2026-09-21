@@ -5,6 +5,7 @@ import type { FinancialMetricsData } from "@/schemas/credit-application-schemas/
 export interface ApplicationDetails {
   application: Application;
   financialMetrics: FinancialMetricsData;
+  financialData: string
   workerName: string;
   documents: ApplicationDocument[];
 }
