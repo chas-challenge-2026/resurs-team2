@@ -26,7 +26,7 @@ import se.comerit.resurs.security.UserPrincipal;
 @RestController
 @RequestMapping("api/v1/applications")
 @Tag(name = "Audit Logs", description = "Audit trail for credit applications")
-@SecurityRequirement(name = "Bearer Authentication")
+@SecurityRequirement(name = "Session Cookie")
 public class AuditController {
 
     private final AuditLogService service;

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-
+import { formatTime } from "@/utils/dateUtils";
 import type { ApplicationSummary } from "../../types/applicationSummary";
 import { applicationApi } from "../../api/applicationApi";
 import { useAuth } from "../../components/hooks/useAuth";
@@ -142,7 +142,7 @@ export function Dashboard() {
                       </span>
                     </td>
 
-                    <td>{application.createdAt}</td>
+                    <td>{formatTime(application.createdAt)}</td>
 
                     <td>
                       <button

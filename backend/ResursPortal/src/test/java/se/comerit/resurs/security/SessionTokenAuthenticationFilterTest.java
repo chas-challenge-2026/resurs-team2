@@ -46,9 +46,9 @@ class SessionTokenAuthenticationFilterTest {
     }
 
     @Test
-    void setsAuthenticationForValidBearerToken() throws Exception {
+    void setsAuthenticationForValidAccessCookie() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/v1/test/ping");
-        request.addHeader("Authorization", "Bearer some-token");
+        request.setCookies(SessionCookie.access("some-token"));
         when(fingerprint.of(any())).thenReturn("UA|ip");
         when(store.validateAccess(eq("some-token"), any())).thenReturn(Optional.of(principal));
 
@@ -67,7 +67,7 @@ class SessionTokenAuthenticationFilterTest {
         UserPrincipal worker =
                 new CaseWorkerPrincipal(2L, "Karin", "karin@resurs.se");
         MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/v1/test/ping");
-        request.addHeader("Authorization", "Bearer some-token");
+        request.setCookies(SessionCookie.access("some-token"));
         when(fingerprint.of(any())).thenReturn("UA|ip");
         when(store.validateAccess(eq("some-token"), any())).thenReturn(Optional.of(worker));
 
@@ -80,32 +80,36 @@ class SessionTokenAuthenticationFilterTest {
     }
 
     @Test
-    void skipsWhenNoAuthorizationHeader() throws Exception {
+    void skipsWhenNoCookies() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/v1/test/ping");
 
         filter.doFilter(request, response, chain);
 
         assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
         verify(store, never()).validateAccess(any(), any());
+        verify(store, never()).rotate(any(), any());
         assertThat(chain.getRequest()).isSameAs(request);
     }
 
     @Test
-    void skipsWhenHeaderNotBearer() throws Exception {
-        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/v1/test/ping");
-        request.addHeader("Authorization", "Basic dXNlcjpwYXNz");
+    void doesNotAutoRotateOnTokenManagedEndpoint() throws Exception {
+        // POST /auth/refresh manages its own cookies — the filter must not
+        // rotate on top of it (a double rotation would consume the new pair).
+        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/v1/auth/refresh");
+        request.setCookies(SessionCookie.refresh("refresh-token"));
+        when(fingerprint.of(any())).thenReturn("UA|ip");
 
         filter.doFilter(request, response, chain);
 
         assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
-        verify(store, never()).validateAccess(any(), any());
+        verify(store, never()).rotate(any(), any());
         assertThat(chain.getRequest()).isSameAs(request);
     }
 
     @Test
-    void passesThroughOnInvalidToken() throws Exception {
+    void passesThroughOnInvalidAccessCookie() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/v1/test/ping");
-        request.addHeader("Authorization", "Bearer bogus");
+        request.setCookies(SessionCookie.access("bogus"));
         when(fingerprint.of(any())).thenReturn("UA|ip");
         when(store.validateAccess(eq("bogus"), any())).thenReturn(Optional.empty());
 
@@ -118,7 +122,7 @@ class SessionTokenAuthenticationFilterTest {
     @Test
     void doesNotCreateServerSession() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/v1/test/ping");
-        request.addHeader("Authorization", "Bearer some-token");
+        request.setCookies(SessionCookie.access("some-token"));
         when(fingerprint.of(any())).thenReturn("UA|ip");
         when(store.validateAccess(eq("some-token"), any())).thenReturn(Optional.of(principal));
 
@@ -126,5 +130,61 @@ class SessionTokenAuthenticationFilterTest {
 
         // STATELESS API contract: nothing must force an HttpSession.
         assertThat(request.getSession(false)).isNull();
+    }
+
+    @Test
+    void rotatesTransparentlyWhenAccessCookieMissing() throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/v1/test/ping");
+        request.setCookies(SessionCookie.refresh("refresh-token"));
+        when(fingerprint.of(any())).thenReturn("UA|ip");
+
+        AuthTokens rotated = new AuthTokens(
+                "new-access", "new-refresh", PrincipalRole.COMPANY, "Malmö Fastigheter AB");
+        when(store.rotate(eq("refresh-token"), any())).thenReturn(Optional.of(rotated));
+        when(store.validateAccess(eq("new-access"), any())).thenReturn(Optional.of(principal));
+
+        filter.doFilter(request, response, chain);
+
+        // Fresh pair is written into the response as Set-Cookie cookies.
+        assertThat(response.getCookie(SessionCookie.ACCESS)).isNotNull();
+        assertThat(response.getCookie(SessionCookie.ACCESS).getValue()).isEqualTo("new-access");
+        assertThat(response.getCookie(SessionCookie.REFRESH)).isNotNull();
+        assertThat(response.getCookie(SessionCookie.REFRESH).getValue()).isEqualTo("new-refresh");
+
+        // The request is authenticated via the rotated access token.
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        assertThat(auth).isNotNull();
+        assertThat(auth.getPrincipal()).isSameAs(principal);
+    }
+
+    @Test
+    void doesNotRotateWhenRefreshAlreadySpent() throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/v1/test/ping");
+        request.setCookies(SessionCookie.refresh("spent-refresh"));
+        when(fingerprint.of(any())).thenReturn("UA|ip");
+        when(store.rotate(eq("spent-refresh"), any())).thenReturn(Optional.empty());
+
+        filter.doFilter(request, response, chain);
+
+        assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
+        assertThat(response.getCookie(SessionCookie.ACCESS)).isNull();
+        assertThat(response.getCookie(SessionCookie.REFRESH)).isNull();
+        assertThat(chain.getRequest()).isSameAs(request);
+    }
+
+    @Test
+    void doesNotRotateWhenProbingSingleUseRefreshCookieOnProtectedPath() throws Exception {
+        // Same as passesThroughOnInvalidAccessCookie but exercised where the
+        // filter WOULD rotate if a refresh cookie were present: with neither
+        // cookie the request stays unauthenticated and the store is untouched.
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/v1/test/ping");
+        when(fingerprint.of(any())).thenReturn("UA|ip");
+
+        filter.doFilter(request, response, chain);
+
+        assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
+        verify(store, never()).validateAccess(any(), any());
+        verify(store, never()).rotate(any(), any());
+        assertThat(chain.getRequest()).isSameAs(request);
     }
 }
