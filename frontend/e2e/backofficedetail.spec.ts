@@ -38,7 +38,7 @@ async function openFirstApplication(page: Page) {
 test("detaljsidan visar laddningsstatus", async ({ page }) => {
   await loginAsCaseWorker(page);
 
-  await page.route("**/api/v1/applications/*", async (route) => {
+  await page.route("**/api/v1/applications/*", async () => {
     await new Promise(() => {});
   });
 
