@@ -67,7 +67,7 @@ public class ApplicationService {
             String orgNumber,
             ApplicationRequest application) {
         Company company = getCompany(orgNumber)
-                .orElseThrow(() -> new CompanyNotFoundException(orgNumber));
+                .orElseThrow(CompanyNotFoundException::new);
 
         ApplicationData data = ApplicationMapper.toApplicationData(application);
 
@@ -147,7 +147,7 @@ public class ApplicationService {
 
         String orgNumber = principal.asCompany().orgNumber();
         Company company = getCompany(orgNumber)
-                .orElseThrow(() -> new CompanyNotFoundException(orgNumber));
+                .orElseThrow(CompanyNotFoundException::new);
         if (status != null) {
             return applicationRepository.findByCompanyIdAndStatus(company.getId(), status).stream()
                     .map(ApplicationMapper::toResponse).toList();

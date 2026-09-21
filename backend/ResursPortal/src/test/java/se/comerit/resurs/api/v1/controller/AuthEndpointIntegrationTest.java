@@ -510,6 +510,38 @@ class AuthEndpointIntegrationTest {
         }
     }
 
+    @Nested
+    @DisplayName("Login failure confidentiality")
+    class LoginFailureConfidentiality {
+
+        @Test
+        @DisplayName("Failed BankID and unregistered org number yield byte-identical 401 responses")
+        void cannotDistinguishRegisteredFromUnregisteredOrganisations() throws Exception {
+            // "556000-5678" passes the BankID mock whitelist but is not a
+            // registered company in this database (only 556000-1234 is).
+            // "999999-9999" is not whitelisted, so BankID itself fails.
+            // Both must produce exactly the same response so that callers
+            // cannot enumerate which organisations are known to the bank.
+            String notWhitelisted = loginFailureBody("999999-9999");
+            String whitelistedButUnregistered = loginFailureBody("556000-5678");
+
+            org.assertj.core.api.Assertions.assertThat(whitelistedButUnregistered)
+                    .isEqualTo(notWhitelisted);
+        }
+
+        private String loginFailureBody(String orgNumber) throws Exception {
+            MvcResult result = mockMvc.perform(post("/api/v1/auth/login/company")
+                            .header("User-Agent", UA)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"orgNumber\":\"" + orgNumber + "\"}"))
+                    .andExpect(status().isUnauthorized())
+                    .andExpect(jsonPath("$.title").value("Unauthorized"))
+                    .andExpect(jsonPath("$.status").value(401))
+                    .andReturn();
+            return result.getResponse().getContentAsString();
+        }
+    }
+
     private AuthTokens loginCompany() throws Exception {
         return loginCompanyWithUA(UA);
     }

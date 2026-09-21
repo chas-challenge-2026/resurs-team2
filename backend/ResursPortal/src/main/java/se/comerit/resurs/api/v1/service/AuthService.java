@@ -17,6 +17,14 @@ import se.comerit.resurs.security.UserPrincipal;
 
 @Service
 public class AuthService {
+    /**
+     * Shared login failure so that the response is identical whether the org
+     * number failed authentication (e.g. the BankID mock) or is not a
+     * registered company. Revealing which one it was would allow anyone to
+     * enumerate registered organisations.
+     */
+    private static final String LOGIN_FAILED = "Invalid login";
+
     private final BankIdService bankIdService;
     private final CompanyRepository companyRepository;
     private final CaseWorkerRepository caseWorkerRepository;
@@ -35,12 +43,12 @@ public class AuthService {
 
     public AuthTokens loginCompany(String orgNumber, String fingerprint) {
         if (!bankIdService.authenticate(orgNumber)) {
-            throw InvalidCredentialsException.unauthorized("Invalid BankID authentication");
+            throw InvalidCredentialsException.unauthorized(LOGIN_FAILED);
         }
 
         return companyRepository.findByOrgNumber(orgNumber)
                 .map(company -> tokenStore.issue(new CompanyPrincipal(company.getId(), company.getName(), company.getOrgNumber()), fingerprint))
-                .orElseThrow(() -> InvalidCredentialsException.unauthorized("Invalid login"));
+                .orElseThrow(() -> InvalidCredentialsException.unauthorized(LOGIN_FAILED));
     }
 
     public AuthTokens loginCaseWorker(String email, String password, String fingerprint) {

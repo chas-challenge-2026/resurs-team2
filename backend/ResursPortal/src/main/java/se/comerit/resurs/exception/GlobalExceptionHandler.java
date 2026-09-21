@@ -42,7 +42,9 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
     @ExceptionHandler(CompanyNotFoundException.class)
     public ResponseEntity<ProblemDetail> handleCompanyNotFound(CompanyNotFoundException e) {
-        log.info("Company not found: {}", e.getMessage());
+        // The exception deliberately carries no identifying information, so
+        // this line can never leak PII (e.g. an organisation number).
+        log.info("Company not found");
         ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(
                 HttpStatus.BAD_REQUEST, "Unable to process the application");
         problemDetail.setTitle("Bad Request");
