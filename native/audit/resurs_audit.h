@@ -61,7 +61,7 @@ extern "C"
                                              const unsigned char *signatures,
                                              const size_t *signature_lens,
                                              const char *entries, const size_t *entry_lens,
-                                             size_t entry_count,
+                                             size_t entry_count, size_t entries_len, size_t signatures_len,
                                              const unsigned char *public_key,
                                              int *first_invalid_index);
 

@@ -81,9 +81,9 @@ int main(void)
         size_t siglen = 0;
 
         int rc = resurs_audit_chain_entry(prev, entries_arr[i], entry_lens[i],
-                                           hashes + i * RESURS_AUDIT_HASH_LEN,
-                                           signatures + i * RESURS_AUDIT_SIG_LEN,
-                                           &siglen);
+                                          hashes + i * RESURS_AUDIT_HASH_LEN,
+                                          signatures + i * RESURS_AUDIT_SIG_LEN,
+                                          &siglen);
         check(rc == RESURS_AUDIT_OK, "chain_entry -> OK");
         check(siglen == RESURS_AUDIT_SIG_LEN, "chain_entry writes a 64-byte signature");
 
@@ -105,24 +105,42 @@ int main(void)
     /* --- verify_chain: argument errors (no init required for this call) --- */
     int first_invalid = -2;
     check(resurs_audit_verify_chain(NULL, signatures, signature_lens, entries_buf,
-                                     entry_lens, 3, pub, &first_invalid) == RESURS_AUDIT_ERR_INVALID_ARG,
+                                    entry_lens, 3, off, 3 * RESURS_AUDIT_SIG_LEN,
+                                    pub, &first_invalid) == RESURS_AUDIT_ERR_INVALID_ARG,
           "verify_chain(NULL hashes) -> INVALID_ARG");
     check(resurs_audit_verify_chain(hashes, signatures, signature_lens, entries_buf,
-                                     entry_lens, 0, pub, &first_invalid) == RESURS_AUDIT_ERR_INVALID_ARG,
+                                    entry_lens, 0, off, 3 * RESURS_AUDIT_SIG_LEN,
+                                    pub, &first_invalid) == RESURS_AUDIT_ERR_INVALID_ARG,
           "verify_chain(entry_count == 0) -> INVALID_ARG");
 
     /* --- verify_chain: intact chain --- */
     first_invalid = -2;
     int rc = resurs_audit_verify_chain(hashes, signatures, signature_lens, entries_buf,
-                                        entry_lens, 3, pub, &first_invalid);
+                                       entry_lens, 3, off, 3 * RESURS_AUDIT_SIG_LEN,
+                                       pub, &first_invalid);
     check(rc == RESURS_AUDIT_OK, "verify_chain(intact) -> OK");
     check(first_invalid == -1, "verify_chain(intact) -> first_invalid_index == -1");
+
+    /* --- verify_chain: entry_lens[i] claims more than entries_len actually has --- */
+    {
+        size_t bad_entry_lens[3];
+        memcpy(bad_entry_lens, entry_lens, sizeof entry_lens);
+        bad_entry_lens[0] = off + 4096; /* much more than entries_buf */
+
+        first_invalid = -2;
+        int rc2 = resurs_audit_verify_chain(hashes, signatures, signature_lens, entries_buf,
+                                            bad_entry_lens, 3, off, 3 * RESURS_AUDIT_SIG_LEN,
+                                            pub, &first_invalid);
+        check(rc2 == RESURS_AUDIT_ERR_INVALID_ARG,
+              "verify_chain: inflated entry_lens[0] past entries_len -> INVALID_ARG, not a crash");
+    }
 
     /* --- tamper: flip a byte inside entries[1]'s content --- */
     entries_buf[entry_offset[1]] ^= 0x01;
     first_invalid = -2;
     rc = resurs_audit_verify_chain(hashes, signatures, signature_lens, entries_buf,
-                                    entry_lens, 3, pub, &first_invalid);
+                                   entry_lens, 3, off, 3 * RESURS_AUDIT_SIG_LEN,
+                                   pub, &first_invalid);
     check(rc == RESURS_AUDIT_OK, "verify_chain(tampered entry) -> OK");
     check(first_invalid == 1, "tampered entries[1] -> first_invalid_index == 1");
     entries_buf[entry_offset[1]] ^= 0x01; /* restore */
@@ -131,7 +149,8 @@ int main(void)
     signatures[2 * RESURS_AUDIT_SIG_LEN] ^= 0x01;
     first_invalid = -2;
     rc = resurs_audit_verify_chain(hashes, signatures, signature_lens, entries_buf,
-                                    entry_lens, 3, pub, &first_invalid);
+                                   entry_lens, 3, off, 3 * RESURS_AUDIT_SIG_LEN,
+                                   pub, &first_invalid);
     check(rc == RESURS_AUDIT_OK, "verify_chain(tampered signature) -> OK");
     check(first_invalid == 2, "tampered signatures[2] -> first_invalid_index == 2");
     signatures[2 * RESURS_AUDIT_SIG_LEN] ^= 0x01; /* restore */
@@ -144,7 +163,8 @@ int main(void)
 
     first_invalid = -2;
     rc = resurs_audit_verify_chain(hashes, signatures, signature_lens, entries_buf,
-                                    entry_lens, 3, pub, &first_invalid);
+                                   entry_lens, 3, off, 3 * RESURS_AUDIT_SIG_LEN,
+                                   pub, &first_invalid);
     check(rc == RESURS_AUDIT_OK, "verify_chain(swapped hashes) -> OK");
     check(first_invalid != -1, "swapped hashes[0]/hashes[1] is detected");
 
@@ -167,7 +187,8 @@ int main(void)
      * shutdown - it only needs the public_key argument. */
     first_invalid = -2;
     rc = resurs_audit_verify_chain(hashes, signatures, signature_lens, entries_buf,
-                                    entry_lens, 3, pub, &first_invalid);
+                                   entry_lens, 3, off, 3 * RESURS_AUDIT_SIG_LEN,
+                                   pub, &first_invalid);
     check(rc == RESURS_AUDIT_OK, "verify_chain after shutdown -> OK");
     check(first_invalid == -1, "verify_chain after shutdown still verifies the intact chain");
 

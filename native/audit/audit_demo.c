@@ -77,8 +77,8 @@ int main(void)
         size_t siglen = 0;
 
         must(resurs_audit_chain_entry(prev, entries[i], entry_lens[i],
-                                       hashes + i * RESURS_AUDIT_HASH_LEN,
-                                       signatures + i * RESURS_AUDIT_SIG_LEN, &siglen),
+                                      hashes + i * RESURS_AUDIT_HASH_LEN,
+                                      signatures + i * RESURS_AUDIT_SIG_LEN, &siglen),
              "resurs_audit_chain_entry");
         signature_lens[i] = siglen;
 
@@ -105,7 +105,7 @@ int main(void)
     printf("=== 4. resurs_audit_verify_chain: verifying the intact chain ===\n");
     int first_invalid = -2;
     must(resurs_audit_verify_chain(hashes, signatures, signature_lens, entries_buf,
-                                    entry_lens, 3, pub, &first_invalid),
+                                   entry_lens, 3, off, 3 * RESURS_AUDIT_SIG_LEN, pub, &first_invalid),
          "resurs_audit_verify_chain");
     printf("first_invalid_index = %d  (chain is intact)\n\n", first_invalid);
 
@@ -126,7 +126,7 @@ int main(void)
 
     first_invalid = -2;
     must(resurs_audit_verify_chain(hashes, signatures, signature_lens, entries_buf,
-                                    entry_lens, 3, pub, &first_invalid),
+                                   entry_lens, 3, off, 3 * RESURS_AUDIT_SIG_LEN, pub, &first_invalid),
          "resurs_audit_verify_chain");
     printf("first_invalid_index = %d  (tampering detected: entries[%d]'s content no longer "
            "matches its stored hash)\n\n",
@@ -137,7 +137,7 @@ int main(void)
     printf("private key wiped. chain_entry now returns NOT_INIT (%d), "
            "but verify_chain still works - it only needs the public key.\n",
            resurs_audit_chain_entry(NULL, entries[0], entry_lens[0],
-                                     hashes, signatures, signature_lens));
+                                    hashes, signatures, signature_lens));
 
     remove(key_path);
     remove(pub_der_path);

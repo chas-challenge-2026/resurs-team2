@@ -166,6 +166,11 @@ int resurs_audit_chain_entry(
 // Kräver INTE föregående resurs_audit_init - verifieringen använder enbart
 // den publika nyckeln som skickas in här, inte den privata nyckeln som
 // resurs_audit_chain_entry behöver.
+// entries_len/signatures_len: den verkliga storleken på respektive buffert.
+// Utan dessa skulle en entry_lens/signature_lens som inte stämmer med
+// buffertens verkliga storlek orsaka en out-of-bounds-läsning i modulen
+// (hittades och åtgärdades i kodgranskning, se native/audit/resurs_audit.cpp).
+
 int resurs_audit_verify_chain(
     const unsigned char* hashes,        // entry_count * 32 bytes, hashkedjan i ordning
     const unsigned char* signatures,    // signaturer i samma ordning
@@ -173,9 +178,12 @@ int resurs_audit_verify_chain(
     const char* entries,                // entry_count JSON-blobbar i följd
     const size_t* entry_lens,           // längden på var post i entries
     size_t entry_count,
+    size_t entries_len,                 // total storlek på entries-buffern (bytes)
+    size_t signatures_len,              // total storlek på signatures-buffern (bytes)
     const unsigned char* public_key,
     int* first_invalid_index            // -1 om kedjan är giltig, annars index på första manipulerade posten
 );
+
 
 // Frigör den privata signeringsnyckeln (EVP_PKEY_free). Säkert att anropa
 // flera gånger och före init. Därefter returnerar chain_entry NOT_INIT
@@ -205,6 +213,8 @@ public interface ResursAuditLibrary extends Library {
         byte[] entries,
         int[] entryLens,
         int entryCount,
+        int entriesLen,
+        int signaturesLen,
         byte[] publicKey,
         IntByReference firstInvalidIndex
     );

@@ -65,14 +65,19 @@ extern "C"
                                   const unsigned char *signatures,
                                   const size_t *signature_lens,
                                   const char *entries, const size_t *entry_lens,
-                                  size_t entry_count,
+                                  size_t entry_count, size_t entries_len, size_t signatures_len,
                                   const unsigned char *public_key,
                                   int *first_invalid_index)
     {
         if (hashes == nullptr || signatures == nullptr ||
             signature_lens == nullptr || entries == nullptr ||
             entry_lens == nullptr || entry_count == 0 ||
+            entries_len == 0 || signatures_len == 0 ||
             public_key == nullptr || first_invalid_index == nullptr)
+        {
+            return RESURS_AUDIT_ERR_INVALID_ARG;
+        }
+        if (entry_count > signatures_len / RESURS_AUDIT_SIG_LEN)
         {
             return RESURS_AUDIT_ERR_INVALID_ARG;
         }
@@ -84,6 +89,7 @@ extern "C"
 
             const char *entryCursor = entries;
             const unsigned char *sigCursor = signatures;
+            size_t entryBudget = entries_len;
 
             for (size_t i = 0; i < entry_count; ++i)
             {
@@ -92,7 +98,12 @@ extern "C"
                 {
                     std::memcpy(prev.data(), hashes + (i - 1) * resurs::audit::kHashLen, resurs::audit::kHashLen);
                 }
-
+                if (entry_lens[i] > entryBudget || signature_lens[i] != RESURS_AUDIT_SIG_LEN)
+                {
+                    return RESURS_AUDIT_ERR_INVALID_ARG;
+                }
+                entryBudget -= entry_lens[i];
+                
                 resurs::audit::Hash expected = resurs::audit::chainHash(prev, {entryCursor, entry_lens[i]});
 
                 resurs::audit::Hash stored;
