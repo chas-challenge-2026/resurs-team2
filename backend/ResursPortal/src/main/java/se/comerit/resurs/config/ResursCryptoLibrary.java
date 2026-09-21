@@ -11,6 +11,9 @@ public interface ResursCryptoLibrary extends Library {
     int resurs_encrypt_pii(String plaintext, Pointer nonce, long nonceLen,
             Pointer ciphertextOut, LongByReference ciphertextLen);
 
+    int resurs_encrypt_pii_raw(Pointer data, long dataLen, Pointer nonce, long nonceLen,
+            Pointer ciphertextOut, LongByReference ciphertextLen);
+
     int resurs_decrypt_pii(Pointer nonce, long nonceLen, Pointer ciphertext, long ciphertextLen,
             Pointer plaintextOut, LongByReference plaintextLen);
 

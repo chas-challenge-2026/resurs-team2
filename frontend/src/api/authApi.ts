@@ -7,6 +7,20 @@ import type {
 
 const API_BASE = "/api/v1";
 
+/**
+ * The backend carries the Spring-security role name ("CASE_WORKER") while the
+ * frontend models roles as "COMPANY" | "CASEWORKER". Normalize at the API
+ * boundary so no caller has to remember the backend spelling.
+ */
+type RawAuthTokens = Omit<AuthTokens, "role"> & {
+  role: "COMPANY" | "CASE_WORKER";
+};
+
+const toAuthTokens = (raw: RawAuthTokens): AuthTokens => ({
+  ...raw,
+  role: raw.role === "CASE_WORKER" ? "CASEWORKER" : "COMPANY",
+});
+
 const parseResponse = async <T>(
   response: Response,
   errorMessage: string,
@@ -30,9 +44,11 @@ export const authApi = {
       body: JSON.stringify(credentials),
     });
 
-    return parseResponse<AuthTokens>(
-      response,
-      "Inloggning misslyckades. Kontrollera organisationsnumret.",
+    return toAuthTokens(
+      await parseResponse<RawAuthTokens>(
+        response,
+        "Inloggning misslyckades. Kontrollera organisationsnumret.",
+      ),
     );
   },
 
@@ -47,9 +63,11 @@ export const authApi = {
       body: JSON.stringify(credentials),
     });
 
-    return parseResponse<AuthTokens>(
-      response,
-      "Felaktig e-postadress eller lösenord.",
+    return toAuthTokens(
+      await parseResponse<RawAuthTokens>(
+        response,
+        "Felaktig e-postadress eller lösenord.",
+      ),
     );
   },
 
@@ -64,9 +82,11 @@ export const authApi = {
       }),
     });
 
-    return parseResponse<AuthTokens>(
-      response,
-      "Sessionen har gått ut.",
+    return toAuthTokens(
+      await parseResponse<RawAuthTokens>(
+        response,
+        "Sessionen har gått ut.",
+      ),
     );
   },
 

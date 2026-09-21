@@ -1,8 +1,6 @@
-import { useNavigate, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 
 import { Panel } from "@/components/Panel/Panel";
-
-import "./Status.css";
 
 import { ApplicationDetailsPanel } from "./components/ApplicationDetailsPanel";
 import { DocumentsPanel } from "./components/DocumentsPanel";
@@ -10,93 +8,66 @@ import { StatusHeader } from "./components/StatusHeader";
 import { useApplicationDetails } from "./hooks/useApplicationDetails";
 import { formatWorker } from "./utils/statusFormatters";
 
+import "./Status.css";
+
 export const Status = () => {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
 
   const {
     application,
-    documents,
-    auditLogRaw,
     workerName,
+    documents,
     loading,
     error,
   } = useApplicationDetails(id);
 
   if (loading) {
     return (
-      <div className="status-page">
-        <p>Laddar ansökan...</p>
-      </div>
+      <main className="status-page">
+        <p className="text-muted">Laddar ansökan...</p>
+      </main>
     );
   }
 
   if (error || !application) {
     return (
-      <div className="status-page">
-        <p className="text-muted">
-          {error ?? "Ingen ansökan hittades."}
-        </p>
-
-        <button
-          type="button"
-          className="btn btn-default"
-          onClick={() => navigate("/application")}
-        >
-          Tillbaka till ansökningar
-        </button>
-      </div>
+      <main className="status-page">
+        <div className="status-error">
+          <strong>Kunde inte hämta ansökan</strong>
+          <p>{error || "Ansökan hittades inte."}</p>
+        </div>
+      </main>
     );
   }
 
   return (
-    <div className="status-page">
+    <main className="status-page">
       <StatusHeader application={application} />
 
       <div className="status-layout">
-        <div className="left-column">
-          {application.scoringResult && (
-            <Panel title="Scoringresultat">
-              {application.scoringResult}
-            </Panel>
-          )}
+        <aside className="status-side-column">
+          <Panel title="Scoringresultat">
+            <p className="status-scoring-result">
+              {application.scoringResult || "Ingen scoring tillgänglig."}
+            </p>
+          </Panel>
 
           <Panel title="Handläggare">
-            {formatWorker(application.status, workerName)}
+            <p className="status-worker">
+              {formatWorker(application.status, workerName)}
+            </p>
           </Panel>
-        </div>
+        </aside>
 
-        <div className="right-column">
+        <section className="status-main-column">
           <ApplicationDetailsPanel application={application} />
 
           <DocumentsPanel
             applicationId={application.id}
             documents={documents}
           />
-
-          <Panel title="Händelselogg">
-            <pre className="audit-log">{auditLogRaw}</pre>
-          </Panel>
-        </div>
+        </section>
       </div>
-
-      <div className="actions">
-        <button
-          type="button"
-          className="btn btn-default"
-          onClick={() => navigate("/application")}
-        >
-          Tillbaka
-        </button>
-
-        <button
-          type="button"
-          className="btn btn-primary"
-          onClick={() => navigate("/apply")}
-        >
-          Redigera ansökan
-        </button>
-      </div>
-    </div>
+    </main>
   );
 };

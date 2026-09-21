@@ -1,16 +1,20 @@
 package se.comerit.resurs.api.v1.service;
 
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Lazy;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import tools.jackson.databind.ObjectMapper;
 
 import jakarta.annotation.Nonnull;
+import se.comerit.resurs.audit.ApplicationCreated;
 import se.comerit.resurs.api.v1.dto.ApplicationDetailsResponse;
 import se.comerit.resurs.api.v1.dto.ApplicationRequest;
 import se.comerit.resurs.api.v1.dto.ApplicationResponse;
@@ -21,8 +25,6 @@ import se.comerit.resurs.entity.Company;
 import se.comerit.resurs.exception.ApplicationNotFoundException;
 import se.comerit.resurs.exception.CompanyNotFoundException;
 import se.comerit.resurs.rating.ApplicationData;
-import se.comerit.resurs.rating.Score;
-import se.comerit.resurs.rating.ScoringResult;
 import se.comerit.resurs.repository.ApplicationRepository;
 import se.comerit.resurs.repository.CompanyRepository;
 import se.comerit.resurs.security.CaseWorkerPrincipal;
@@ -34,15 +36,26 @@ public class ApplicationService {
     private final ApplicationRepository applicationRepository;
     private final ScoringService scoringService;
     private final AuditLogService auditLogService;
+    private final CaseWorkerAssignmentService caseWorkerAssignmentService;
     private final ObjectMapper objectMapper;
+    private final EmailService emailService;
+    private final ApplicationService self;
+
+    @Value("${resurs.scoring.delay-ms:20000}")
+    private long scoringDelayMs;
 
     public ApplicationService(CompanyRepository companyRepository, ApplicationRepository applicationRepository,
-            ScoringService scoringService, AuditLogService auditLogService, ObjectMapper objectMapper) {
+            ScoringService scoringService, AuditLogService auditLogService,
+            CaseWorkerAssignmentService caseWorkerAssignmentService, ObjectMapper objectMapper,
+            EmailService emailService, @Lazy ApplicationService self) {
         this.companyRepository = companyRepository;
         this.applicationRepository = applicationRepository;
         this.scoringService = scoringService;
         this.auditLogService = auditLogService;
+        this.caseWorkerAssignmentService = caseWorkerAssignmentService;
         this.objectMapper = objectMapper;
+        this.emailService = emailService;
+        this.self = self;
     }
 
     public Optional<Company> getCompany(String orgNumber) {
@@ -51,47 +64,69 @@ public class ApplicationService {
 
     @Transactional
     public Long submitApplication(
-        String orgNumber,
-        ApplicationRequest application) {
+            String orgNumber,
+            ApplicationRequest application) {
         Company company = getCompany(orgNumber)
                 .orElseThrow(() -> new CompanyNotFoundException(orgNumber));
 
         ApplicationData data = ApplicationMapper.toApplicationData(application);
-        ScoringResult score = scoringService.score(data);
-        Score scoring = ScoringService.toScore(score);
 
         String financialDataJson;
         try {
             financialDataJson = objectMapper.writeValueAsString(data);
         } catch (Exception _) {
-            // TODO: Log this error somehow
             financialDataJson = null;
         }
 
+        // TODO: Consider what should be the default status
         Application app = new Application(
-            company, 
-            application.requestedAmount(), 
-            application.purpose(),
-            ApplicationMapper.toStatus(score),
-            ApplicationMapper.toDecision(score),
-            score.summary(),
-            scoring.scoringLog(),
-            null,
-            financialDataJson
-        );
-
-        Map<String, String> createdDetails = new LinkedHashMap<>();
-        createdDetails.put("orgNumber", orgNumber);
-        auditLogService.append(app, "APPLICATION_CREATED", createdDetails);
-
-        Map<String, String> scoringDetails = new LinkedHashMap<>();
-        scoringDetails.put("result", scoring.decision());
-        scoringDetails.put("flags", String.valueOf(scoring.flagCount()));
-        auditLogService.append(app, "SCORING_RUN", scoringDetails);
+                company,
+                application.requestedAmount(),
+                application.purpose());
+        app.setFinancialData(financialDataJson);
 
         app = applicationRepository.save(app);
 
+        emailService.sendApplicationSubmitted(app);
+
+        auditLogService.append(app, new ApplicationCreated(orgNumber));
+
+        scheduleScoringAfterCommit(app.getId());
+
         return app.getId();
+    }
+
+    /**
+     * Runs the (asynchronous) scoring only after the surrounding transaction
+     * has committed. Starting it inside the transaction is racy: the scoring
+     * thread reads the application in its own transaction and could see nothing
+     * if the insert has not been committed yet, silently skipping the scoring
+     * for that application. When no transaction is active the scoring is
+     * scheduled immediately.
+     */
+    private void scheduleScoringAfterCommit(Long applicationId) {
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    self.runScoringAsync(applicationId);
+                }
+            });
+        } else {
+            self.runScoringAsync(applicationId);
+        }
+    }
+
+    @Async
+    public void runScoringAsync(Long applicationId) {
+        try {
+            Thread.sleep(scoringDelayMs);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return;
+        }
+
+        scoringService.scoreApplication(applicationId);
     }
 
     /**
@@ -130,17 +165,20 @@ public class ApplicationService {
      */
     @Transactional(readOnly = true)
     public @Nonnull ApplicationDetailsResponse viewApplication(Long id, UserPrincipal principal) {
+        if (principal instanceof CaseWorkerPrincipal caseWorker) {
+            caseWorkerAssignmentService.ensureAssigned(id, caseWorker);
+            Application app = applicationRepository.findByIdWithDocuments(id)
+                    .orElseThrow(() -> new ApplicationNotFoundException(id));
+            return ApplicationMapper.toDetailsResponse(app, app.getFinancialData());
+        }
+
         Application app = applicationRepository.findByIdWithDocuments(id)
                 .orElseThrow(() -> new ApplicationNotFoundException(id));
-
-        if (principal instanceof CaseWorkerPrincipal caseWorker) {
-            return ApplicationMapper.toDetailsResponse(app, caseWorker.name());
-        }
 
         String orgNumber = principal.asCompany().orgNumber();
         if (!app.getCompany().getOrgNumber().equals(orgNumber)) {
             throw new ApplicationNotFoundException(id);
         }
-        return ApplicationMapper.toDetailsResponse(app, app.getCompany().getName());
+        return ApplicationMapper.toDetailsResponse(app);
     }
 }

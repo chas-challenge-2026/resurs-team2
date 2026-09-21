@@ -40,6 +40,9 @@ services:
       - SPRING_DATASOURCE_PASSWORD=resurs123
       - RESURS_CRYPTO_KEY_PATH=/run/secrets/resurs_crypto_key
       - RESURS_AUDIT_KEY_PATH=/run/secrets/resurs_audit_key
+      - STORAGE_PATH=/app/uploads
+    volumes:
+      - storage_data:/app/uploads
     secrets:
       - resurs_crypto_key
       - resurs_audit_key
@@ -49,6 +52,7 @@ services:
 
 volumes:
   postgres_data:
+  storage_data:
 
 secrets:
   resurs_crypto_key:

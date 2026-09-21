@@ -21,5 +21,8 @@ dist/
 # a "build" directory at any depth, not just native/build/ at the repo root.
 build/
 
+# Local file uploads (created by application-local profile)
+uploads/
+
 # C++ Crypto key: 
 /infra/secrets/*
