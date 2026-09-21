@@ -65,7 +65,8 @@ extern "C"
                                              const unsigned char *public_key,
                                              int *first_invalid_index);
 
-    // Wipes the signing key from memory. Safe to call multiple times and before init.
+    // Frees the signing key (EVP_PKEY_free)
+    // Safe to call multiple times and before init.
     RESURS_API void resurs_audit_shutdown(void);
 
 #ifdef __cplusplus

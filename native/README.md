@@ -177,9 +177,8 @@ int resurs_audit_verify_chain(
     int* first_invalid_index            // -1 om kedjan är giltig, annars index på första manipulerade posten
 );
 
-// Suddar den privata signeringsnyckeln ur minnet. Säkert att anropa flera
-// gånger och före init. Därefter returnerar chain_entry NOT_INIT
-// (verify_chain påverkas inte - den behöver aldrig init, se ovan).
+// Frigör den privata signeringsnyckeln (EVP_PKEY_free). Säkert att anropa
+// flera gånger och före init. Därefter returnerar chain_entry NOT_INIT
 void resurs_audit_shutdown(void);
 ```
 
