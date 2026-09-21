@@ -7,8 +7,6 @@ import {
 } from "react";
 
 import { authApi } from "../api/authApi";
-import { tokenStorage } from "../api/tokenStorage";
-import { onSessionExpired, refreshTokens } from "../api/tokenRefresher";
 import { AuthContext } from "./AuthContext";
 
 import type {
@@ -26,47 +24,21 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const saveTokens = useCallback(
-    (accessToken: string, refreshToken: string) => {
-      tokenStorage.setTokens(accessToken, refreshToken);
-    },
-    [],
-  );
-
   const clearSession = useCallback(() => {
-    tokenStorage.clearTokens();
     setUser(null);
   }, []);
 
-  // Automatic rotation (tokenRefresher) logs the user out when the refresh
-  // token can no longer be used, so ProtectedRoute redirects to the login page.
-  useEffect(() => {
-    return onSessionExpired(() => clearSession());
-  }, [clearSession]);
-
   useEffect(() => {
     const restoreSession = async () => {
-      // Restore goes through the SAME single-flight refresher as the 401
-      // interceptor: the refresh token is single-use, and StrictMode double-
-      // invokes this effect in dev — presenting it twice concurrently would
-      // make one presentation lose the race and log the user out on reload.
       try {
-        const tokens = await refreshTokens();
+        const principal = await authApi.me();
 
-        if (tokens === null) {
-          // No token, or the session is over — refreshTokens already cleared
-          // storage and fired the session-expired listeners (user = null).
-          return;
-        }
-
-        if (tokens.role === "COMPANY") {
-          const company = await authApi.getCurrentCompany(
-            tokens.accessToken,
-          );
+        if (principal.role === "COMPANY") {
+          const company = await authApi.getCurrentCompany();
 
           setUser({
             id: company.orgNumber,
-            name: company.name || tokens.name || "Företag",
+            name: company.name || principal.name || "Företag",
             email: "",
             role: "COMPANY",
           });
@@ -74,10 +46,10 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           return;
         }
 
-        if (tokens.role === "CASEWORKER") {
+        if (principal.role === "CASEWORKER") {
           setUser({
             id: "caseworker",
-            name: tokens.name || "Handläggare",
+            name: principal.name || "Handläggare",
             email: "",
             role: "CASEWORKER",
           });
@@ -102,17 +74,12 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       setIsLoading(true);
 
       try {
-        const tokens = await authApi.loginCompany(credentials);
-
-        saveTokens(tokens.accessToken, tokens.refreshToken);
-
-        const company = await authApi.getCurrentCompany(
-          tokens.accessToken,
-        );
+        const principal = await authApi.loginCompany(credentials);
+        const company = await authApi.getCurrentCompany();
 
         setUser({
           id: company.orgNumber || credentials.orgNumber,
-          name: company.name || tokens.name || "Företag",
+          name: company.name || principal.name || "Företag",
           email: "",
           role: "COMPANY",
         });
@@ -123,7 +90,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         setIsLoading(false);
       }
     },
-    [clearSession, saveTokens],
+    [clearSession],
   );
 
   const loginCaseWorker = useCallback(
@@ -131,13 +98,11 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       setIsLoading(true);
 
       try {
-        const tokens = await authApi.loginCaseWorker(credentials);
-
-        saveTokens(tokens.accessToken, tokens.refreshToken);
+        const principal = await authApi.loginCaseWorker(credentials);
 
         setUser({
           id: credentials.email,
-          name: tokens.name || credentials.email,
+          name: principal.name || credentials.email,
           email: credentials.email,
           role: "CASEWORKER",
         });
@@ -148,18 +113,14 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         setIsLoading(false);
       }
     },
-    [clearSession, saveTokens],
+    [clearSession],
   );
 
   const logout = useCallback(async () => {
     setIsLoading(true);
 
-    const accessToken = tokenStorage.getAccessToken();
-
     try {
-      if (accessToken) {
-        await authApi.logout(accessToken);
-      }
+      await authApi.logout();
     } catch (error) {
       console.error("Fel vid utloggning:", error);
     } finally {
@@ -177,18 +138,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       loginCaseWorker,
       logout,
     }),
-    [
-      user,
-      isLoading,
-      loginCompany,
-      loginCaseWorker,
-      logout,
-    ],
+    [user, isLoading, loginCompany, loginCaseWorker, logout],
   );
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

@@ -16,9 +16,7 @@ export interface CaseWorkerCredentials {
   password: string;
 }
 
-export interface AuthTokens {
-  accessToken: string;
-  refreshToken: string;
+export interface PrincipalResponse {
   role: Role;
   name: string;
 }

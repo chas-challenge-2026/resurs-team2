@@ -43,7 +43,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1")
 @Tag(name = "Documents", description = "Upload, list, download, and delete application documents")
-@SecurityRequirement(name = "Bearer Authentication")
+@SecurityRequirement(name = "Session Cookie")
 public class DocumentController {
 
     private final DocumentService documentService;

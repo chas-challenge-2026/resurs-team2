@@ -19,7 +19,7 @@ import se.comerit.resurs.security.UserPrincipal;
 @RestController
 @RequestMapping("api/v1/companies")
 @Tag(name = "Companies", description = "Information about the authenticated company")
-@SecurityRequirement(name = "Bearer Authentication")
+@SecurityRequirement(name = "Session Cookie")
 public class CompanyController {
 
     @PreAuthorize("hasRole('COMPANY')")
