@@ -24,7 +24,7 @@ import se.comerit.resurs.security.UserPrincipal;
 @RestController
 @RequestMapping("api/v1/applications")
 @Tag(name = "Decisions", description = "Case worker decisions on credit applications")
-@SecurityRequirement(name = "Bearer Authentication")
+@SecurityRequirement(name = "Session Cookie")
 public class DecisionController {
 
     private final DecisionService service;

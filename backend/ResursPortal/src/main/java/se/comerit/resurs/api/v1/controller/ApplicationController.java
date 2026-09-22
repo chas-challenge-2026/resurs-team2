@@ -36,7 +36,7 @@ import java.util.List;
 @RestController
 @RequestMapping("api/v1/applications")
 @Tag(name = "Applications", description = "Submit and manage credit applications")
-@SecurityRequirement(name = "Bearer Authentication")
+@SecurityRequirement(name = "Session Cookie")
 public class ApplicationController {
 
     private final ApplicationService service;
