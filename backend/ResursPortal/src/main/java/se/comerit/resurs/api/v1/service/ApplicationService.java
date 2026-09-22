@@ -170,33 +170,31 @@ public class ApplicationService {
             );
         }
 
-
         return applications.map(ApplicationMapper::toResponse).getContent();
     }
+        /**
+         * Returns the details of a single application. A case worker may view any
+         * application; a company may only view its own (mirrors the legacy
+         * controller). For anything the caller is not allowed to see, or that does
+         * not exist, an {@link ApplicationNotFoundException} is thrown so that the
+         * existence of other applications is not leaked.
+         */
+        @Transactional(readOnly = true)
+        public @Nonnull ApplicationDetailsResponse viewApplication (Long id, UserPrincipal principal){
+            if (principal instanceof CaseWorkerPrincipal caseWorker) {
+                caseWorkerAssignmentService.ensureAssigned(id, caseWorker);
+                Application app = applicationRepository.findByIdWithDocuments(id)
+                        .orElseThrow(() -> new ApplicationNotFoundException(id));
+                return ApplicationMapper.toDetailsResponse(app, app.getFinancialData());
+            }
 
-    /**
-     * Returns the details of a single application. A case worker may view any
-     * application; a company may only view its own (mirrors the legacy
-     * controller). For anything the caller is not allowed to see, or that does
-     * not exist, an {@link ApplicationNotFoundException} is thrown so that the
-     * existence of other applications is not leaked.
-     */
-    @Transactional(readOnly = true)
-    public @Nonnull ApplicationDetailsResponse viewApplication (Long id, UserPrincipal principal) {
-        if (principal instanceof CaseWorkerPrincipal caseWorker) {
-            caseWorkerAssignmentService.ensureAssigned(id, caseWorker);
             Application app = applicationRepository.findByIdWithDocuments(id)
                     .orElseThrow(() -> new ApplicationNotFoundException(id));
-            return ApplicationMapper.toDetailsResponse(app, app.getFinancialData());
-        }
 
-        Application app = applicationRepository.findByIdWithDocuments(id)
-                .orElseThrow(() -> new ApplicationNotFoundException(id));
-
-        String orgNumber = principal.asCompany().orgNumber();
-        if (!app.getCompany().getOrgNumber().equals(orgNumber)) {
-            throw new ApplicationNotFoundException(id);
+            String orgNumber = principal.asCompany().orgNumber();
+            if (!app.getCompany().getOrgNumber().equals(orgNumber)) {
+                throw new ApplicationNotFoundException(id);
+            }
+            return ApplicationMapper.toDetailsResponse(app);
         }
-        return ApplicationMapper.toDetailsResponse(app);
     }
-}
