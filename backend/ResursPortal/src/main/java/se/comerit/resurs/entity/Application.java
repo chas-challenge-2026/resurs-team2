@@ -77,6 +77,10 @@ public class Application {
     @Nullable
     private String financialData;
 
+    @Column(name = "estimated_resolution_at")
+    @Nullable
+    private Instant estimatedResolutionAt;
+
     @OneToMany(fetch = FetchType.LAZY, mappedBy = "application")
     @OrderBy("uploadedAt DESC")
     private List<Document> documents;
@@ -223,6 +227,15 @@ public class Application {
 
     public void setFinancialData(@Nullable String financialData) {
         this.financialData = financialData;
+    }
+
+    @Nullable
+    public Instant getEstimatedResolutionAt() {
+        return estimatedResolutionAt;
+    }
+
+    public void setEstimatedResolutionAt(@Nullable Instant estimatedResolutionAt) {
+        this.estimatedResolutionAt = estimatedResolutionAt;
     }
 
     @Nonnull
