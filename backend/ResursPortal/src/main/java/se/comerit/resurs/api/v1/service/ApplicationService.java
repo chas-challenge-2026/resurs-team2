@@ -5,6 +5,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -13,6 +14,7 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 import se.comerit.resurs.api.v1.dto.ApplicationDetailsResponse;
 import se.comerit.resurs.api.v1.dto.ApplicationRequest;
 import se.comerit.resurs.api.v1.dto.ApplicationResponse;
+import se.comerit.resurs.api.v1.dto.PaginatedResponse;
 import se.comerit.resurs.api.v1.mapper.ApplicationMapper;
 import se.comerit.resurs.audit.ApplicationCreated;
 import se.comerit.resurs.entity.Application;
@@ -30,7 +32,6 @@ import tools.jackson.databind.ObjectMapper;
 import java.util.List;
 import java.util.Optional;
 
-
 @Service
 public class ApplicationService {
     private final CompanyRepository companyRepository;
@@ -45,10 +46,10 @@ public class ApplicationService {
     @Value("${resurs.scoring.delay-ms:20000}")
     private long scoringDelayMs;
 
-    public ApplicationService(CompanyRepository companyRepository, ApplicationRepository applicationRepository,
-            ScoringService scoringService, AuditLogService auditLogService,
-            CaseWorkerAssignmentService caseWorkerAssignmentService, ObjectMapper objectMapper,
-            EmailService emailService, @Lazy ApplicationService self) {
+    public ApplicationService (CompanyRepository companyRepository, ApplicationRepository applicationRepository,
+                               ScoringService scoringService, AuditLogService auditLogService,
+                               CaseWorkerAssignmentService caseWorkerAssignmentService, ObjectMapper objectMapper,
+                               EmailService emailService, @Lazy ApplicationService self) {
         this.companyRepository = companyRepository;
         this.applicationRepository = applicationRepository;
         this.scoringService = scoringService;
@@ -59,12 +60,12 @@ public class ApplicationService {
         this.self = self;
     }
 
-    public Optional<Company> getCompany(String orgNumber) {
+    public Optional<Company> getCompany (String orgNumber) {
         return companyRepository.findByOrgNumber(orgNumber);
     }
 
     @Transactional
-    public Long submitApplication(
+    public Long submitApplication (
             String orgNumber,
             ApplicationRequest application) {
         Company company = getCompany(orgNumber)
@@ -105,11 +106,11 @@ public class ApplicationService {
      * for that application. When no transaction is active the scoring is
      * scheduled immediately.
      */
-    private void scheduleScoringAfterCommit(Long applicationId) {
+    private void scheduleScoringAfterCommit (Long applicationId) {
         if (TransactionSynchronizationManager.isSynchronizationActive()) {
             TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
                 @Override
-                public void afterCommit() {
+                public void afterCommit () {
                     self.runScoringAsync(applicationId);
                 }
             });
@@ -119,7 +120,7 @@ public class ApplicationService {
     }
 
     @Async
-    public void runScoringAsync(Long applicationId) {
+    public void runScoringAsync (Long applicationId) {
         try {
             Thread.sleep(scoringDelayMs);
         } catch (InterruptedException e) {
@@ -171,6 +172,8 @@ public class ApplicationService {
             );
         }
 
+
+
         return applications.map(ApplicationMapper::toResponse).getContent();
     }
 
@@ -182,7 +185,7 @@ public class ApplicationService {
      * existence of other applications is not leaked.
      */
     @Transactional(readOnly = true)
-    public @Nonnull ApplicationDetailsResponse viewApplication(Long id, UserPrincipal principal) {
+    public @Nonnull ApplicationDetailsResponse viewApplication (Long id, UserPrincipal principal) {
         if (principal instanceof CaseWorkerPrincipal caseWorker) {
             caseWorkerAssignmentService.ensureAssigned(id, caseWorker);
             Application app = applicationRepository.findByIdWithDocuments(id)
