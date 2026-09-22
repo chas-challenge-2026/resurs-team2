@@ -1,5 +1,7 @@
 package se.comerit.resurs.api.v1.service;
 
+import java.time.Instant;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Optional;
 
@@ -15,6 +17,7 @@ import tools.jackson.databind.ObjectMapper;
 
 import jakarta.annotation.Nonnull;
 import se.comerit.resurs.audit.ApplicationCreated;
+import se.comerit.resurs.audit.EtaSet;
 import se.comerit.resurs.api.v1.dto.ApplicationDetailsResponse;
 import se.comerit.resurs.api.v1.dto.ApplicationRequest;
 import se.comerit.resurs.api.v1.dto.ApplicationResponse;
@@ -35,6 +38,7 @@ public class ApplicationService {
     private final CompanyRepository companyRepository;
     private final ApplicationRepository applicationRepository;
     private final ScoringService scoringService;
+    private final EtaService etaService;
     private final AuditLogService auditLogService;
     private final CaseWorkerAssignmentService caseWorkerAssignmentService;
     private final ObjectMapper objectMapper;
@@ -44,13 +48,17 @@ public class ApplicationService {
     @Value("${resurs.scoring.delay-ms:20000}")
     private long scoringDelayMs;
 
+    @Value("${resurs.sla.automated-decision-hours:24}")
+    private long automatedDecisionHours;
+
     public ApplicationService(CompanyRepository companyRepository, ApplicationRepository applicationRepository,
-            ScoringService scoringService, AuditLogService auditLogService,
+            ScoringService scoringService, EtaService etaService, AuditLogService auditLogService,
             CaseWorkerAssignmentService caseWorkerAssignmentService, ObjectMapper objectMapper,
             EmailService emailService, @Lazy ApplicationService self) {
         this.companyRepository = companyRepository;
         this.applicationRepository = applicationRepository;
         this.scoringService = scoringService;
+        this.etaService = etaService;
         this.auditLogService = auditLogService;
         this.caseWorkerAssignmentService = caseWorkerAssignmentService;
         this.objectMapper = objectMapper;
@@ -86,12 +94,16 @@ public class ApplicationService {
                 application.purpose());
         app.setStatus(ApplicationStatus.SCORING_IN_PROGRESS);
         app.setFinancialData(financialDataJson);
+        app.setEstimatedResolutionAt(
+                etaService.estimateWithinHours(Instant.now(), automatedDecisionHours));
 
         app = applicationRepository.save(app);
 
         emailService.sendApplicationSubmitted(app);
 
         auditLogService.append(app, new ApplicationCreated(orgNumber));
+        auditLogService.append(app,
+                new EtaSet(DateTimeFormatter.ISO_INSTANT.format(app.getEstimatedResolutionAt())));
 
         scheduleScoringAfterCommit(app.getId());
 

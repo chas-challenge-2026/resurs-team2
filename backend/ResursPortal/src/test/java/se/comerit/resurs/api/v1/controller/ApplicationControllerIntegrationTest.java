@@ -142,9 +142,12 @@ class ApplicationControllerIntegrationTest {
             assertThat(app.getCompany().getOrgNumber()).isEqualTo(COMPANY_ORG);
             assertThat(app.getPurpose()).isEqualTo("Rörelsekapital");
             assertThat(app.getRequestedAmount()).isEqualByComparingTo("300000");
+            // The submission sets a non-null estimated resolution time.
+            assertThat(app.getEstimatedResolutionAt()).isNotNull();
 
-            // Audit log table must contain both expected entries, created before scoring.
-            assertThat(auditLogRepository.findAll()).hasSize(2);
+            // Audit log table contains the submit trail: APPLICATION_CREATED and
+            // ETA_SET synchronously, then SCORING_RUN from the async scoring.
+            assertThat(auditLogRepository.findAll()).hasSize(3);
             List<String> entries = auditLogRepository.findAll().stream()
                     .sorted((a, b) -> Long.compare(a.getSequenceNumber(), b.getSequenceNumber()))
                     .map(AuditLog::getEntry)
@@ -152,7 +155,8 @@ class ApplicationControllerIntegrationTest {
             assertThat(entries.get(0))
                     .contains("\"action\":\"APPLICATION_CREATED\"")
                     .contains("\"orgNumber\":\"556000-1234\"");
-            assertThat(entries.get(1)).contains("\"action\":\"SCORING_RUN\"");
+            assertThat(entries.get(1)).contains("\"action\":\"ETA_SET\"");
+            assertThat(entries.get(2)).contains("\"action\":\"SCORING_RUN\"");
 
             // A decision/reason should be produced by scoring.
             assertThat(app.getDecisionReason()).isNotBlank();

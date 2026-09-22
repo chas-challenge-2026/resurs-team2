@@ -135,17 +135,19 @@ class ApplicationLifecycleIntegrationTest {
                         .cookie(SessionCookie.access(companyToken))
                         .header("User-Agent", UA))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.application.status").value("UNDER_REVIEW"));
+                .andExpect(jsonPath("$.application.status").value("UNDER_REVIEW"))
+                .andExpect(jsonPath("$.application.estimatedResolutionAt").exists());
 
-        // The submit transaction wrote APPLICATION_CREATED synchronously; the
-        // asynchronous scoring appended SCORING_RUN once it completed. This
-        // locks the per-submission trail.
+        // The submit transaction wrote APPLICATION_CREATED then ETA_SET
+        // synchronously; the asynchronous scoring appended SCORING_RUN once it
+        // completed. This locks the per-submission trail.
         List<AuditLog> trail = auditLogRepository.findAll().stream()
                 .sorted(Comparator.comparingLong(AuditLog::getSequenceNumber))
                 .toList();
-        assertThat(trail).hasSize(2);
+        assertThat(trail).hasSize(3);
         assertThat(trail.get(0).getEntry()).contains("\"action\":\"APPLICATION_CREATED\"");
-        assertThat(trail.get(1).getEntry()).contains("\"action\":\"SCORING_RUN\"");
+        assertThat(trail.get(1).getEntry()).contains("\"action\":\"ETA_SET\"");
+        assertThat(trail.get(2).getEntry()).contains("\"action\":\"SCORING_RUN\"");
 
         mockMvc.perform(post("/api/v1/auth/logout")
                         .cookie(SessionCookie.access(companyToken))
