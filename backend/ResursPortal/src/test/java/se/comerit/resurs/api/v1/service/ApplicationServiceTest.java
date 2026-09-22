@@ -7,10 +7,12 @@ import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
@@ -47,10 +49,13 @@ import se.comerit.resurs.security.CompanyPrincipal;
  */
 class ApplicationServiceTest {
 
+    private static final Instant FIXED_ETA = Instant.parse("2026-09-26T10:00:00Z");
+
     private CompanyRepository companyRepository;
     private ApplicationRepository applicationRepository;
     private AuditLogRepository auditLogRepository;
     private ScoringService scoringService;
+    private EtaService etaService;
     private AuditLogService auditLogService;
     private CaseWorkerAssignmentService caseWorkerAssignmentService;
     private EmailService emailService;
@@ -73,9 +78,11 @@ class ApplicationServiceTest {
         caseWorkerAssignmentService = mock(CaseWorkerAssignmentService.class);
 
         emailService = mock(EmailService.class);
+        etaService = mock(EtaService.class);
+        when(etaService.estimateWithinHours(any(Instant.class), eq(24L))).thenReturn(FIXED_ETA);
 
         applicationService = new ApplicationService(
-                companyRepository, applicationRepository, scoringService, auditLogService,
+                companyRepository, applicationRepository, scoringService, etaService, auditLogService,
                 caseWorkerAssignmentService, objectMapper,
                 emailService, null);
         try {
@@ -84,6 +91,13 @@ class ApplicationServiceTest {
             field.set(applicationService, applicationService);
         } catch (ReflectiveOperationException e) {
             throw new IllegalStateException("Failed to set self reference", e);
+        }
+        try {
+            var field = ApplicationService.class.getDeclaredField("automatedDecisionHours");
+            field.setAccessible(true);
+            field.setLong(applicationService, 24L);
+        } catch (ReflectiveOperationException e) {
+            throw new IllegalStateException("Failed to set automated decision SLA hours", e);
         }
 
         company = new Company("556677-8899", "Testbolaget AB", "Kalle Kula");
@@ -182,8 +196,11 @@ class ApplicationServiceTest {
                     app.getCompany().equals(company)
                     && app.getRequestedAmount().compareTo(new BigDecimal("300000")) == 0
                     && "Rörelsekapital".equals(app.getPurpose())
+                    && app.getStatus() == ApplicationStatus.SCORING_IN_PROGRESS
                     && app.getFinancialData() != null
-                    && app.getFinancialData().contains("\"industry\":\"IT\"")));
+                    && app.getFinancialData().contains("\"industry\":\"IT\"")
+                    && app.getEstimatedResolutionAt().equals(FIXED_ETA)));
+            verify(etaService).estimateWithinHours(any(Instant.class), eq(24L));
         }
 
         @Test
@@ -215,10 +232,28 @@ class ApplicationServiceTest {
             applicationService.submitApplication("556677-8899", validRequest);
 
             ArgumentCaptor<AuditLog> captor = ArgumentCaptor.forClass(AuditLog.class);
-            verify(auditLogRepository).save(captor.capture());
-            assertThat(captor.getValue().getEntry())
+            verify(auditLogRepository, times(2)).save(captor.capture());
+            assertThat(captor.getAllValues()).hasSize(2);
+            assertThat(captor.getAllValues().get(0).getEntry())
                     .contains("\"action\":\"APPLICATION_CREATED\"")
                     .contains("\"orgNumber\":\"556677-8899\"");
+        }
+
+        @Test
+        @DisplayName("Creates an ETA_SET entry carrying the ISO-8601 estimated resolution time")
+        void etaSetEntryPresent() {
+            when(companyRepository.findByOrgNumber("556677-8899"))
+                    .thenReturn(Optional.of(company));
+            stubSaveReturnsSavedWithId(1L);
+
+            applicationService.submitApplication("556677-8899", validRequest);
+
+            ArgumentCaptor<AuditLog> captor = ArgumentCaptor.forClass(AuditLog.class);
+            verify(auditLogRepository, times(2)).save(captor.capture());
+            assertThat(captor.getAllValues()).hasSize(2);
+            assertThat(captor.getAllValues().get(1).getEntry())
+                    .contains("\"action\":\"ETA_SET\"")
+                    .contains("\"estimatedResolutionAt\":\"2026-09-26T10:00:00Z\"");
         }
     }
 

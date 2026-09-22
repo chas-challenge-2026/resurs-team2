@@ -20,11 +20,12 @@ CREATE TABLE applications (
     case_worker_id INT REFERENCES case_workers(id),
     requested_amount VARCHAR(512),
     purpose TEXT,
-    status VARCHAR(30) DEFAULT 'PENDING_DOCS',
+    status VARCHAR(30) DEFAULT 'PENDING_DOCS', -- PENDING_DOCS, SCORING_IN_PROGRESS, UNDER_REVIEW, APPROVED, REJECTED
     decision VARCHAR(20),
     decision_reason TEXT,
     scoring_result TEXT,
     financial_data TEXT,
+    estimated_resolution_at TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );

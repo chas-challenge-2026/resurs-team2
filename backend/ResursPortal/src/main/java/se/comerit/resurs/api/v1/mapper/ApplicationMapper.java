@@ -90,6 +90,7 @@ public final class ApplicationMapper {
                 app.getDecision() != null ? app.getDecision().name() : null,
                 app.getDecisionReason(),
                 app.getScoringResult(),
+                app.getEstimatedResolutionAt(),
                 app.getCreatedAt(),
                 app.getUpdatedAt());
     }
