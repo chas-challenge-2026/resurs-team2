@@ -78,11 +78,13 @@ public class ApplicationService {
             financialDataJson = null;
         }
 
-        // TODO: Consider what should be the default status
+        // The application is received and queued for the automated scoring run
+        // that follows right after the transaction commits.
         Application app = new Application(
                 company,
                 application.requestedAmount(),
                 application.purpose());
+        app.setStatus(ApplicationStatus.SCORING_IN_PROGRESS);
         app.setFinancialData(financialDataJson);
 
         app = applicationRepository.save(app);

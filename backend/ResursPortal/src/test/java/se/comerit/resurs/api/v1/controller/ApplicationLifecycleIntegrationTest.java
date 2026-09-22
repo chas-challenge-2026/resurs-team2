@@ -6,6 +6,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.util.Comparator;
+import java.util.List;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.security.crypto.argon2.Argon2PasswordEncoder;
 
@@ -24,7 +27,9 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import jakarta.servlet.http.Cookie;
 import se.comerit.resurs.entity.Application;
+import se.comerit.resurs.entity.AuditLog;
 import se.comerit.resurs.repository.ApplicationRepository;
+import se.comerit.resurs.repository.AuditLogRepository;
 import se.comerit.resurs.security.SessionCookie;
 
 /**
@@ -81,6 +86,9 @@ class ApplicationLifecycleIntegrationTest {
     private ApplicationRepository applicationRepository;
 
     @Autowired
+    private AuditLogRepository auditLogRepository;
+
+    @Autowired
     private CaseWorkerRepository caseWorkerRepository;
 
     @Autowired
@@ -128,6 +136,16 @@ class ApplicationLifecycleIntegrationTest {
                         .header("User-Agent", UA))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.application.status").value("UNDER_REVIEW"));
+
+        // The submit transaction wrote APPLICATION_CREATED synchronously; the
+        // asynchronous scoring appended SCORING_RUN once it completed. This
+        // locks the per-submission trail.
+        List<AuditLog> trail = auditLogRepository.findAll().stream()
+                .sorted(Comparator.comparingLong(AuditLog::getSequenceNumber))
+                .toList();
+        assertThat(trail).hasSize(2);
+        assertThat(trail.get(0).getEntry()).contains("\"action\":\"APPLICATION_CREATED\"");
+        assertThat(trail.get(1).getEntry()).contains("\"action\":\"SCORING_RUN\"");
 
         mockMvc.perform(post("/api/v1/auth/logout")
                         .cookie(SessionCookie.access(companyToken))

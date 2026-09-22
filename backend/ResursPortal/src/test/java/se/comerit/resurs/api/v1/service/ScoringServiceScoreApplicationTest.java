@@ -62,6 +62,9 @@ class ScoringServiceScoreApplicationTest {
         company = new Company("556677-8899", "Testbolaget AB", "Kalle Kula");
         app = new Application(company, new BigDecimal("300000"), "Rörelsekapital");
         setApplicationId(app, 7L);
+        // Freshly submitted applications carry SCORING_IN_PROGRESS while the
+        // async run is scheduled; scoring moves them to their final status.
+        app.setStatus(ApplicationStatus.SCORING_IN_PROGRESS);
         app.setFinancialData(objectMapper.writeValueAsString(
                 new ApplicationData(500_000.0, 1_000_000.0, 400_000.0, 200_000.0, 500_000.0,
                         150_000.0, 1_000_000.0, new BigDecimal("300000"),
@@ -149,6 +152,10 @@ class ScoringServiceScoreApplicationTest {
 
         scoringService.scoreApplication(7L);
 
+        // The application keeps its SCORING_IN_PROGRESS status: the silent
+        // return means it was never moved on, neither by scoring nor by anyone
+        // else.
+        assertThat(app.getStatus()).isEqualTo(ApplicationStatus.SCORING_IN_PROGRESS);
         verify(repository, never()).save(any());
         verify(emailService, never()).sendDecision(any(Application.class));
         verify(emailService, never()).sendStatusUpdate(any(Application.class));

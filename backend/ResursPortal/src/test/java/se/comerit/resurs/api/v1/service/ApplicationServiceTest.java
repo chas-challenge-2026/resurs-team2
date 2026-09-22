@@ -182,6 +182,7 @@ class ApplicationServiceTest {
                     app.getCompany().equals(company)
                     && app.getRequestedAmount().compareTo(new BigDecimal("300000")) == 0
                     && "Rörelsekapital".equals(app.getPurpose())
+                    && app.getStatus() == ApplicationStatus.SCORING_IN_PROGRESS
                     && app.getFinancialData() != null
                     && app.getFinancialData().contains("\"industry\":\"IT\"")));
         }

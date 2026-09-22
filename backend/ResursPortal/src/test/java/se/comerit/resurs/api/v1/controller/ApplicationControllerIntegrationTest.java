@@ -230,6 +230,10 @@ class ApplicationControllerIntegrationTest {
                     .content(requestJsonWithAmount(50000)))
                     .andExpect(status().isOk());
 
+            // Wait for the async scoring so no in-flight thread races the next
+            // test's table cleanup with a late SCORING_RUN audit insert.
+            awaitScoringComplete();
+
             assertThat(applicationRepository.findAll()).hasSize(1);
         }
 
@@ -247,6 +251,10 @@ class ApplicationControllerIntegrationTest {
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(requestJsonWithAmount(10000000)))
                     .andExpect(status().isOk());
+
+            // Wait for the async scoring so no in-flight thread races the next
+            // test's table cleanup with a late SCORING_RUN audit insert.
+            awaitScoringComplete();
 
             assertThat(applicationRepository.findAll()).hasSize(1);
         }
