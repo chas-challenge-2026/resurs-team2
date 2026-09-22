@@ -5,7 +5,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -14,7 +13,6 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 import se.comerit.resurs.api.v1.dto.ApplicationDetailsResponse;
 import se.comerit.resurs.api.v1.dto.ApplicationRequest;
 import se.comerit.resurs.api.v1.dto.ApplicationResponse;
-import se.comerit.resurs.api.v1.dto.PaginatedResponse;
 import se.comerit.resurs.api.v1.mapper.ApplicationMapper;
 import se.comerit.resurs.audit.ApplicationCreated;
 import se.comerit.resurs.entity.Application;
@@ -123,7 +121,7 @@ public class ApplicationService {
     public void runScoringAsync (Long applicationId) {
         try {
             Thread.sleep(scoringDelayMs);
-        } catch (InterruptedException e) {
+        } catch (InterruptedException _) {
             Thread.currentThread().interrupt();
             return;
         }
@@ -171,7 +169,6 @@ public class ApplicationService {
                     pageable
             );
         }
-
 
 
         return applications.map(ApplicationMapper::toResponse).getContent();
