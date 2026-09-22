@@ -12,6 +12,8 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import java.util.List;
+
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
@@ -20,6 +22,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.web.servlet.MockMvc;
 
+import se.comerit.resurs.entity.Application;
 import se.comerit.resurs.entity.AuditLog;
 import se.comerit.resurs.repository.ApplicationRepository;
 import se.comerit.resurs.repository.AuditLogRepository;
@@ -77,7 +80,7 @@ class DecisionControllerIntegrationTest {
                 "DELETE FROM companies",
                 "INSERT INTO case_workers (id, name, email, email_index, password) VALUES (1, 'Karin Handläggare', 'karin@resurs.se', X'01', 'x')",
                 "INSERT INTO companies (id, org_number, company_name, authorized_signatory) VALUES (500, '556000-9101', 'Beslut Bolag AB', 'Test Person')",
-                "INSERT INTO applications (id, company_id, requested_amount, purpose, status, decision, decision_reason, scoring_result) VALUES (500, 500, 150000.00, 'Företagslån', 'UNDER_REVIEW', NULL, NULL, NULL)"
+                "INSERT INTO applications (id, company_id, requested_amount, purpose, status, decision, decision_reason, scoring_result, estimated_resolution_at) VALUES (500, 500, 150000.00, 'Företagslån', 'UNDER_REVIEW', NULL, NULL, NULL, '2026-09-22T10:00:00Z')"
         })
         void approveApplication() throws Exception {
             mockMvc.perform(post("/api/v1/applications/500/decision")
@@ -88,7 +91,17 @@ class DecisionControllerIntegrationTest {
                     .andExpect(jsonPath("$.companyName").value("Beslut Bolag AB"))
                     .andExpect(jsonPath("$.status").value("APPROVED"))
                     .andExpect(jsonPath("$.decision").value("APPROVED"))
-                    .andExpect(jsonPath("$.decisionReason").value("Godkänd"));
+                    .andExpect(jsonPath("$.decisionReason").value("Godkänd"))
+                    // A decided application no longer carries an ETA.
+                    .andExpect(jsonPath("$.estimatedResolutionAt").value(nullValue()));
+
+            Application decided = applicationRepository.findById(500L).orElseThrow();
+            assertThat(decided.getEstimatedResolutionAt()).isNull();
+
+            // The clear is persisted as a valueless ETA_SET entry.
+            List<AuditLog> logs = auditLogRepository.findByApplication(decided, Sort.by("sequenceNumber"));
+            assertThat(logs).anySatisfy(log ->
+                    assertThat(log.getEntry()).isEqualTo("{\"action\":\"ETA_SET\"}"));
         }
 
         @Test

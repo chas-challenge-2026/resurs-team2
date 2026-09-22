@@ -2,12 +2,15 @@ package se.comerit.resurs.api.v1.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
@@ -18,6 +21,7 @@ import org.mockito.ArgumentCaptor;
 
 import tools.jackson.databind.ObjectMapper;
 
+import se.comerit.resurs.audit.EtaSet;
 import se.comerit.resurs.entity.Application;
 import se.comerit.resurs.entity.ApplicationStatus;
 import se.comerit.resurs.entity.AuditLog;
@@ -38,12 +42,15 @@ import se.comerit.resurs.repository.AuditLogRepository;
  */
 class ScoringServiceScoreApplicationTest {
 
+    private static final Instant FIXED_ETA = Instant.parse("2026-09-26T10:00:00Z");
+
     private ApplicationRepository repository;
     private AuditLogRepository auditLogRepository;
     private ObjectMapper objectMapper;
     private AuditLogService auditLogService;
     private EmailService emailService;
     private DecisionEngine decisionEngine;
+    private EtaService etaService;
     private ScoringService scoringService;
 
     private Company company;
@@ -57,7 +64,17 @@ class ScoringServiceScoreApplicationTest {
         auditLogService = new AuditLogService(auditLogRepository, repository, objectMapper);
         emailService = mock(EmailService.class);
         decisionEngine = mock(DecisionEngine.class);
-        scoringService = new ScoringService(List.of(), decisionEngine, repository, objectMapper, auditLogService, emailService);
+        etaService = mock(EtaService.class);
+        when(etaService.estimateBusinessDays(any(Instant.class), eq(2))).thenReturn(FIXED_ETA);
+        scoringService = new ScoringService(List.of(), decisionEngine, repository, objectMapper,
+                auditLogService, etaService, emailService);
+        try {
+            var field = ScoringService.class.getDeclaredField("reviewBusinessDays");
+            field.setAccessible(true);
+            field.setInt(scoringService, 2);
+        } catch (ReflectiveOperationException e) {
+            throw new IllegalStateException("Failed to set manual review SLA days", e);
+        }
 
         company = new Company("556677-8899", "Testbolaget AB", "Kalle Kula");
         app = new Application(company, new BigDecimal("300000"), "Rörelsekapital");
@@ -107,13 +124,19 @@ class ScoringServiceScoreApplicationTest {
         assertThat(app.getDecision()).isEqualTo(Decision.APPROVED);
         assertThat(app.getDecisionReason()).isEqualTo("ANSÖKAN GODKÄND");
         assertThat(app.getScoringResult()).isNotBlank();
+        // A decided application carries no ETA.
+        assertThat(app.getEstimatedResolutionAt()).isNull();
 
         ArgumentCaptor<AuditLog> captor = ArgumentCaptor.forClass(AuditLog.class);
-        verify(auditLogRepository).save(captor.capture());
-        assertThat(captor.getValue().getEntry())
+        verify(auditLogRepository, times(2)).save(captor.capture());
+        assertThat(captor.getAllValues()).hasSize(2);
+        assertThat(captor.getAllValues().get(0).getEntry())
                 .contains("\"action\":\"SCORING_RUN\"")
                 .contains("\"result\":\"APPROVED\"")
                 .contains("\"flags\"");
+        // The outcome entry clears the ETA (no estimatedResolutionAt field).
+        assertThat(captor.getAllValues().get(1).getEntry())
+                .isEqualTo("{\"action\":\"ETA_SET\"}");
 
         verify(repository).save(app);
         verify(emailService).sendDecision(app);
@@ -129,6 +152,16 @@ class ScoringServiceScoreApplicationTest {
 
         assertThat(app.getStatus()).isEqualTo(ApplicationStatus.UNDER_REVIEW);
         assertThat(app.getDecision()).isNull();
+        // Flagged applications move to the manual-review SLA.
+        assertThat(app.getEstimatedResolutionAt()).isEqualTo(FIXED_ETA);
+
+        ArgumentCaptor<AuditLog> captor = ArgumentCaptor.forClass(AuditLog.class);
+        verify(auditLogRepository, times(2)).save(captor.capture());
+        assertThat(captor.getAllValues()).hasSize(2);
+        assertThat(captor.getAllValues().get(0).getEntry()).contains("\"action\":\"SCORING_RUN\"");
+        assertThat(captor.getAllValues().get(1).getEntry())
+                .isEqualTo("{\"action\":\"ETA_SET\",\"estimatedResolutionAt\":\"2026-09-26T10:00:00Z\"}");
+
         verify(emailService).sendStatusUpdate(app);
         verify(emailService, never()).sendDecision(any(Application.class));
     }
