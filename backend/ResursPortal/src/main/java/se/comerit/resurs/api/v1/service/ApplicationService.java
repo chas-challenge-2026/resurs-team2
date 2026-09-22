@@ -171,8 +171,6 @@ public class ApplicationService {
             );
         }
 
-
-
         return applications.map(ApplicationMapper::toResponse).getContent();
     }
 
