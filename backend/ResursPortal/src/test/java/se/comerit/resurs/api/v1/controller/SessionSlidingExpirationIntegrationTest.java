@@ -122,6 +122,10 @@ class SessionSlidingExpirationIntegrationTest {
                 "Malmö Fastigheter AB");
     }
 
+    private static Cookie accessCookie(String token) {
+        return new Cookie(SessionCookie.ACCESS, token);
+    }
+
     private static String cookieValue(MockHttpServletResponse response, String name) {
         for (Cookie cookie : response.getCookies()) {
             if (name.equals(cookie.getName())) {
@@ -133,14 +137,14 @@ class SessionSlidingExpirationIntegrationTest {
 
     private void assertOk(AuthTokens tokens) throws Exception {
         mockMvc.perform(get("/api/v1/companies/me")
-                        .cookie(SessionCookie.access(tokens.accessToken()))
+                        .cookie(accessCookie(tokens.accessToken()))
                         .header("User-Agent", UA))
                 .andExpect(status().isOk());
     }
 
     private void assertUnauthorized(AuthTokens tokens) throws Exception {
         mockMvc.perform(get("/api/v1/companies/me")
-                        .cookie(SessionCookie.access(tokens.accessToken()))
+                        .cookie(accessCookie(tokens.accessToken()))
                         .header("User-Agent", UA))
                 .andExpect(status().isUnauthorized());
     }

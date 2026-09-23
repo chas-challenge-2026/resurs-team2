@@ -1,72 +1,85 @@
 package se.comerit.resurs.security;
 
+import org.springframework.stereotype.Component;
+
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 
 /**
  * Builds the two {@code httpOnly} session cookies that carry the access and
  * single-use refresh tokens between the browser and the API. Opaque to
- * JavaScript (HttpOnly + SameSite=Lax + Secure), so the frontend never reads
- * or presents token values. Both cookies share {@code Path=/} so the browser
+ * JavaScript (HttpOnly + SameSite + Secure), so the frontend never reads or
+ * presents token values. Both cookies share {@code Path=/} so the browser
  * sends the refresh cookie on every API request — that is what lets
  * {@link SessionTokenAuthenticationFilter} perform transparent server-side
  * rotation on any request, not just on the refresh endpoint.
+ * <p>
+ * The {@code Secure} and {@code SameSite} attributes come from
+ * {@link SessionCookieProperties} (defaults: Secure on, SameSite=Lax).
+ * {@code HttpOnly} is always on.
  */
-public final class SessionCookie {
+@Component
+public class SessionCookie {
 
     public static final String ACCESS = "resurs_access";
     public static final String REFRESH = "resurs_refresh";
 
     private static final String PATH = "/";
-    private static final String SAME_SITE = "Lax";
 
-    private SessionCookie() {
+    private final boolean secure;
+    private final String sameSite;
+
+    public SessionCookie(SessionCookieProperties properties) {
+        this.secure = properties.secure();
+        this.sameSite = properties.sameSite();
     }
 
-    public static Cookie access(String token) {
+    public Cookie access(String token) {
         return tokenCookie(ACCESS, token);
     }
 
-    public static Cookie refresh(String token) {
+    public Cookie refresh(String token) {
         return tokenCookie(REFRESH, token);
     }
 
     /** Clears the access cookie (matching name + path so the browser removes it). */
-    public static Cookie clearAccess() {
+    public Cookie clearAccess() {
         return clearedCookie(ACCESS);
     }
 
     /** Clears the refresh cookie (matching name + path so the browser removes it). */
-    public static Cookie clearRefresh() {
+    public Cookie clearRefresh() {
         return clearedCookie(REFRESH);
     }
 
+    /** Reads the access cookie value from an incoming request, or {@code null}. */
     public static String accessToken(HttpServletRequest request) {
         return value(request, ACCESS);
     }
 
+    /** Reads the refresh cookie value from an incoming request, or {@code null}. */
     public static String refreshToken(HttpServletRequest request) {
         return value(request, REFRESH);
     }
 
-    private static Cookie tokenCookie(String name, String token) {
+    private Cookie tokenCookie(String name, String token) {
         Cookie cookie = new Cookie(name, token);
         configure(cookie);
         return cookie;
     }
 
-    private static Cookie clearedCookie(String name) {
+    private Cookie clearedCookie(String name) {
         Cookie cookie = new Cookie(name, "");
         configure(cookie);
         cookie.setMaxAge(0);
         return cookie;
     }
 
-    private static void configure(Cookie cookie) {
+    private void configure(Cookie cookie) {
         cookie.setPath(PATH);
         cookie.setHttpOnly(true);
-        cookie.setSecure(true);
-        cookie.setAttribute("SameSite", SAME_SITE);
+        cookie.setSecure(secure);
+        cookie.setAttribute("SameSite", sameSite);
     }
 
     private static String value(HttpServletRequest request, String name) {

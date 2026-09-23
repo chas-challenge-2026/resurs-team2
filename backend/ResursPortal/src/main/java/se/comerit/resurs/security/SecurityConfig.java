@@ -47,7 +47,8 @@ public class SecurityConfig {
     @Bean
     @Order(2)
     public SecurityFilterChain apiChain(HttpSecurity http,
-           SessionTokenAuthenticationFilter filter) throws Exception {
+           SessionTokenAuthenticationFilter filter,
+           CsrfOriginCheckFilter csrfOriginCheck) throws Exception {
         http
                 .securityMatcher("/api/**")
                 .csrf(AbstractHttpConfigurer::disable)
@@ -62,7 +63,8 @@ public class SecurityConfig {
                 .exceptionHandling(ex -> ex
                         .authenticationEntryPoint(authenticationEntryPoint())
                         .accessDeniedHandler(accessDeniedHandler()))
-                .addFilterBefore(filter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(filter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(csrfOriginCheck, SessionTokenAuthenticationFilter.class);
         return http.build();
     }
 

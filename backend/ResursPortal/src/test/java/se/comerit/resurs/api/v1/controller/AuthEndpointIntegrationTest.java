@@ -48,7 +48,8 @@ import org.springframework.test.context.jdbc.Sql;
  * session-token fingerprint binding.
  */
 @SpringBootTest(properties = {
-        "spring.datasource.url=jdbc:h2:mem:auth;MODE=PostgreSQL"
+        "spring.datasource.url=jdbc:h2:mem:auth;MODE=PostgreSQL",
+        "resurs.auth.allowed-origins=http://dev.ui.internal"
 })
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
@@ -108,7 +109,7 @@ class AuthEndpointIntegrationTest {
             // Presenting the refresh cookie yields a brand-new pair.
             MvcResult rotatedResult = mockMvc.perform(post("/api/v1/auth/refresh")
                             .header("User-Agent", UA)
-                            .cookie(SessionCookie.refresh(original.refreshToken())))
+                            .cookie(refreshCookie(original.refreshToken())))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.role").value("COMPANY"))
                     .andReturn();
@@ -121,19 +122,19 @@ class AuthEndpointIntegrationTest {
             // The rotated (new) access cookie is valid.
             mockMvc.perform(get("/api/v1/companies/me")
                             .header("User-Agent", UA)
-                            .cookie(SessionCookie.access(rotated.accessToken())))
+                            .cookie(accessCookie(rotated.accessToken())))
                     .andExpect(status().isOk());
 
             // The old access cookie is dead after rotation.
             mockMvc.perform(get("/api/v1/companies/me")
                             .header("User-Agent", UA)
-                            .cookie(SessionCookie.access(original.accessToken())))
+                            .cookie(accessCookie(original.accessToken())))
                     .andExpect(status().isUnauthorized());
 
             // The old refresh cookie is single-use: a replay is rejected.
             mockMvc.perform(post("/api/v1/auth/refresh")
                             .header("User-Agent", UA)
-                            .cookie(SessionCookie.refresh(original.refreshToken())))
+                            .cookie(refreshCookie(original.refreshToken())))
                     .andExpect(status().isUnauthorized())
                     .andExpect(jsonPath("$.title").value("Unauthorized"));
         }
@@ -143,7 +144,7 @@ class AuthEndpointIntegrationTest {
         void refreshWithUnknownTokenRejected() throws Exception {
             mockMvc.perform(post("/api/v1/auth/refresh")
                             .header("User-Agent", UA)
-                            .cookie(SessionCookie.refresh("never-issued-token")))
+                            .cookie(refreshCookie("never-issued-token")))
                     .andExpect(status().isUnauthorized())
                     .andExpect(jsonPath("$.title").value("Unauthorized"));
         }
@@ -169,7 +170,7 @@ class AuthEndpointIntegrationTest {
                     start.await();
                     return mockMvc.perform(post("/api/v1/auth/refresh")
                                     .header("User-Agent", UA)
-                                    .cookie(SessionCookie.refresh(original.refreshToken())))
+                                    .cookie(refreshCookie(original.refreshToken())))
                             .andReturn();
                 })).toList();
 
@@ -195,7 +196,7 @@ class AuthEndpointIntegrationTest {
                 assertThat(rotated).isNotNull();
                 mockMvc.perform(get("/api/v1/companies/me")
                                 .header("User-Agent", UA)
-                                .cookie(SessionCookie.access(rotated.accessToken())))
+                                .cookie(accessCookie(rotated.accessToken())))
                         .andExpect(status().isOk());
             } finally {
                 pool.shutdownNow();
@@ -214,7 +215,7 @@ class AuthEndpointIntegrationTest {
 
             mockMvc.perform(get("/api/v1/auth/me")
                             .header("User-Agent", UA)
-                            .cookie(SessionCookie.access(tokens.accessToken())))
+                            .cookie(accessCookie(tokens.accessToken())))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.role").value("COMPANY"))
                     .andExpect(jsonPath("$.name").value("Malmö Fastigheter AB"));
@@ -239,7 +240,7 @@ class AuthEndpointIntegrationTest {
             // set fresh cookies, and serve /me.
             MvcResult me = mockMvc.perform(get("/api/v1/auth/me")
                             .header("User-Agent", UA)
-                            .cookie(SessionCookie.refresh(original.refreshToken())))
+                            .cookie(refreshCookie(original.refreshToken())))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.role").value("COMPANY"))
                     .andReturn();
@@ -249,13 +250,13 @@ class AuthEndpointIntegrationTest {
             // The freshly rotated access cookie works.
             mockMvc.perform(get("/api/v1/companies/me")
                             .header("User-Agent", UA)
-                            .cookie(SessionCookie.access(rotated.accessToken())))
+                            .cookie(accessCookie(rotated.accessToken())))
                     .andExpect(status().isOk());
 
             // The refresh cookie is single-use: replaying it on /me is rejected.
             mockMvc.perform(get("/api/v1/auth/me")
                             .header("User-Agent", UA)
-                            .cookie(SessionCookie.refresh(original.refreshToken())))
+                            .cookie(refreshCookie(original.refreshToken())))
                     .andExpect(status().isUnauthorized());
         }
     }
@@ -280,7 +281,7 @@ class AuthEndpointIntegrationTest {
 
             mockMvc.perform(get("/api/v1/auth/me")
                             .header("User-Agent", UA)
-                            .cookie(SessionCookie.access(tokens.accessToken())))
+                            .cookie(accessCookie(tokens.accessToken())))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.role").value("CASEWORKER"))
                     .andExpect(jsonPath("$.name").value("Karin Handläggare"));
@@ -298,19 +299,19 @@ class AuthEndpointIntegrationTest {
 
             mockMvc.perform(post("/api/v1/auth/logout")
                             .header("User-Agent", UA)
-                            .cookie(SessionCookie.access(tokens.accessToken())))
+                            .cookie(accessCookie(tokens.accessToken())))
                     .andExpect(status().isNoContent());
 
             // The logged-out access cookie can no longer reach a protected endpoint.
             mockMvc.perform(get("/api/v1/companies/me")
                             .header("User-Agent", UA)
-                            .cookie(SessionCookie.access(tokens.accessToken())))
+                            .cookie(accessCookie(tokens.accessToken())))
                     .andExpect(status().isUnauthorized());
 
             // The logged-out refresh cookie can no longer be used to rotate.
             mockMvc.perform(post("/api/v1/auth/refresh")
                             .header("User-Agent", UA)
-                            .cookie(SessionCookie.refresh(tokens.refreshToken())))
+                            .cookie(refreshCookie(tokens.refreshToken())))
                     .andExpect(status().isUnauthorized());
         }
 
@@ -327,27 +328,27 @@ class AuthEndpointIntegrationTest {
             // Both sessions are valid initially.
             mockMvc.perform(get("/api/v1/companies/me")
                             .header("User-Agent", browserA)
-                            .cookie(SessionCookie.access(sessionA.accessToken())))
+                            .cookie(accessCookie(sessionA.accessToken())))
                     .andExpect(status().isOk());
             mockMvc.perform(get("/api/v1/companies/me")
                             .header("User-Agent", browserB)
-                            .cookie(SessionCookie.access(sessionB.accessToken())))
+                            .cookie(accessCookie(sessionB.accessToken())))
                     .andExpect(status().isOk());
 
             // Browser A logs out.
             mockMvc.perform(post("/api/v1/auth/logout")
                             .header("User-Agent", browserA)
-                            .cookie(SessionCookie.access(sessionA.accessToken())))
+                            .cookie(accessCookie(sessionA.accessToken())))
                     .andExpect(status().isNoContent());
 
             // Session A is revoked — access and refresh both dead.
             mockMvc.perform(get("/api/v1/companies/me")
                             .header("User-Agent", browserA)
-                            .cookie(SessionCookie.access(sessionA.accessToken())))
+                            .cookie(accessCookie(sessionA.accessToken())))
                     .andExpect(status().isUnauthorized());
             mockMvc.perform(post("/api/v1/auth/refresh")
                             .header("User-Agent", browserA)
-                            .cookie(SessionCookie.refresh(sessionA.refreshToken())))
+                            .cookie(refreshCookie(sessionA.refreshToken())))
                     .andExpect(status().isUnauthorized());
 
             // Session B must still be active — the session-scoped logout only revokes
@@ -355,7 +356,7 @@ class AuthEndpointIntegrationTest {
             // same user untouched.
             mockMvc.perform(get("/api/v1/companies/me")
                             .header("User-Agent", browserB)
-                            .cookie(SessionCookie.access(sessionB.accessToken())))
+                            .cookie(accessCookie(sessionB.accessToken())))
                     .andExpect(status().isOk());
         }
 
@@ -372,37 +373,37 @@ class AuthEndpointIntegrationTest {
             // Both sessions are valid.
             mockMvc.perform(get("/api/v1/companies/me")
                             .header("User-Agent", UA)
-                            .cookie(SessionCookie.access(sessionA.accessToken())))
+                            .cookie(accessCookie(sessionA.accessToken())))
                     .andExpect(status().isOk());
             mockMvc.perform(get("/api/v1/companies/me")
                             .header("User-Agent", UA)
-                            .cookie(SessionCookie.access(sessionB.accessToken())))
+                            .cookie(accessCookie(sessionB.accessToken())))
                     .andExpect(status().isOk());
 
             // The incognito window logs out.
             mockMvc.perform(post("/api/v1/auth/logout")
                             .header("User-Agent", UA)
-                            .cookie(SessionCookie.access(sessionA.accessToken())))
+                            .cookie(accessCookie(sessionA.accessToken())))
                     .andExpect(status().isNoContent());
 
             // Session A is dead — access and refresh.
             mockMvc.perform(get("/api/v1/companies/me")
                             .header("User-Agent", UA)
-                            .cookie(SessionCookie.access(sessionA.accessToken())))
+                            .cookie(accessCookie(sessionA.accessToken())))
                     .andExpect(status().isUnauthorized());
             mockMvc.perform(post("/api/v1/auth/refresh")
                             .header("User-Agent", UA)
-                            .cookie(SessionCookie.refresh(sessionA.refreshToken())))
+                            .cookie(refreshCookie(sessionA.refreshToken())))
                     .andExpect(status().isUnauthorized());
 
             // The normal window's session B is untouched — access AND refresh.
             mockMvc.perform(get("/api/v1/companies/me")
                             .header("User-Agent", UA)
-                            .cookie(SessionCookie.access(sessionB.accessToken())))
+                            .cookie(accessCookie(sessionB.accessToken())))
                     .andExpect(status().isOk());
             mockMvc.perform(post("/api/v1/auth/refresh")
                             .header("User-Agent", UA)
-                            .cookie(SessionCookie.refresh(sessionB.refreshToken())))
+                            .cookie(refreshCookie(sessionB.refreshToken())))
                     .andExpect(status().isOk());
         }
 
@@ -418,34 +419,34 @@ class AuthEndpointIntegrationTest {
             // Both sessions are valid initially.
             mockMvc.perform(get("/api/v1/companies/me")
                             .header("User-Agent", browserA)
-                            .cookie(SessionCookie.access(sessionA.accessToken())))
+                            .cookie(accessCookie(sessionA.accessToken())))
                     .andExpect(status().isOk());
             mockMvc.perform(get("/api/v1/companies/me")
                             .header("User-Agent", browserB)
-                            .cookie(SessionCookie.access(sessionB.accessToken())))
+                            .cookie(accessCookie(sessionB.accessToken())))
                     .andExpect(status().isOk());
 
             // Browser A asks to log out EVERYWHERE.
             mockMvc.perform(post("/api/v1/auth/logout/all")
                             .header("User-Agent", browserA)
-                            .cookie(SessionCookie.access(sessionA.accessToken())))
+                            .cookie(accessCookie(sessionA.accessToken())))
                     .andExpect(status().isNoContent());
 
             // Session A is dead — access and refresh.
             mockMvc.perform(get("/api/v1/companies/me")
                             .header("User-Agent", browserA)
-                            .cookie(SessionCookie.access(sessionA.accessToken())))
+                            .cookie(accessCookie(sessionA.accessToken())))
                     .andExpect(status().isUnauthorized());
 
             // And session B is dead too — unlike the session-scoped /auth/logout,
             // /auth/logout/all wipes every session of the principal.
             mockMvc.perform(get("/api/v1/companies/me")
                             .header("User-Agent", browserB)
-                            .cookie(SessionCookie.access(sessionB.accessToken())))
+                            .cookie(accessCookie(sessionB.accessToken())))
                     .andExpect(status().isUnauthorized());
             mockMvc.perform(post("/api/v1/auth/refresh")
                             .header("User-Agent", browserB)
-                            .cookie(SessionCookie.refresh(sessionB.refreshToken())))
+                            .cookie(refreshCookie(sessionB.refreshToken())))
                     .andExpect(status().isUnauthorized());
         }
 
@@ -470,19 +471,19 @@ class AuthEndpointIntegrationTest {
             // Legit device works.
             mockMvc.perform(get("/api/v1/companies/me")
                             .header("User-Agent", UA)
-                            .cookie(SessionCookie.access(tokens.accessToken())))
+                            .cookie(accessCookie(tokens.accessToken())))
                     .andExpect(status().isOk());
 
             // The same token from another device is treated as theft and rejected.
             mockMvc.perform(get("/api/v1/companies/me")
                             .header("User-Agent", OTHER_UA)
-                            .cookie(SessionCookie.access(tokens.accessToken())))
+                            .cookie(accessCookie(tokens.accessToken())))
                     .andExpect(status().isUnauthorized());
 
             // Theft tripwire nukes the whole session: the legit device is dead too.
             mockMvc.perform(get("/api/v1/companies/me")
                             .header("User-Agent", UA)
-                            .cookie(SessionCookie.access(tokens.accessToken())))
+                            .cookie(accessCookie(tokens.accessToken())))
                     .andExpect(status().isUnauthorized());
         }
 
@@ -494,18 +495,18 @@ class AuthEndpointIntegrationTest {
             // Attacker replays the refresh cookie from another device.
             mockMvc.perform(post("/api/v1/auth/refresh")
                             .header("User-Agent", OTHER_UA)
-                            .cookie(SessionCookie.refresh(tokens.refreshToken())))
+                            .cookie(refreshCookie(tokens.refreshToken())))
                     .andExpect(status().isUnauthorized());
 
             // Whole session revoked: legit access cookie no longer works, and the
             // refresh cookie is dead even from the correct device.
             mockMvc.perform(get("/api/v1/companies/me")
                             .header("User-Agent", UA)
-                            .cookie(SessionCookie.access(tokens.accessToken())))
+                            .cookie(accessCookie(tokens.accessToken())))
                     .andExpect(status().isUnauthorized());
             mockMvc.perform(post("/api/v1/auth/refresh")
                             .header("User-Agent", UA)
-                            .cookie(SessionCookie.refresh(tokens.refreshToken())))
+                            .cookie(refreshCookie(tokens.refreshToken())))
                     .andExpect(status().isUnauthorized());
         }
     }
@@ -540,6 +541,131 @@ class AuthEndpointIntegrationTest {
                     .andReturn();
             return result.getResponse().getContentAsString();
         }
+    }
+
+    @Nested
+    @DisplayName("CSRF origin check")
+    class Csrf {
+
+        @Test
+        @DisplayName("State-changing request from a foreign origin is rejected with 403")
+        void crossOriginPostIsRejected() throws Exception {
+            mockMvc.perform(post("/api/v1/auth/login/company")
+                            .header("User-Agent", UA)
+                            .header("Origin", "http://evil.example.com")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"orgNumber\":\"" + COMPANY_ORG + "\"}"))
+                    .andExpect(status().isForbidden())
+                    .andExpect(jsonPath("$.status").value(403))
+                    .andExpect(jsonPath("$.title").value("Access Denied"))
+                    .andExpect(jsonPath("$.detail").value("Cross-origin request rejected"));
+        }
+
+        @Test
+        @DisplayName("State-changing request whose Origin host matches the request host is accepted")
+        void sameOriginPostIsAccepted() throws Exception {
+            mockMvc.perform(post("/api/v1/auth/login/company")
+                            .header("User-Agent", UA)
+                            .header("Host", "localhost:8083")
+                            .header("Origin", "http://localhost:8083")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"orgNumber\":\"" + COMPANY_ORG + "\"}"))
+                    .andExpect(status().isOk());
+        }
+
+        @Test
+        @DisplayName("Allow-listed origin is accepted even when its host differs from the backend Host")
+        void allowListedOriginIsAccepted() throws Exception {
+            mockMvc.perform(post("/api/v1/auth/login/company")
+                            .header("User-Agent", UA)
+                            .header("Host", "localhost:8083")
+                            .header("Origin", "http://dev.ui.internal")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"orgNumber\":\"" + COMPANY_ORG + "\"}"))
+                    .andExpect(status().isOk());
+        }
+
+        @Test
+        @DisplayName("curl-style request without an Origin header is accepted")
+        void requestWithoutOriginIsAccepted() throws Exception {
+            mockMvc.perform(post("/api/v1/auth/login/company")
+                            .header("User-Agent", UA)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"orgNumber\":\"" + COMPANY_ORG + "\"}"))
+                    .andExpect(status().isOk());
+        }
+
+        @Test
+        @DisplayName("Safe (GET) requests are never blocked by the origin check")
+        void safeGetIsNotBlocked() throws Exception {
+            // No session, so /me is 401 — proving the request reached the
+            // authorization layer instead of being short-circuited at 403.
+            mockMvc.perform(get("/api/v1/auth/me")
+                            .header("User-Agent", UA)
+                            .header("Origin", "http://evil.example.com"))
+                    .andExpect(status().isUnauthorized());
+        }
+    }
+
+    @Nested
+    @DisplayName("Session cookie attributes")
+    class CookieAttributes {
+
+        @Test
+        @DisplayName("Login sets access/refresh cookies that are HttpOnly, Secure, SameSite=Lax, Path=/")
+        void loginCookiesCarrySecurityFlags() throws Exception {
+            MvcResult login = mockMvc.perform(post("/api/v1/auth/login/company")
+                            .header("User-Agent", UA)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"orgNumber\":\"" + COMPANY_ORG + "\"}"))
+                    .andExpect(status().isOk())
+                    .andReturn();
+
+            Cookie access = login.getResponse().getCookie(SessionCookie.ACCESS);
+            Cookie refresh = login.getResponse().getCookie(SessionCookie.REFRESH);
+
+            assertThat(access).isNotNull();
+            assertThat(access.isHttpOnly()).isTrue();
+            assertThat(access.getSecure()).isTrue();
+            assertThat(access.getAttribute("SameSite")).isEqualTo("Lax");
+            assertThat(access.getPath()).isEqualTo("/");
+            assertThat(access.getValue()).isNotBlank();
+
+            assertThat(refresh).isNotNull();
+            assertThat(refresh.isHttpOnly()).isTrue();
+            assertThat(refresh.getSecure()).isTrue();
+            assertThat(refresh.getAttribute("SameSite")).isEqualTo("Lax");
+            assertThat(refresh.getPath()).isEqualTo("/");
+            assertThat(refresh.getValue()).isNotBlank();
+        }
+
+        @Test
+        @DisplayName("Logout clears both cookies with Max-Age 0")
+        void logoutClearsCookies() throws Exception {
+            AuthTokens tokens = loginCompany();
+
+            MvcResult logout = mockMvc.perform(post("/api/v1/auth/logout")
+                            .header("User-Agent", UA)
+                            .header("Origin", "http://localhost")
+                            .cookie(accessCookie(tokens.accessToken())))
+                    .andExpect(status().isNoContent())
+                    .andReturn();
+
+            Cookie access = logout.getResponse().getCookie(SessionCookie.ACCESS);
+            Cookie refresh = logout.getResponse().getCookie(SessionCookie.REFRESH);
+            assertThat(access).isNotNull();
+            assertThat(access.getMaxAge()).isZero();
+            assertThat(refresh).isNotNull();
+            assertThat(refresh.getMaxAge()).isZero();
+        }
+    }
+
+    private static Cookie accessCookie(String token) {
+        return new Cookie(SessionCookie.ACCESS, token);
+    }
+
+    private static Cookie refreshCookie(String token) {
+        return new Cookie(SessionCookie.REFRESH, token);
     }
 
     private AuthTokens loginCompany() throws Exception {

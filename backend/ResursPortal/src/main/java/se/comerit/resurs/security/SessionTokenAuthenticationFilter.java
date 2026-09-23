@@ -45,10 +45,13 @@ public class SessionTokenAuthenticationFilter extends OncePerRequestFilter {
 
     private final SessionTokenStore store;
     private final SessionFingerprint fingerprint;
+    private final SessionCookie sessionCookie;
 
-    public SessionTokenAuthenticationFilter(SessionTokenStore store, SessionFingerprint fingerprint) {
+    public SessionTokenAuthenticationFilter(SessionTokenStore store, SessionFingerprint fingerprint,
+            SessionCookie sessionCookie) {
         this.store = store;
         this.fingerprint = fingerprint;
+        this.sessionCookie = sessionCookie;
     }
 
     @Override
@@ -65,8 +68,8 @@ public class SessionTokenAuthenticationFilter extends OncePerRequestFilter {
             String refreshToken = SessionCookie.refreshToken(request);
             if (refreshToken != null) {
                 store.rotate(refreshToken, fp).ifPresent(tokens -> {
-                    response.addCookie(SessionCookie.access(tokens.accessToken()));
-                    response.addCookie(SessionCookie.refresh(tokens.refreshToken()));
+                    response.addCookie(sessionCookie.access(tokens.accessToken()));
+                    response.addCookie(sessionCookie.refresh(tokens.refreshToken()));
                     // The rotated (brand-new) pair is valid by construction, but
                     // validateAccess also resolves the UserPrincipal to authenticate with.
                     store.validateAccess(tokens.accessToken(), fp)

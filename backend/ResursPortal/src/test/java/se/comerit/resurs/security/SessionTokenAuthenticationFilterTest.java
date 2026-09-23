@@ -19,6 +19,8 @@ import org.springframework.mock.web.MockFilterChain;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 
+import jakarta.servlet.http.Cookie;
+
 class SessionTokenAuthenticationFilterTest {
 
     private SessionTokenStore store;
@@ -34,7 +36,8 @@ class SessionTokenAuthenticationFilterTest {
     void setUp() {
         store = mock(SessionTokenStore.class);
         fingerprint = mock(SessionFingerprint.class);
-        filter = new SessionTokenAuthenticationFilter(store, fingerprint);
+        filter = new SessionTokenAuthenticationFilter(store, fingerprint,
+                new SessionCookie(new SessionCookieProperties(true, "Lax")));
         response = new MockHttpServletResponse();
         chain = new MockFilterChain();
         SecurityContextHolder.clearContext();
@@ -48,7 +51,7 @@ class SessionTokenAuthenticationFilterTest {
     @Test
     void setsAuthenticationForValidAccessCookie() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/v1/test/ping");
-        request.setCookies(SessionCookie.access("some-token"));
+        request.setCookies(accessCookie("some-token"));
         when(fingerprint.of(any())).thenReturn("UA|ip");
         when(store.validateAccess(eq("some-token"), any())).thenReturn(Optional.of(principal));
 
@@ -67,7 +70,7 @@ class SessionTokenAuthenticationFilterTest {
         UserPrincipal worker =
                 new CaseWorkerPrincipal(2L, "Karin", "karin@resurs.se");
         MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/v1/test/ping");
-        request.setCookies(SessionCookie.access("some-token"));
+        request.setCookies(accessCookie("some-token"));
         when(fingerprint.of(any())).thenReturn("UA|ip");
         when(store.validateAccess(eq("some-token"), any())).thenReturn(Optional.of(worker));
 
@@ -96,7 +99,7 @@ class SessionTokenAuthenticationFilterTest {
         // POST /auth/refresh manages its own cookies — the filter must not
         // rotate on top of it (a double rotation would consume the new pair).
         MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/v1/auth/refresh");
-        request.setCookies(SessionCookie.refresh("refresh-token"));
+        request.setCookies(refreshCookie("refresh-token"));
         when(fingerprint.of(any())).thenReturn("UA|ip");
 
         filter.doFilter(request, response, chain);
@@ -109,7 +112,7 @@ class SessionTokenAuthenticationFilterTest {
     @Test
     void passesThroughOnInvalidAccessCookie() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/v1/test/ping");
-        request.setCookies(SessionCookie.access("bogus"));
+        request.setCookies(accessCookie("bogus"));
         when(fingerprint.of(any())).thenReturn("UA|ip");
         when(store.validateAccess(eq("bogus"), any())).thenReturn(Optional.empty());
 
@@ -122,7 +125,7 @@ class SessionTokenAuthenticationFilterTest {
     @Test
     void doesNotCreateServerSession() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/v1/test/ping");
-        request.setCookies(SessionCookie.access("some-token"));
+        request.setCookies(accessCookie("some-token"));
         when(fingerprint.of(any())).thenReturn("UA|ip");
         when(store.validateAccess(eq("some-token"), any())).thenReturn(Optional.of(principal));
 
@@ -135,7 +138,7 @@ class SessionTokenAuthenticationFilterTest {
     @Test
     void rotatesTransparentlyWhenAccessCookieMissing() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/v1/test/ping");
-        request.setCookies(SessionCookie.refresh("refresh-token"));
+        request.setCookies(refreshCookie("refresh-token"));
         when(fingerprint.of(any())).thenReturn("UA|ip");
 
         AuthTokens rotated = new AuthTokens(
@@ -160,7 +163,7 @@ class SessionTokenAuthenticationFilterTest {
     @Test
     void doesNotRotateWhenRefreshAlreadySpent() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/v1/test/ping");
-        request.setCookies(SessionCookie.refresh("spent-refresh"));
+        request.setCookies(refreshCookie("spent-refresh"));
         when(fingerprint.of(any())).thenReturn("UA|ip");
         when(store.rotate(eq("spent-refresh"), any())).thenReturn(Optional.empty());
 
@@ -186,5 +189,13 @@ class SessionTokenAuthenticationFilterTest {
         verify(store, never()).validateAccess(any(), any());
         verify(store, never()).rotate(any(), any());
         assertThat(chain.getRequest()).isSameAs(request);
+    }
+
+    private static Cookie accessCookie(String token) {
+        return new Cookie(SessionCookie.ACCESS, token);
+    }
+
+    private static Cookie refreshCookie(String token) {
+        return new Cookie(SessionCookie.REFRESH, token);
     }
 }

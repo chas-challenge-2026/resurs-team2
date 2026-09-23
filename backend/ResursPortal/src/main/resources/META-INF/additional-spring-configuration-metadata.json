@@ -227,6 +227,29 @@
             "name": "resurs.jna.key.path",
             "type": "java.lang.String",
             "description": "Path to the 64-byte crypto key file ([32 AES-256 bytes][32 HMAC-SHA256 bytes]) passed to resurs_crypto_init. Loads from the RESURS_CRYPTO_KEY_PATH environment variable. If unset (or blank), the native library is not initialised and PII encryption silently falls back to non-encrypting storage — set it in production."
+        },
+        {
+            "name": "resurs.auth.cookie.secure",
+            "type": "java.lang.Boolean",
+            "description": "Mark the session cookies Secure (TLS-only). Defaults to true; keep on for HTTPS edges and for plain http://localhost (a secure context). Disable only for plain-HTTP dev on a non-localhost host.",
+            "defaultValue": true
+        },
+        {
+            "name": "resurs.auth.cookie.same-site",
+            "type": "java.lang.String",
+            "description": "SameSite attribute of the session cookies. Defaults to Lax, which blocks cross-site POSTs from carrying the cookies.",
+            "defaultValue": "Lax"
+        },
+        {
+            "name": "resurs.auth.origin-check.enabled",
+            "type": "java.lang.Boolean",
+            "description": "Enable the CSRF Origin check on state-changing API requests. A request whose Origin host does not match the request host is rejected unless allow-listed.",
+            "defaultValue": true
+        },
+        {
+            "name": "resurs.auth.allowed-origins",
+            "type": "java.util.List<java.lang.String>",
+            "description": "Comma-separated browser origins exempted from the CSRF Origin check (used when a legitimate origin host differs from the backend Host header, e.g. the Vite dev proxy on :5173)."
         }
     ]
 }

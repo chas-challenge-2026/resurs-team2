@@ -17,6 +17,8 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
+import jakarta.servlet.http.Cookie;
+
 @SpringBootTest(properties = "spring.sql.init.mode=never")
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
@@ -38,6 +40,10 @@ class SecurityConfigIntegrationTest {
                 new CompanyPrincipal(1L, "Malmö Fastigheter AB", "556000-1234"), FP);
     }
 
+    private static Cookie accessCookie(String token) {
+        return new Cookie(SessionCookie.ACCESS, token);
+    }
+
     // ---------- authorization on the /api chain ----------
 
     @Test
@@ -50,7 +56,7 @@ class SecurityConfigIntegrationTest {
     void protectedEndpointWithValidTokenIs200() throws Exception {
         AuthTokens tokens = issueCompany();
         mockMvc.perform(get("/api/v1/test/ping")
-                        .cookie(SessionCookie.access(tokens.accessToken()))
+                        .cookie(accessCookie(tokens.accessToken()))
                         .header("User-Agent", UA))
                 .andExpect(status().isOk())
                 .andExpect(content().string("pong"));
@@ -59,7 +65,7 @@ class SecurityConfigIntegrationTest {
     @Test
     void protectedEndpointWithInvalidTokenIs401() throws Exception {
         mockMvc.perform(get("/api/v1/test/ping")
-                        .cookie(SessionCookie.access("definitely-not-a-token"))
+                        .cookie(accessCookie("definitely-not-a-token"))
                         .header("User-Agent", UA))
                 .andExpect(status().isUnauthorized());
     }
@@ -78,7 +84,7 @@ class SecurityConfigIntegrationTest {
         // /api/v1/backoffice/** requires ROLE_CASE_WORKER -> company gets 403.
         AuthTokens tokens = issueCompany();
         mockMvc.perform(get("/api/v1/backoffice/anything")
-                        .cookie(SessionCookie.access(tokens.accessToken()))
+                        .cookie(accessCookie(tokens.accessToken()))
                         .header("User-Agent", UA))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.status").value(403))
@@ -89,7 +95,7 @@ class SecurityConfigIntegrationTest {
     void principalRoleExposedToController() throws Exception {
         AuthTokens tokens = issueCompany();
         mockMvc.perform(get("/api/v1/test/role")
-                        .cookie(SessionCookie.access(tokens.accessToken()))
+                        .cookie(accessCookie(tokens.accessToken()))
                         .header("User-Agent", UA))
                 .andExpect(status().isOk())
                 .andExpect(content().string("COMPANY"));
@@ -99,7 +105,7 @@ class SecurityConfigIntegrationTest {
     void apiRequestDoesNotCreateHttpSession() throws Exception {
         AuthTokens tokens = issueCompany();
         var result = mockMvc.perform(get("/api/v1/test/ping")
-                        .cookie(SessionCookie.access(tokens.accessToken()))
+                        .cookie(accessCookie(tokens.accessToken()))
                         .header("User-Agent", UA))
                 .andExpect(status().isOk())
                 .andReturn();
@@ -127,7 +133,7 @@ class SecurityConfigIntegrationTest {
         store.revoke(tokens.accessToken());
 
         mockMvc.perform(get("/api/v1/test/ping")
-                        .cookie(SessionCookie.access(tokens.accessToken()))
+                        .cookie(accessCookie(tokens.accessToken()))
                         .header("User-Agent", UA))
                 .andExpect(status().isUnauthorized());
     }

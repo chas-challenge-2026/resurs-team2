@@ -42,10 +42,12 @@ import se.comerit.resurs.security.UserPrincipal;
 public class AuthController {
     private final AuthService service;
     private final SessionFingerprint fingerprint;
+    private final SessionCookie sessionCookie;
 
-    public AuthController(AuthService service, SessionFingerprint fingerprint) {
+    public AuthController(AuthService service, SessionFingerprint fingerprint, SessionCookie sessionCookie) {
         this.service = service;
         this.fingerprint = fingerprint;
+        this.sessionCookie = sessionCookie;
     }
 
     @PostMapping("/login/company")
@@ -60,8 +62,8 @@ public class AuthController {
     public ResponseEntity<PrincipalResponse> loginCompany(@Valid @RequestBody CompanyLoginRequest body,
             HttpServletRequest req, HttpServletResponse res) {
         AuthTokens tokens = service.loginCompany(body.orgNumber(), fingerprint.of(req));
-        res.addCookie(SessionCookie.access(tokens.accessToken()));
-        res.addCookie(SessionCookie.refresh(tokens.refreshToken()));
+        res.addCookie(sessionCookie.access(tokens.accessToken()));
+        res.addCookie(sessionCookie.refresh(tokens.refreshToken()));
         return ResponseEntity.ok(PrincipalResponse.from(tokens));
     }
 
@@ -77,8 +79,8 @@ public class AuthController {
     public ResponseEntity<PrincipalResponse> loginCaseWorker(@Valid @RequestBody CaseWorkerLoginRequest body,
             HttpServletRequest req, HttpServletResponse res) {
         AuthTokens tokens = service.loginCaseWorker(body.email(), body.password(), fingerprint.of(req));
-        res.addCookie(SessionCookie.access(tokens.accessToken()));
-        res.addCookie(SessionCookie.refresh(tokens.refreshToken()));
+        res.addCookie(sessionCookie.access(tokens.accessToken()));
+        res.addCookie(sessionCookie.refresh(tokens.refreshToken()));
         return ResponseEntity.ok(PrincipalResponse.from(tokens));
     }
 
@@ -94,8 +96,8 @@ public class AuthController {
             @CookieValue(name = SessionCookie.REFRESH, required = false) String refreshToken,
             HttpServletRequest req, HttpServletResponse res) {
         AuthTokens tokens = service.refresh(refreshToken, fingerprint.of(req));
-        res.addCookie(SessionCookie.access(tokens.accessToken()));
-        res.addCookie(SessionCookie.refresh(tokens.refreshToken()));
+        res.addCookie(sessionCookie.access(tokens.accessToken()));
+        res.addCookie(sessionCookie.refresh(tokens.refreshToken()));
         return ResponseEntity.ok(PrincipalResponse.from(tokens));
     }
 
@@ -129,8 +131,8 @@ public class AuthController {
         if (accessToken != null) {
             service.logout(accessToken);
         }
-        res.addCookie(SessionCookie.clearAccess());
-        res.addCookie(SessionCookie.clearRefresh());
+        res.addCookie(sessionCookie.clearAccess());
+        res.addCookie(sessionCookie.clearRefresh());
         return ResponseEntity.noContent().build();
     }
 
@@ -148,8 +150,8 @@ public class AuthController {
     public ResponseEntity<Void> logoutAll(@AuthenticationPrincipal UserPrincipal principal,
             HttpServletResponse res) {
         service.logoutAll(principal);
-        res.addCookie(SessionCookie.clearAccess());
-        res.addCookie(SessionCookie.clearRefresh());
+        res.addCookie(sessionCookie.clearAccess());
+        res.addCookie(sessionCookie.clearRefresh());
         return ResponseEntity.noContent().build();
     }
 }

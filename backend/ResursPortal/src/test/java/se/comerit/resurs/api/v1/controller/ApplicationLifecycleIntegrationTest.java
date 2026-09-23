@@ -112,7 +112,7 @@ class ApplicationLifecycleIntegrationTest {
         String companyToken = loginCompany();
 
         MvcResult submit = mockMvc.perform(post("/api/v1/applications")
-                        .cookie(SessionCookie.access(companyToken))
+                        .cookie(accessCookie(companyToken))
                         .header("User-Agent", UA)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(MANUAL_REVIEW_REQUEST_JSON))
@@ -124,13 +124,13 @@ class ApplicationLifecycleIntegrationTest {
         awaitStatus(applicationId, "UNDER_REVIEW");
 
         mockMvc.perform(get("/api/v1/applications/{id}", applicationId)
-                        .cookie(SessionCookie.access(companyToken))
+                        .cookie(accessCookie(companyToken))
                         .header("User-Agent", UA))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.application.status").value("UNDER_REVIEW"));
 
         mockMvc.perform(post("/api/v1/auth/logout")
-                        .cookie(SessionCookie.access(companyToken))
+                        .cookie(accessCookie(companyToken))
                         .header("User-Agent", UA))
                 .andExpect(status().isNoContent());
 
@@ -140,7 +140,7 @@ class ApplicationLifecycleIntegrationTest {
         String caseWorkerToken = loginCaseWorker();
 
         mockMvc.perform(post("/api/v1/applications/{id}/decision", applicationId)
-                        .cookie(SessionCookie.access(caseWorkerToken))
+                        .cookie(accessCookie(caseWorkerToken))
                         .header("User-Agent", UA)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -153,7 +153,7 @@ class ApplicationLifecycleIntegrationTest {
                 .andExpect(jsonPath("$.decisionReason").value("Godkänd efter manuell granskning"));
 
         mockMvc.perform(post("/api/v1/auth/logout")
-                        .cookie(SessionCookie.access(caseWorkerToken))
+                        .cookie(accessCookie(caseWorkerToken))
                         .header("User-Agent", UA))
                 .andExpect(status().isNoContent());
 
@@ -163,7 +163,7 @@ class ApplicationLifecycleIntegrationTest {
         String secondCompanyToken = loginCompany();
 
         mockMvc.perform(get("/api/v1/applications/{id}", applicationId)
-                        .cookie(SessionCookie.access(secondCompanyToken))
+                        .cookie(accessCookie(secondCompanyToken))
                         .header("User-Agent", UA))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.application.id").value(applicationId))
@@ -199,6 +199,10 @@ class ApplicationLifecycleIntegrationTest {
                 .andExpect(jsonPath("$.role").value("CASEWORKER"))
                 .andReturn();
         return readAccessCookie(result);
+    }
+
+    private static Cookie accessCookie(String token) {
+        return new Cookie(SessionCookie.ACCESS, token);
     }
 
     private static String readAccessCookie(MvcResult result) {
