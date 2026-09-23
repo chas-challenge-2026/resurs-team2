@@ -13,6 +13,7 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 import se.comerit.resurs.api.v1.dto.ApplicationDetailsResponse;
 import se.comerit.resurs.api.v1.dto.ApplicationRequest;
 import se.comerit.resurs.api.v1.dto.ApplicationResponse;
+import se.comerit.resurs.api.v1.dto.PaginatedResponse;
 import se.comerit.resurs.api.v1.mapper.ApplicationMapper;
 import se.comerit.resurs.audit.ApplicationCreated;
 import se.comerit.resurs.entity.Application;
@@ -137,7 +138,7 @@ public class ApplicationService {
      * everything.
      */
     @Transactional(readOnly = true)
-    public @Nonnull List<ApplicationResponse> listApplications (UserPrincipal principal,
+    public @Nonnull PaginatedResponse<ApplicationResponse> listApplications (UserPrincipal principal,
                                                                 ApplicationStatus status,
                                                                 Pageable pageable) {
         if (principal instanceof CaseWorkerPrincipal) {
@@ -146,7 +147,7 @@ public class ApplicationService {
             Page<Application> applications = applicationRepository.findByStatus(effective, pageable);
 
 
-            return applications.map(ApplicationMapper::toResponse).getContent();
+            return PaginatedResponse.from(applications.map(ApplicationMapper::toResponse));
 
 
         }
@@ -170,7 +171,7 @@ public class ApplicationService {
             );
         }
 
-        return applications.map(ApplicationMapper::toResponse).getContent();
+        return PaginatedResponse.from(applications.map(ApplicationMapper::toResponse));
     }
         /**
          * Returns the details of a single application. A case worker may view any

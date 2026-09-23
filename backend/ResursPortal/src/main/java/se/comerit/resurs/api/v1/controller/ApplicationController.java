@@ -26,6 +26,7 @@ import jakarta.validation.Valid;
 import se.comerit.resurs.api.v1.dto.ApplicationDetailsResponse;
 import se.comerit.resurs.api.v1.dto.ApplicationRequest;
 import se.comerit.resurs.api.v1.dto.ApplicationResponse;
+import se.comerit.resurs.api.v1.dto.PaginatedResponse;
 import se.comerit.resurs.api.v1.service.ApplicationService;
 import se.comerit.resurs.entity.ApplicationStatus;
 import se.comerit.resurs.security.UserPrincipal;
@@ -99,7 +100,7 @@ public class ApplicationController {
     @ApiResponse(responseCode = "401", description = "Missing or invalid bearer token")
     @ApiResponse(responseCode = "403", description = "Caller does not have the COMPANY or CASE_WORKER role")
     @ApiResponse(responseCode = "500", description = "Unexpected internal error")
-    public ResponseEntity<List<ApplicationResponse>> listApplications(
+    public ResponseEntity<PaginatedResponse<ApplicationResponse>> listApplications(
             @Parameter(hidden = true) @AuthenticationPrincipal UserPrincipal principal,
             @Parameter(description = "Filter by application status",
                        schema = @Schema(implementation = ApplicationStatus.class))
@@ -108,6 +109,8 @@ public class ApplicationController {
             @PageableDefault(size = 20,
             sort = "createdAt",
             direction = Sort.Direction.DESC) Pageable pageable) {
-        return ResponseEntity.ok(service.listApplications(principal, status, pageable));
+        return ResponseEntity.ok(
+                service.listApplications(principal, status, pageable)
+        );
     }
 }
