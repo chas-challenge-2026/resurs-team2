@@ -15,7 +15,8 @@ export const useBackofficeApplications = () => {
         setLoading(true);
         setError(null);
 
-        const applications = await applicationApi.getAll();
+        const response = await applicationApi.getAll();
+        const applications = response.content;
 
         const review = applications.filter(
           (app) => app.status === "UNDER_REVIEW",
