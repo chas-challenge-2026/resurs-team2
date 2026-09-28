@@ -10,6 +10,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.test.context.ActiveProfiles;
 
 import se.comerit.resurs.config.PlainPiiCodec;
@@ -36,6 +39,8 @@ import org.springframework.test.context.jdbc.Sql;
 })
 class ApplicationRepositoryTest {
 
+    private static final Pageable pageable = PageRequest.of(0, 10);
+
     @Autowired
     private ApplicationRepository applicationRepository;
 
@@ -44,32 +49,35 @@ class ApplicationRepositoryTest {
 
     @Test
     void shouldFindApplicationsByCompanyId() {
-        List<Application> result = applicationRepository.findByCompanyId(1L);
+        Page<Application> result = applicationRepository.findByCompanyId(1L, pageable);
 
-        assertThat(result).hasSize(1);
-        assertThat(result.get(0).getRequestedAmount()).isEqualByComparingTo(new BigDecimal("500000.00"));
+        assertThat(result.get()).hasSize(1);
+        assertThat(result.getContent().getFirst()
+                .getRequestedAmount()).isEqualByComparingTo(new BigDecimal("500000.00"));
     }
 
     @Test
     void shouldReturnEmptyForUnknownCompanyId() {
-        List<Application> result = applicationRepository.findByCompanyId(999L);
+        Page<Application> result = applicationRepository.findByCompanyId(999L,pageable);
 
-        assertThat(result).isEmpty();
+        assertThat(result.get()).isEmpty();
+
     }
 
     @Test
     void shouldFindApplicationsByStatus() {
-        List<Application> result = applicationRepository.findByStatus(ApplicationStatus.UNDER_REVIEW);
+        Page<Application> result = applicationRepository.findByStatus(ApplicationStatus.UNDER_REVIEW,pageable);
 
-        assertThat(result).hasSize(1);
-        assertThat(result.get(0).getStatus()).isEqualTo(ApplicationStatus.UNDER_REVIEW);
+        assertThat(result.getContent()).hasSize(1);
+        assertThat(result.getContent().get(0).getStatus())
+                .isEqualTo(ApplicationStatus.UNDER_REVIEW);
     }
 
     @Test
     void shouldReturnEmptyForUnknownStatus() {
-        List<Application> result = applicationRepository.findByStatus(ApplicationStatus.APPROVED);
+        Page<Application> result = applicationRepository.findByStatus(ApplicationStatus.APPROVED,pageable);
 
-        assertThat(result).isEmpty();
+        assertThat(result.getContent()).isEmpty();
     }
 
     @Test
@@ -96,4 +104,73 @@ class ApplicationRepositoryTest {
 
         assertThat(saved.getStatus()).isEqualTo(ApplicationStatus.PENDING_DOCS);
     }
+
+    @Test
+    void shouldPaginateApplicationsByCompanyId() {
+        Company company = companyRepository
+                .findByOrgNumber("556000-1234")
+                .orElseThrow();
+
+        applicationRepository.saveAll(List.of(
+                new Application(
+                        company,
+                        new BigDecimal("100000"),
+                        "Application 1"
+                ),
+                new Application(
+                        company,
+                        new BigDecimal("200000"),
+                        "Application 2"
+                ),
+                new Application(
+                        company,
+                        new BigDecimal("300000"),
+                        "Application 3"
+                )
+        ));
+
+        Pageable pageable = PageRequest.of(0, 2);
+
+        Page<Application> result =
+                applicationRepository.findByCompanyId(
+                        company.getId(),
+                        pageable
+                );
+
+        assertThat(result.getContent()).hasSize(2);
+        assertThat(result.getTotalElements()).isEqualTo(4);
+        assertThat(result.getTotalPages()).isEqualTo(2);
+        assertThat(result.getNumber()).isZero();
+        assertThat(result.getSize()).isEqualTo(2);
+        assertThat(result.isFirst()).isTrue();
+        assertThat(result.isLast()).isFalse();
+    }
+
+    @Test
+    void shouldReturnSecondPage() {
+        Company company = companyRepository
+                .findByOrgNumber("556000-1234")
+                .orElseThrow();
+
+        applicationRepository.saveAll(List.of(
+                new Application(company, new BigDecimal("100000"), "Application 1"),
+                new Application(company, new BigDecimal("200000"), "Application 2"),
+                new Application(company, new BigDecimal("300000"), "Application 3")
+        ));
+
+        Pageable pageable = PageRequest.of(1, 2);
+
+        Page<Application> result =
+                applicationRepository.findByCompanyId(
+                        company.getId(),
+                        pageable
+                );
+
+        assertThat(result.getContent()).hasSize(2);
+        assertThat(result.getTotalElements()).isEqualTo(4);
+        assertThat(result.getNumber()).isEqualTo(1);
+        assertThat(result.isFirst()).isFalse();
+        assertThat(result.isLast()).isTrue();
+    }
+
 }
