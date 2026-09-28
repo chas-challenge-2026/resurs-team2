@@ -25,7 +25,7 @@ export function Dashboard() {
 
         const data = await applicationApi.getAll();
 
-        setApplications(data);
+        setApplications(data.content);
       } catch (err: unknown) {
         if (err instanceof Error) {
           setError(err.message);
