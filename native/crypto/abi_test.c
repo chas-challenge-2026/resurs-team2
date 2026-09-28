@@ -259,6 +259,35 @@ int main(void)
                 free(huge);
             }
 
+            /* Exactly the max is still allowed (size query, so no 8 KiB output needed). */
+            size_t max = RESURS_MAX_PLAINTEXT_LEN;
+            char *at_max = malloc(max + 1);
+            check(at_max != NULL, "allocated max-length plaintext");
+            if (at_max)
+            {
+                memset(at_max, 'a', max);
+                at_max[max] = '\0';
+                size_t n = 0;
+                check(resurs_encrypt_pii(at_max, nonce, RESURS_NONCE_LEN, NULL, &n) == RESURS_ERR_BUFFER_SMALL,
+                      "encrypt: plaintext of exactly the max -> passes the length check");
+                check(n == RESURS_KEY_VERSION_LEN + max + RESURS_TAG_LEN,
+                      "encrypt: max-length size query reports the required size");
+                free(at_max);
+            }
+
+            /* No NUL anywhere: the length scan must stop at max + 1 bytes, i.e.
+             * exactly at the end of this buffer (ASAN catches any read past it). */
+            char *no_nul = malloc(max + 1);
+            check(no_nul != NULL, "allocated unterminated buffer");
+            if (no_nul)
+            {
+                memset(no_nul, 'a', max + 1);
+                size_t n = 0;
+                check(resurs_encrypt_pii(no_nul, nonce, RESURS_NONCE_LEN, NULL, &n) == RESURS_ERR_INVALID_ARG,
+                      "encrypt: unterminated buffer past the max -> INVALID_ARG, no over-read");
+                free(no_nul);
+            }
+
             /* RESURS_MAX_RAW_LEN, not RESURS_MAX_PLAINTEXT_LEN: decrypt must reject
              * anything past what _raw could have produced, since it can't tell
              * which encrypt path a given ciphertext came from. */

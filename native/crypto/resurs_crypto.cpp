@@ -130,7 +130,7 @@ extern "C"
         {
             return RESURS_ERR_INVALID_ARG;
         }
-        const size_t plain_len = std::strlen(plaintext);
+        const size_t plain_len = strnlen(plaintext, RESURS_MAX_PLAINTEXT_LEN + 1);
         // Keep the string API's contract tight even though _raw would allow much
         // more (RESURS_MAX_RAW_LEN) — a NUL-terminated "PII string" should never
         // legitimately be file-sized; catch that bug here instead of silently
