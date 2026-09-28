@@ -99,10 +99,10 @@ extern "C"
             resurs::Nonce nonce_arr{};
             std::memcpy(nonce_arr.data(), nonce, resurs::kNonceLen);
 
-            resurs::Key key = resurs::KeyManager::instance().key();
+            const resurs::SecretKey key = resurs::KeyManager::instance().key();
 
             auto body = resurs::AesGcmCipher::encrypt(
-                std::string_view{reinterpret_cast<const char *>(data), data_len}, key, nonce_arr);
+                std::string_view{reinterpret_cast<const char *>(data), data_len}, key.bytes(), nonce_arr);
 
             // Defensive: the cipher output must fit the capacity we just checked.
             if (RESURS_KEY_VERSION_LEN + body.size() > *ciphertext_len)
@@ -194,13 +194,13 @@ extern "C"
             resurs::Nonce nonce_arr{};
             std::memcpy(nonce_arr.data(), nonce, resurs::kNonceLen);
 
-            resurs::Key key = resurs::KeyManager::instance().key();
+            const resurs::SecretKey key = resurs::KeyManager::instance().key();
 
             // Drop the version byte; [body][tag] is what AesGcmCipher expects.
             std::vector<std::uint8_t> input(ciphertext + RESURS_KEY_VERSION_LEN,
                                             ciphertext + ciphertext_len);
 
-            std::string plain = resurs::AesGcmCipher::decrypt(input, key, nonce_arr);
+            const resurs::SecureBytes plain = resurs::AesGcmCipher::decrypt(input, key.bytes(), nonce_arr);
 
             // Defensive: never write past the capacity we just checked.
             if (plain.size() > *plaintext_len)
@@ -249,10 +249,10 @@ extern "C"
 
         try
         {
-            resurs::Key lookup_key = resurs::KeyManager::instance().lookupKey();
+            const resurs::SecretKey lookup_key = resurs::KeyManager::instance().lookupKey();
 
             resurs::Hmac mac = resurs::hmacSha256(
-                {reinterpret_cast<const char *>(data), data_len}, lookup_key);
+                {reinterpret_cast<const char *>(data), data_len}, lookup_key.bytes());
 
             std::memcpy(hmac_out, mac.data(), RESURS_HMAC_LEN);
             *hmac_len = RESURS_HMAC_LEN;

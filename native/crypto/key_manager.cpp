@@ -30,20 +30,20 @@ void KeyManager::loadFromBytes(const Key& aesKey, const Key& lookupKey) {
     loaded_ = true;
 }
 
-Key KeyManager::key() const {
+SecretKey KeyManager::key() const {
     std::lock_guard<std::mutex> lock(mutex_);
     if (!loaded_) {
         throw std::runtime_error("KeyManager: key not loaded");
     }
-    return key_;          // returns a copy (by value)
+    return SecretKey{key_};          // copy is wiped when the caller is done
 }
 
-Key KeyManager::lookupKey() const {
+SecretKey KeyManager::lookupKey() const {
     std::lock_guard<std::mutex> lock(mutex_);
     if (!loaded_) {
         throw std::runtime_error("KeyManager: key not loaded");
     }
-    return lookupKey_;    // returns a copy (by value)
+    return SecretKey{lookupKey_};    // copy is wiped when the caller is done
 }
 
 bool KeyManager::isLoaded() const noexcept {
@@ -64,9 +64,10 @@ void KeyManager::loadFromFile(const std::string& path) {
         throw std::runtime_error("KeyManager: cannot open key file: " + path);
     }
 
-    std::array<std::uint8_t, kFileLen> buf{};
-    file.read(reinterpret_cast<char*>(buf.data()), buf.size());
-    if (file.gcount() != static_cast<std::streamsize>(buf.size())) {
+    // buf, aes and lookup are wiped on every exit, including the throws below.
+    SecretArray<kFileLen> buf;
+    file.read(reinterpret_cast<char*>(buf.bytes().data()), kFileLen);
+    if (file.gcount() != static_cast<std::streamsize>(kFileLen)) {
         throw std::runtime_error("KeyManager: key file must be exactly 64 bytes");
     }
 
@@ -77,16 +78,12 @@ void KeyManager::loadFromFile(const std::string& path) {
         throw std::runtime_error("KeyManager: key file must be exactly 64 bytes");
     }
 
-    Key aes{};
-    Key lookup{};
-    std::copy(buf.begin(), buf.begin() + kKeyLen, aes.begin());
-    std::copy(buf.begin() + kKeyLen, buf.end(), lookup.begin());
+    SecretKey aes;
+    SecretKey lookup;
+    std::copy(buf.bytes().begin(), buf.bytes().begin() + kKeyLen, aes.bytes().begin());
+    std::copy(buf.bytes().begin() + kKeyLen, buf.bytes().end(), lookup.bytes().begin());
 
-    loadFromBytes(aes, lookup);       // takes the lock, copies in, sets loaded_
-
-    OPENSSL_cleanse(buf.data(), buf.size());
-    OPENSSL_cleanse(aes.data(), aes.size());
-    OPENSSL_cleanse(lookup.data(), lookup.size());
+    loadFromBytes(aes.bytes(), lookup.bytes());   // takes the lock, copies in, sets loaded_
 }
 
 }

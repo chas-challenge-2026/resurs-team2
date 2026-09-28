@@ -80,6 +80,12 @@ namespace
         return false;
     }
 
+    // Shows decrypted bytes as text (for checks and printing)
+    std::string_view as_view(const resurs::SecureBytes &b)
+    {
+        return {reinterpret_cast<const char *>(b.data()), b.size()};
+    }
+
     // Runs the AES-GCM + HMAC checks against one (aes, lookup) key pair.
     // Called once with random keys and once with the real generated key file,
     // so both paths exercise the same behaviour.
@@ -100,8 +106,8 @@ namespace
               "ciphertext length == plaintext + tag");
         check(std::memcmp(ct.data(), plain.data(), plain.size()) != 0,
               "ciphertext bytes differ from plaintext");
-        const std::string back = resurs::AesGcmCipher::decrypt(ct, aes, nonce);
-        check(back == plain, "encrypt -> decrypt round-trip");
+        const resurs::SecureBytes back = resurs::AesGcmCipher::decrypt(ct, aes, nonce);
+        check(as_view(back) == plain, "encrypt -> decrypt round-trip");
 
         auto tampered = ct;
         tampered[0] ^= 0x01;
@@ -137,7 +143,8 @@ namespace
         dump("nonce", nonce.data(), nonce.size());
         dump("ciphertext+tag", ct.data(), ct.size());
         dump("hmac", h1.data(), h1.size());
-        std::printf("  decrypted      : \"%s\"\n", back.c_str());
+        std::printf("  decrypted      : \"%.*s\"\n", static_cast<int>(back.size()),
+                    as_view(back).data());
     }
 
     // Creates a temp file with `nbytes` random bytes on construction
@@ -198,8 +205,8 @@ int main()
         lk[i] = static_cast<std::uint8_t>(0x80 + i);
     }
     km.loadFromBytes(k, lk);
-    check(km.key() == k, "loadFromBytes -> key() round-trip");
-    check(km.lookupKey() == lk, "loadFromBytes -> lookupKey() round-trip");
+    check(km.key().bytes() == k, "loadFromBytes -> key() round-trip");
+    check(km.lookupKey().bytes() == lk, "loadFromBytes -> lookupKey() round-trip");
     check(km.isLoaded(), "isLoaded() true after loadFromBytes");
 
     km.cleanse();
@@ -269,6 +276,19 @@ int main()
         dump("hmac(556000-1234)", a1.data(), a1.size());
     }
 
+    // --- SecureBytes: a move hands over the buffer instead of copying it ---
+    {
+        resurs::SecureBytes a(4);
+        a.data()[0] = 0x42;
+        const std::uint8_t *before = a.data();
+
+        resurs::SecureBytes b(std::move(a));
+        check(b.data() == before && b.size() == 4 && b.data()[0] == 0x42,
+              "SecureBytes move keeps the same buffer");
+        check(a.data() == nullptr && a.size() == 0,
+              "SecureBytes moved-from is empty");
+    }
+
     // --- AesGcmCipher rejects an input whose length would not fit an int ---
     {
         resurs::Key ek{};
@@ -313,7 +333,7 @@ int main()
             check(loaded, "real key file loads (exactly 64 bytes)");
             if (loaded)
             {
-                crypto_demo("real key file", km.key(), km.lookupKey(), /*dump_keys=*/false);
+                crypto_demo("real key file", km.key().bytes(), km.lookupKey().bytes(), /*dump_keys=*/false);
                 km.cleanse();
             }
         }

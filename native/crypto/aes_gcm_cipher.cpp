@@ -86,7 +86,7 @@ namespace resurs
         return out;
     }
 
-    std::string AesGcmCipher::decrypt(const std::vector<std::uint8_t> &input, const Key &key, const Nonce &nonce)
+    SecureBytes AesGcmCipher::decrypt(const std::vector<std::uint8_t> &input, const Key &key, const Nonce &nonce)
     {
         if (input.size() < kTagLen)
         {
@@ -120,9 +120,11 @@ namespace resurs
             throw_openssl("EVP_DecryptInit_ex (key/iv) failed");
         }
 
-        std::string out(ct_len, '\0');
+        // Plaintext is written here before the tag is checked, so it must be
+        // wiped even when AuthError is thrown. SecureBytes does that.
+        SecureBytes out(ct_len);
         int len = 0;
-        if (EVP_DecryptUpdate(ctx.get(), reinterpret_cast<unsigned char *>(out.data()), &len, ct, static_cast<int>(ct_len)) != 1)
+        if (EVP_DecryptUpdate(ctx.get(), out.data(), &len, ct, static_cast<int>(ct_len)) != 1)
         {
             throw_openssl("EVP_DecryptUpdate failed");
         }
@@ -135,13 +137,17 @@ namespace resurs
         }
 
         // Final returns 0 (not just != 1) when the tag does not verify.
-        if (EVP_DecryptFinal_ex(ctx.get(), reinterpret_cast<unsigned char *>(out.data()) + plaintext_len, &len) != 1)
+        if (EVP_DecryptFinal_ex(ctx.get(), out.data() + plaintext_len, &len) != 1)
         {
             throw AuthError("authentication failed (tampered data or wrong key/nonce)");
         }
         plaintext_len += len;
 
-        out.resize(static_cast<std::size_t>(plaintext_len));
+        // In GCM the plaintext is always as long as the ciphertext.
+        if (static_cast<std::size_t>(plaintext_len) != ct_len)
+        {
+            throw_openssl("unexpected plaintext length");
+        }
         return out;
     }
 

@@ -8,6 +8,8 @@
 #include <vector>
 #include <stdexcept>
 
+#include "secure_buffer.hpp"
+
 namespace resurs{
     inline constexpr std::size_t kKeyLen    =32; //AES-256
     inline constexpr std::size_t kNonceLen  =12; // gcm-nonce
@@ -32,7 +34,8 @@ namespace resurs{
 
     // Need ciphertext as 'input'
     // Throws if the GCM tag check fails (tampered data / wrong key or nonce).
-    static std::string decrypt(const std::vector<std::uint8_t>& input, const Key& key, const Nonce& nonce);
+    // The returned plaintext is wiped when it goes out of scope.
+    static SecureBytes decrypt(const std::vector<std::uint8_t>& input, const Key& key, const Nonce& nonce);
 
     };
 
