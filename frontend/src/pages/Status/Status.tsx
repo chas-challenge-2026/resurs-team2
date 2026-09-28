@@ -7,6 +7,7 @@ import { DocumentsPanel } from "./components/DocumentsPanel";
 import { StatusHeader } from "./components/StatusHeader";
 import { useApplicationDetails } from "./hooks/useApplicationDetails";
 import { formatWorker } from "./utils/statusFormatters";
+import { ScoringResultPanel } from "./components/ScoringResultPanel";
 
 import "./Status.css";
 
@@ -46,11 +47,7 @@ export const Status = () => {
 
       <div className="status-layout">
         <aside className="status-side-column">
-          <Panel title="Scoringresultat">
-            <p className="status-scoring-result">
-              {application.scoringResult || "Ingen scoring tillgänglig."}
-            </p>
-          </Panel>
+          <ScoringResultPanel scoringResult={application.scoringResult} />
 
           <Panel title="Handläggare">
             <p className="status-worker">
