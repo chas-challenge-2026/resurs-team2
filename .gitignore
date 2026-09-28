@@ -17,9 +17,8 @@ node_modules/
 dist/
 *.local
 
-# Native C++ - trailing-slash-only pattern (no other slash), so it matches
-# a "build" directory at any depth, not just native/build/ at the repo root.
-build/
+# Native C++
+native/build/
 
 # Local file uploads (created by application-local profile)
 uploads/

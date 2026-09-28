@@ -65,7 +65,7 @@ class ScoringServiceTest {
                         new SignalChecks(config),
                         new CombinationChecks(config)),
                 new DecisionEngine(config),
-                null, null, null, null);
+                null, null, null, null, null);
     }
 
     private Score run(ApplicationData data) {

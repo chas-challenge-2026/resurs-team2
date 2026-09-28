@@ -4,6 +4,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import jakarta.annotation.Nonnull;
+import se.comerit.resurs.audit.EtaSet;
 import se.comerit.resurs.audit.ManualDecision;
 import se.comerit.resurs.api.v1.dto.DecisionRequest;
 import se.comerit.resurs.api.v1.dto.ApplicationResponse;
@@ -47,9 +48,12 @@ public class DecisionService {
         application.setStatus(ApplicationMapper.toStatus(request.decision()));
         application.setDecision(request.decision());
         application.setDecisionReason(request.comment());
+        // A decided application is no longer pending: its ETA is cleared.
+        application.setEstimatedResolutionAt(null);
 
         auditLogService.append(application,
                 new ManualDecision(request.decision().name(), caseWorker.name(), blankToNull(request.comment())));
+        auditLogService.append(application, new EtaSet(null));
 
         Application saved = repository.save(application);
 
