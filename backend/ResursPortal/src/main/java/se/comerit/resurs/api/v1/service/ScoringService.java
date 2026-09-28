@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import tools.jackson.databind.ObjectMapper;
 
@@ -66,6 +67,7 @@ public class ScoringService {
      * the scoring engine, persists the outcome, and notifies the applicant.
      * Silently returns if the application or its financial data is missing.
      */
+    @Transactional
     public void scoreApplication(Long applicationId) {
         Application app = applicationRepository.findById(applicationId)
                 .orElse(null);
