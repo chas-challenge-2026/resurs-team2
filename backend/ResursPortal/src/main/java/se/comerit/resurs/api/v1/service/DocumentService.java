@@ -3,6 +3,7 @@ package se.comerit.resurs.api.v1.service;
 import org.springframework.core.io.Resource;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import se.comerit.resurs.api.v1.dto.DocumentDto;
 import se.comerit.resurs.entity.Application;
@@ -51,6 +52,7 @@ public class DocumentService {
                 .toList();
     }
 
+    @Transactional 
     public DocumentDto uploadDocument(Long applicationId, String docType, MultipartFile file, UserPrincipal principal) {
         validateFile(file);
 
@@ -63,7 +65,7 @@ public class DocumentService {
             String storedFilename = fileStorageService.upload(document.getUuid(), getOriginalFilename(file),
                     file.getInputStream(), file.getSize());
             document.setFilename(storedFilename);
-        } catch (IOException e) {
+        } catch (IOException _) {
             throw new FileUploadException("Upload failed.");
         }
 
@@ -85,7 +87,7 @@ public class DocumentService {
         try {
             Resource resource = fileStorageService.download(document.getFilename());
             return new DocumentDownload(resource, document.getOriginalFilename());
-        } catch (IOException e) {
+        } catch (IOException _) {
             throw new DocumentNotFoundException(uuid);
         }
     }
@@ -118,11 +120,6 @@ public class DocumentService {
         return filename;
     }
 
-    private Document saveDocument(Application application, String storedFilename, String docType) {
-        Document document = new Document(application, storedFilename, docType);
-        return documentRepository.save(document);
-    }
-
     private void updateApplicationStatus(Application application, String docType) {
         if ("AnnualReview".equals(docType)
                 && application.getStatus() == ApplicationStatus.PENDING_DOCS) {
@@ -143,7 +140,7 @@ public class DocumentService {
 
         try {
             fileStorageService.delete(document.getFilename());
-        } catch (IOException e) {
+        } catch (IOException _) {
             throw new FileUploadException("Could not delete file.");
         }
 
