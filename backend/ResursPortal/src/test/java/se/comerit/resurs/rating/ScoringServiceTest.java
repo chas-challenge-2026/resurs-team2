@@ -64,7 +64,8 @@ class ScoringServiceTest {
                         new IndustryBenchmarkCheck(config),
                         new SignalChecks(config),
                         new CombinationChecks(config)),
-                new DecisionEngine(config));
+                new DecisionEngine(config),
+                null, null, null, null);
     }
 
     private Score run(ApplicationData data) {

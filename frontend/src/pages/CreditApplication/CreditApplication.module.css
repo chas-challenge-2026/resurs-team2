@@ -1,73 +1,182 @@
 .container {
-    width: 100%;
-    max-width: 1170px;
-    margin: 0 auto;
-    padding: 0 15px;
-}
+  width: 100%;
+  max-width: var(--container-width);
 
-.stepIndicator {
-    display: flex;
-    width: 100%;
-    margin-bottom: 30px;
-}
-
-.stepItem {
-    flex: 1;
-    padding: 10px;
-    text-align: center;
-    color: var(--color-text);
-    font-size: var(--font-size-base);
-    font-weight: 400;
-    line-height: var(--line-height-base);
-    border-bottom: 3px solid #ddd;
-}
-
-.stepItem.active {
-    color: var(--color-primary);
-    font-weight: 700;
-    border-bottom-color: var(--color-primary);
-}
-
-.stepItem.done {
-    color: var(--color-success);
-    border-bottom-color: var(--color-success);
-}
-
-.stepItem.active.done {
-    color: var(--color-primary);
-    border-bottom-color: var(--color-primary);
-}
-
-.alert {
-    padding: 15px;
-    margin-bottom: 20px;
-    border: 1px solid transparent;
-    border-radius: 4px;
-}
-
-.alertDanger {
-    color: #a94442;
-    background-color: #f2dede;
-    border-color: #ebccd1;
+  margin: 0 auto;
+  padding:
+    var(--spacing-2xl)
+    var(--spacing-lg)
+    var(--spacing-3xl);
 }
 
 .h2 {
-    font-size: 30px;
-    font-weight: 500;
+  margin: 0 0 var(--spacing-xl);
+
+  color: var(--color-text-strong);
+
+  font-size: var(--font-size-3xl);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-tight);
 }
-@media (max-width: 767px) {
-    .stepIndicator {
-        flex-direction: column;
-        margin-bottom: 20px;
-    }
 
-    .stepItem {
-        width: 100%;
-        text-align: left;
-        border-bottom: 1px solid #ddd;
-    }
+/* Step indicator */
 
-    .stepItem.active {
-        border-bottom-width: 3px;
-    }
+.stepIndicator {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+
+  width: 100%;
+
+  margin-bottom: var(--spacing-xl);
+
+  overflow: hidden;
+
+  background-color: var(--color-white);
+
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+
+  box-shadow: var(--shadow-sm);
+}
+
+.stepItem {
+  position: relative;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  min-height: 58px;
+  padding: 12px var(--spacing-md);
+
+  color: var(--color-muted);
+  background-color: var(--color-white);
+
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-base);
+
+  text-align: center;
+
+  border-right: 1px solid var(--color-border);
+
+  transition:
+    background-color var(--transition-fast),
+    color var(--transition-fast);
+}
+
+.stepItem:last-child {
+  border-right: none;
+}
+
+/* Current step */
+
+.stepItem.active {
+  color: var(--color-primary);
+  background-color: var(--color-primary-soft);
+
+  font-weight: var(--font-weight-bold);
+}
+
+.stepItem.active::after {
+  position: absolute;
+  right: var(--spacing-md);
+  bottom: 0;
+  left: var(--spacing-md);
+
+  height: 3px;
+
+  background-color: var(--color-primary);
+
+  border-radius: var(--radius-pill);
+
+  content: "";
+}
+
+/* Completed step */
+
+.stepItem.done {
+  color: var(--color-success-text);
+  background-color: var(--color-success-bg);
+}
+
+.stepItem.done::before {
+  margin-right: var(--spacing-sm);
+
+  color: var(--color-success);
+
+  font-weight: var(--font-weight-bold);
+
+  content: "✓";
+}
+
+.stepItem.active.done {
+  color: var(--color-primary);
+  background-color: var(--color-primary-soft);
+}
+
+.stepItem.active.done::before {
+  color: var(--color-primary);
+}
+
+/* Alerts */
+
+.alert {
+  padding: var(--spacing-md);
+  margin-bottom: var(--spacing-lg);
+
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+}
+
+.alertDanger {
+  color: var(--color-danger-text);
+  background-color: var(--color-danger-bg);
+  border-color: var(--color-danger-border);
+}
+
+/* Responsive */
+
+@media (max-width: 768px) {
+  .container {
+    padding:
+      var(--spacing-xl)
+      var(--spacing-md)
+      var(--spacing-2xl);
+  }
+
+  .h2 {
+    font-size: var(--font-size-2xl);
+  }
+
+  .stepIndicator {
+    grid-template-columns: 1fr;
+
+    border-radius: var(--radius);
+  }
+
+  .stepItem {
+    justify-content: flex-start;
+
+    min-height: 48px;
+
+    text-align: left;
+
+    border-right: none;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .stepItem:last-child {
+    border-bottom: none;
+  }
+
+  .stepItem.active::after {
+    top: 8px;
+    right: auto;
+    bottom: 8px;
+    left: 0;
+
+    width: 3px;
+    height: auto;
+  }
 }

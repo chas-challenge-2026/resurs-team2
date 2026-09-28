@@ -171,7 +171,6 @@ try {
   return (
     <main className={styles.container}>
       <h2 className={styles.h2}>Ny kreditansökan</h2>
-      <div className={`${styles.alert} ${styles.alertDanger}`}></div>
       <nav className={styles.stepIndicator} aria-label="Ansökans steg">
         {steps.map((step, index) => {
           const stepNumber = index + 1;

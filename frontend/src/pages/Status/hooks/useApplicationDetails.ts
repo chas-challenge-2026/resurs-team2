@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
-import { applicationApi } from "../../../api/applicationApi";
-import type { Application } from "../../../types/application";
-import type { ApplicationDocument } from "../../../types/document";
+
+import { applicationApi } from "@/api/applicationApi";
+import type { Application } from "@/types/application";
+import type { ApplicationDocument } from "@/types/document";
 
 export const useApplicationDetails = (
   id: string | undefined,
@@ -11,9 +12,6 @@ export const useApplicationDetails = (
 
   const [documents, setDocuments] =
     useState<ApplicationDocument[]>([]);
-
-  const [auditLogRaw, setAuditLogRaw] =
-    useState<string>("[]");
 
   const [workerName, setWorkerName] =
     useState<string>("");
@@ -47,10 +45,6 @@ export const useApplicationDetails = (
           details.documents,
         );
 
-        setAuditLogRaw(
-          details.auditLogRaw,
-        );
-
         setWorkerName(
           details.workerName,
         );
@@ -73,7 +67,6 @@ export const useApplicationDetails = (
   return {
     application,
     documents,
-    auditLogRaw,
     workerName,
     loading,
     error,

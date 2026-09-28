@@ -1,15 +1,23 @@
 .hero-container {
-  /* Pekar direkt mot mappen public/assets/images/ */
-  background-image: linear-gradient(rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.4)), 
-                    url('/assets/images/Foretagsbanken.jpg');
-  background-size: cover;
-  background-position: center 35%; /* Justerar fokuset på ansiktet */
-  background-repeat: no-repeat;
   min-height: 80vh;
+
   display: flex;
   align-items: center;
+
   padding: 0 10%;
-  color: #ffffff;
+
+  color: var(--color-white);
+
+  background-image:
+    linear-gradient(
+      rgba(0, 0, 0, 0.2),
+      rgba(0, 0, 0, 0.4)
+    ),
+    url("/assets/images/Foretagsbanken.jpg");
+
+  background-size: cover;
+  background-position: center 35%;
+  background-repeat: no-repeat;
 }
 
 .hero-content {
@@ -17,44 +25,141 @@
 }
 
 .hero-badge {
-  background-color: rgba(255, 255, 255, 0.2);
-  padding: 6px 16px;
-  border-radius: 20px;
-  font-size: 0.9rem;
   display: inline-block;
-  margin-bottom: 1rem;
+
+  margin-bottom: var(--spacing-md);
+  padding: 6px 16px;
+
+  color: var(--color-white);
+  background-color: rgba(255, 255, 255, 0.2);
+
+  border-radius: var(--radius-pill);
+
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
 }
 
 .hero-content h1 {
+  margin: 0 0 var(--spacing-md);
+
+  color: var(--color-white);
+
   font-size: 3rem;
-  font-weight: 700;
-  margin-bottom: 1rem;
-  line-height: 1.2;
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-tight);
+}
+
+.hero-content p {
+  margin: 0;
+
+  color: rgba(255, 255, 255, 0.88);
+
+  font-size: var(--font-size-lg);
+  line-height: var(--line-height-relaxed);
 }
 
 .hero-features {
-  list-style: none;
+  margin: var(--spacing-lg) 0;
   padding: 0;
-  margin: 1.5rem 0;
+
+  list-style: none;
 }
 
 .hero-features li {
-  margin-bottom: 0.5rem;
-  font-size: 1.1rem;
+  margin-bottom: var(--spacing-sm);
+
+  color: var(--color-white);
+
+  font-size: var(--font-size-lg);
+  line-height: var(--line-height-base);
+}
+
+.hero-features li:last-child {
+  margin-bottom: 0;
 }
 
 .hero-button {
-  background-color: #fce682; /* Resurs Banks gula färg */
-  color: #000;
-  border: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  min-height: 48px;
   padding: 14px 28px;
-  border-radius: 25px;
-  font-weight: bold;
-  font-size: 1rem;
+
+  color: var(--color-accent-text);
+  background-color: var(--color-accent);
+
+  border: 1px solid var(--color-accent);
+  border-radius: var(--radius-pill);
+
+  font-family: inherit;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-bold);
+  line-height: 1;
+
   cursor: pointer;
-  transition: transform 0.2s ease;
+
+  transition:
+    background-color var(--transition-fast),
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast),
+    transform var(--transition-fast);
 }
 
 .hero-button:hover {
+  background-color: var(--color-accent-hover);
+  border-color: var(--color-accent-hover);
+
   transform: translateY(-2px);
+}
+
+.hero-button:focus-visible {
+  outline: none;
+
+  box-shadow: 0 0 0 3px rgba(252, 230, 130, 0.4);
+}
+
+.hero-button:active {
+  transform: translateY(0);
+}
+
+@media (max-width: 768px) {
+  .hero-container {
+    min-height: 70vh;
+
+    padding:
+      var(--spacing-2xl)
+      var(--spacing-lg);
+
+    background-position: center;
+  }
+
+  .hero-content {
+    max-width: 100%;
+  }
+
+  .hero-content h1 {
+    font-size: 2.25rem;
+  }
+
+  .hero-content p,
+  .hero-features li {
+    font-size: var(--font-size-base);
+  }
+}
+
+@media (max-width: 480px) {
+  .hero-container {
+    padding:
+      var(--spacing-xl)
+      var(--spacing-md);
+  }
+
+  .hero-content h1 {
+    font-size: 2rem;
+  }
+
+  .hero-button {
+    width: 100%;
+  }
 }

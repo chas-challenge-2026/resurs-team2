@@ -1,15 +1,13 @@
 package se.comerit.resurs.entity;
 
-import java.time.LocalDateTime;
-import java.time.ZoneId;
+import java.util.UUID;
+import java.time.Instant;
 
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import jakarta.persistence.Column;
 import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
@@ -18,12 +16,15 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
+
+
 @Entity
 @Table(name = "documents")
 public class Document {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @Column(name = "uuid", nullable = false)
+
+    private UUID uuid = UUID.randomUUID();
 
     @ManyToOne
     @NotNull
@@ -35,23 +36,34 @@ public class Document {
     @Size(max = 512)
     private String filename;
 
+    @Convert(converter = PiiAttributeConverter.class)
+    @Column(name = "original_filename", length = 512)
+    @NotBlank
+    @Size(max = 512)
+    private String originalFilename;
+
     @Column(name = "doc_type", length = 50)
     @NotBlank
     @Size(max = 50)
     private String docType;
-    
+
     @Column(name = "uploaded_at")
     @Nullable
-    private LocalDateTime uploadedAt;
+    private Instant uploadedAt;
 
     @PrePersist
     protected void onCreate() {
-        uploadedAt = LocalDateTime.now(ZoneId.of("UTC"));
+        if (uuid == null) {
+            uuid = UUID.randomUUID();
+        }
+        uploadedAt = Instant.now();
     }
 
-    public Document(@Nonnull Application application, @Nonnull String filename, @Nonnull String docType) {
+    public Document(@Nonnull Application application, @Nonnull String originalFilename, @Nonnull String docType) {
         this.application = application;
-        this.filename = filename;
+        // Storage key; DocumentService overwrites it with the opaque <uuid>.pdf key after upload.
+        this.filename = originalFilename;
+        this.originalFilename = originalFilename;
         this.docType = docType;
     }
 
@@ -60,8 +72,11 @@ public class Document {
     }
 
     @Nullable
-    public Long getId() {
-        return id;
+    public UUID getUuid() {
+        return uuid;
+    }
+
+    public void setUuid(@Nonnull UUID uuid) {this.uuid = uuid;
     }
 
     @Nonnull
@@ -83,6 +98,15 @@ public class Document {
     }
 
     @Nonnull
+    public String getOriginalFilename() {
+        return originalFilename;
+    }
+
+    public void setOriginalFilename(@Nonnull String originalFilename) {
+        this.originalFilename = originalFilename;
+    }
+
+    @Nonnull
     public String getDocType() {
         return docType;
     }
@@ -92,7 +116,7 @@ public class Document {
     }
 
     @Nullable
-    public LocalDateTime getUploadedAt() {
+    public Instant getUploadedAt() {
         return uploadedAt;
     }
 }

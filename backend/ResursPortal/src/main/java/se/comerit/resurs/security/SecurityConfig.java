@@ -56,7 +56,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/auth/login/**", "/api/v1/auth/refresh").permitAll()
                         .requestMatchers("/api/v1/backoffice/**").hasRole("CASE_WORKER")
                         .requestMatchers("/api/v1/applications/**", "/api/v1/documents/**",
-                                "/api/v1/document/**", "/api/v1/auth/logout")
+                                "/api/v1/document/**", "/api/v1/auth/logout", "/api/v1/auth/logout/all")
                         .hasAnyRole("COMPANY", "CASE_WORKER")
                         .anyRequest().authenticated())
                 .exceptionHandling(ex -> ex

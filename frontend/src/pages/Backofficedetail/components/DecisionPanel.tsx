@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import type { Application } from "../../../types/application";
 import type { Decision } from "../../../api/applicationApi";
 import { Panel } from "../../../components/Panel/Panel";

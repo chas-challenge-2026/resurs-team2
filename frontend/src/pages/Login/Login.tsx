@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../components/hooks/useAuth";
 import "./Login.css";
@@ -156,7 +156,7 @@ export const Login: React.FC = () => {
                   </div>
                   <button
                     type="submit"
-                    className="btn btn-warning btn-block"
+                    className="btn btn-primary btn-block"
                     disabled={loading}
                   >
                     {loading ? "Loggar in..." : "Logga in"}

@@ -20,5 +20,8 @@ dist/
 # Native C++
 native/build/
 
+# Local file uploads (created by application-local profile)
+uploads/
+
 # C++ Crypto key: 
 /infra/secrets/*

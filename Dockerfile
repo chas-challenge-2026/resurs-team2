@@ -30,7 +30,7 @@ RUN make build-native && make build-backend
 # ── Stage 3: Runtime ───────────────────────────────────────────
 FROM eclipse-temurin:25-jre-jammy
 WORKDIR /app
-RUN mkdir -p /tmp/uploads
+RUN mkdir -p /app/uploads
 
 COPY --from=build /app/target/ target/
 COPY --from=frontend /app/frontend/dist/ target/frontend/

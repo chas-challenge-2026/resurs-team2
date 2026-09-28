@@ -1,4 +1,3 @@
-import React from "react";
 import { useNavigate } from "react-router-dom";
 import type { ApplicationDocument } from "../../../types/document";
 import { Panel } from "../../../components/Panel/Panel";

@@ -6,6 +6,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.util.List;
+
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -24,7 +26,9 @@ import org.springframework.test.context.jdbc.Sql;
 
 import org.springframework.test.web.servlet.MockMvc;
 import se.comerit.resurs.entity.Application;
+import se.comerit.resurs.entity.AuditLog;
 import se.comerit.resurs.repository.ApplicationRepository;
+import se.comerit.resurs.repository.AuditLogRepository;
 import se.comerit.resurs.security.WithCaseWorker;
 import se.comerit.resurs.security.WithCompany;
 
@@ -43,6 +47,9 @@ class ApplicationControllerIntegrationTest {
 
     @Autowired
     private ApplicationRepository applicationRepository;
+
+    @Autowired
+    private AuditLogRepository auditLogRepository;
 
     private static final String COMPANY_ORG = "556000-1234";
 
@@ -84,6 +91,10 @@ class ApplicationControllerIntegrationTest {
                 """.formatted(amount);
     }
 
+    private static final String FINANCIAL_DATA =
+            "{\"equity\":500000.0,\"totalCapital\":1000000.0,\"netRevenue\":1000000.0,"
+            + "\"requestedAmount\":300000,\"industry\":\"IT\"}";
+
     @Nested
     @DisplayName("POST submit application")
     class Submit {
@@ -113,6 +124,7 @@ class ApplicationControllerIntegrationTest {
         @WithCompany
         @Sql(statements = {
                 "DELETE FROM documents",
+                "DELETE FROM audit_log",
                 "DELETE FROM applications",
                 "DELETE FROM companies",
                 "INSERT INTO companies (id, org_number, org_number_index, company_name, authorized_signatory) VALUES (600, '556000-1234', X'dedd7d2467a47aac7cc703665899fded7d8013ddecbbbf69e0ff366fd4812ed7', 'Malmö Fastigheter AB', 'Test Person')"
@@ -123,24 +135,39 @@ class ApplicationControllerIntegrationTest {
                     .content(VALID_REQUEST_JSON))
                     .andExpect(status().isOk());
 
+            awaitScoringComplete();
+
             assertThat(applicationRepository.findAll()).hasSize(1);
             Application app = applicationRepository.findAll().get(0);
             assertThat(app.getCompany().getOrgNumber()).isEqualTo(COMPANY_ORG);
             assertThat(app.getPurpose()).isEqualTo("Rörelsekapital");
             assertThat(app.getRequestedAmount()).isEqualByComparingTo("300000");
 
-            // Audit log must contain both expected entries, created before scoring.
-            String log = app.getAuditLog();
-            assertThat(log)
+            // Audit log table must contain both expected entries, created before scoring.
+            assertThat(auditLogRepository.findAll()).hasSize(2);
+            List<String> entries = auditLogRepository.findAll().stream()
+                    .sorted((a, b) -> Long.compare(a.getSequenceNumber(), b.getSequenceNumber()))
+                    .map(AuditLog::getEntry)
+                    .toList();
+            assertThat(entries.get(0))
                     .contains("\"action\":\"APPLICATION_CREATED\"")
-                    .contains("\"orgNumber\":\"556000-1234\"")
-                    .contains("\"action\":\"SCORING_RUN\"");
-            int created = log.indexOf("APPLICATION_CREATED");
-            int scoring = log.indexOf("SCORING_RUN");
-            assertThat(scoring).isGreaterThan(created);
+                    .contains("\"orgNumber\":\"556000-1234\"");
+            assertThat(entries.get(1)).contains("\"action\":\"SCORING_RUN\"");
 
             // A decision/reason should be produced by scoring.
             assertThat(app.getDecisionReason()).isNotBlank();
+        }
+
+        private void awaitScoringComplete() throws InterruptedException {
+            for (int i = 0; i < 50; i++) {
+                boolean scoringRun = auditLogRepository.findAll().stream()
+                        .map(AuditLog::getEntry)
+                        .anyMatch(entry -> entry.contains("SCORING_RUN"));
+                if (scoringRun) {
+                    return;
+                }
+                Thread.sleep(200);
+            }
         }
 
         @Test
@@ -156,6 +183,7 @@ class ApplicationControllerIntegrationTest {
         @WithCompany
         @Sql(statements = {
                 "DELETE FROM documents",
+                "DELETE FROM audit_log",
                 "DELETE FROM applications",
                 "DELETE FROM companies",
                 "INSERT INTO companies (id, org_number, org_number_index, company_name, authorized_signatory) VALUES (601, '556000-1234', X'dedd7d2467a47aac7cc703665899fded7d8013ddecbbbf69e0ff366fd4812ed7', 'Malmö Fastigheter AB', 'Test Person')"
@@ -173,6 +201,7 @@ class ApplicationControllerIntegrationTest {
         @WithCompany
         @Sql(statements = {
                 "DELETE FROM documents",
+                "DELETE FROM audit_log",
                 "DELETE FROM applications",
                 "DELETE FROM companies",
                 "INSERT INTO companies (id, org_number, org_number_index, company_name, authorized_signatory) VALUES (602, '556000-1234', X'dedd7d2467a47aac7cc703665899fded7d8013ddecbbbf69e0ff366fd4812ed7', 'Malmö Fastigheter AB', 'Test Person')"
@@ -190,6 +219,7 @@ class ApplicationControllerIntegrationTest {
         @WithCompany
         @Sql(statements = {
                 "DELETE FROM documents",
+                "DELETE FROM audit_log",
                 "DELETE FROM applications",
                 "DELETE FROM companies",
                 "INSERT INTO companies (id, org_number, org_number_index, company_name, authorized_signatory) VALUES (603, '556000-1234', X'dedd7d2467a47aac7cc703665899fded7d8013ddecbbbf69e0ff366fd4812ed7', 'Malmö Fastigheter AB', 'Test Person')"
@@ -207,6 +237,7 @@ class ApplicationControllerIntegrationTest {
         @WithCompany
         @Sql(statements = {
                 "DELETE FROM documents",
+                "DELETE FROM audit_log",
                 "DELETE FROM applications",
                 "DELETE FROM companies",
                 "INSERT INTO companies (id, org_number, org_number_index, company_name, authorized_signatory) VALUES (604, '556000-1234', X'dedd7d2467a47aac7cc703665899fded7d8013ddecbbbf69e0ff366fd4812ed7', 'Malmö Fastigheter AB', 'Test Person')"
@@ -246,11 +277,12 @@ class ApplicationControllerIntegrationTest {
         @WithCompany(orgNumber = "556000-1234")
         @Sql(statements = {
                 "DELETE FROM documents",
+                "DELETE FROM audit_log",
                 "DELETE FROM applications",
                 "DELETE FROM companies",
                 "INSERT INTO companies (id, org_number, org_number_index, company_name, authorized_signatory) VALUES (700, '556000-1234', X'dedd7d2467a47aac7cc703665899fded7d8013ddecbbbf69e0ff366fd4812ed7', 'Malmö Fastigheter AB', 'Test Person')",
-                "INSERT INTO applications (id, company_id, requested_amount, purpose, status, decision, decision_reason, scoring_result, audit_log) VALUES (700, 700, 300000.00, 'Rörelsekapital', 'UNDER_REVIEW', NULL, NULL, NULL, '[]')",
-                "INSERT INTO documents (id, application_id, filename, doc_type) VALUES (700, 700, 'bokaplan.pdf', 'BOKFORING')"
+                "INSERT INTO applications (id, company_id, requested_amount, purpose, status, decision, decision_reason, scoring_result) VALUES (700, 700, 300000.00, 'Rörelsekapital', 'UNDER_REVIEW', NULL, NULL, NULL)",
+                "INSERT INTO documents (uuid, application_id, filename, doc_type) VALUES ('00000000-0000-0000-0000-000000000700', 700, 'bokaplan.pdf', 'BOKFORING')"
         })
         void companyCanViewOwnApplication() throws Exception {
             mockMvc.perform(get("/api/v1/applications/700"))
@@ -260,6 +292,7 @@ class ApplicationControllerIntegrationTest {
                     .andExpect(jsonPath("$.application.orgNumber").value("556000-1234"))
                     .andExpect(jsonPath("$.application.purpose").value("Rörelsekapital"))
                     .andExpect(jsonPath("$.application.status").value("UNDER_REVIEW"))
+                    .andExpect(jsonPath("$.workerName").doesNotExist())
                     .andExpect(jsonPath("$.documents.length()").value(1))
                     .andExpect(jsonPath("$.documents[0].filename").value("bokaplan.pdf"))
                     .andExpect(jsonPath("$.documents[0].docType").value("BOKFORING"));
@@ -269,10 +302,11 @@ class ApplicationControllerIntegrationTest {
         @WithCompany(orgNumber = "556000-9999")
         @Sql(statements = {
                 "DELETE FROM documents",
+                "DELETE FROM audit_log",
                 "DELETE FROM applications",
                 "DELETE FROM companies",
                 "INSERT INTO companies (id, org_number, org_number_index, company_name, authorized_signatory) VALUES (701, '556000-1234', X'dedd7d2467a47aac7cc703665899fded7d8013ddecbbbf69e0ff366fd4812ed7', 'Ägarens Bolag AB', 'Test Person')",
-                "INSERT INTO applications (id, company_id, requested_amount, purpose, status, decision, decision_reason, scoring_result, audit_log) VALUES (701, 701, 300000.00, 'Rörelsekapital', 'UNDER_REVIEW', NULL, NULL, NULL, '[]')"
+                "INSERT INTO applications (id, company_id, requested_amount, purpose, status, decision, decision_reason, scoring_result) VALUES (701, 701, 300000.00, 'Rörelsekapital', 'UNDER_REVIEW', NULL, NULL, NULL)"
         })
         void companyCannotViewAnotherCompanysApplication() throws Exception {
             // The authenticated company (556000-9999) must NOT be able to see
@@ -288,10 +322,13 @@ class ApplicationControllerIntegrationTest {
         @WithCaseWorker(name = "Karin Handläggare")
         @Sql(statements = {
                 "DELETE FROM documents",
+                "DELETE FROM audit_log",
                 "DELETE FROM applications",
+                "DELETE FROM case_workers",
                 "DELETE FROM companies",
+                "INSERT INTO case_workers (id, name, email, email_index, password) VALUES (1, 'Karin Handläggare', 'karin@resurs.se', X'01', 'x')",
                 "INSERT INTO companies (id, org_number, org_number_index, company_name, authorized_signatory) VALUES (702, '556000-1234', X'dedd7d2467a47aac7cc703665899fded7d8013ddecbbbf69e0ff366fd4812ed7', 'Malmö Fastigheter AB', 'Test Person')",
-                "INSERT INTO applications (id, company_id, requested_amount, purpose, status, decision, decision_reason, scoring_result, audit_log) VALUES (702, 702, 400000.00, 'Expansion', 'APPROVED', 'APPROVED', 'Godkänd', NULL, '[]')"
+                "INSERT INTO applications (id, company_id, requested_amount, purpose, status, decision, decision_reason, scoring_result) VALUES (702, 702, 400000.00, 'Expansion', 'APPROVED', 'APPROVED', 'Godkänd', NULL)"
         })
         void caseWorkerCanViewAnyApplication() throws Exception {
             mockMvc.perform(get("/api/v1/applications/702"))
@@ -303,6 +340,124 @@ class ApplicationControllerIntegrationTest {
                     .andExpect(jsonPath("$.application.decisionReason").value("Godkänd"))
                     .andExpect(jsonPath("$.workerName").value("Karin Handläggare"))
                     .andExpect(jsonPath("$.documents").isEmpty());
+        }
+
+        @Test
+        @WithCaseWorker(name = "Karin Handläggare")
+        @Sql(statements = {
+                "DELETE FROM documents",
+                "DELETE FROM audit_log",
+                "DELETE FROM applications",
+                "DELETE FROM case_workers",
+                "DELETE FROM companies",
+                "INSERT INTO case_workers (id, name, email, email_index, password) VALUES (1, 'Karin Handläggare', 'karin@resurs.se', X'01', 'x')",
+                "INSERT INTO companies (id, org_number, org_number_index, company_name, authorized_signatory) VALUES (760, '556000-1234', X'dedd7d2467a47aac7cc703665899fded7d8013ddecbbbf69e0ff366fd4812ed7', 'Malmö Fastigheter AB', 'Test Person')",
+                "INSERT INTO applications (id, company_id, requested_amount, purpose, status, financial_data) VALUES (760, 760, 300000.00, 'Rörelsekapital', 'UNDER_REVIEW', '" + FINANCIAL_DATA + "')"
+        })
+        void caseWorkerCanSeeFinancialData() throws Exception {
+            mockMvc.perform(get("/api/v1/applications/760"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.application.id").value(760))
+                    .andExpect(jsonPath("$.financialData").value(FINANCIAL_DATA));
+        }
+
+        @Test
+        @WithCompany(orgNumber = "556000-1234")
+        @Sql(statements = {
+                "DELETE FROM documents",
+                "DELETE FROM audit_log",
+                "DELETE FROM applications",
+                "DELETE FROM companies",
+                "INSERT INTO companies (id, org_number, org_number_index, company_name, authorized_signatory) VALUES (770, '556000-1234', X'dedd7d2467a47aac7cc703665899fded7d8013ddecbbbf69e0ff366fd4812ed7', 'Malmö Fastigheter AB', 'Test Person')",
+                "INSERT INTO applications (id, company_id, requested_amount, purpose, status, financial_data) VALUES (770, 770, 300000.00, 'Rörelsekapital', 'UNDER_REVIEW', '" + FINANCIAL_DATA + "')"
+        })
+        void companyCannotSeeFinancialData() throws Exception {
+            mockMvc.perform(get("/api/v1/applications/770"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.application.id").value(770))
+                    .andExpect(jsonPath("$.financialData").doesNotExist());
+        }
+
+        @Test
+        @WithCaseWorker(name = "Karin Handläggare")
+        @Sql(statements = {
+                "DELETE FROM documents",
+                "DELETE FROM audit_log",
+                "DELETE FROM applications",
+                "DELETE FROM case_workers",
+                "DELETE FROM companies",
+                "INSERT INTO case_workers (id, name, email, email_index, password) VALUES (1, 'Karin Handläggare', 'karin@resurs.se', X'01', 'x')",
+                "INSERT INTO companies (id, org_number, org_number_index, company_name, authorized_signatory) VALUES (780, '556000-1234', X'dedd7d2467a47aac7cc703665899fded7d8013ddecbbbf69e0ff366fd4812ed7', 'Malmö Fastigheter AB', 'Test Person')",
+                "INSERT INTO applications (id, company_id, requested_amount, purpose, status) VALUES (780, 780, 300000.00, 'Rörelsekapital', 'UNDER_REVIEW')"
+        })
+        void caseWorkerSeesNoFinancialDataWhenNoneStored() throws Exception {
+            mockMvc.perform(get("/api/v1/applications/780"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.application.id").value(780))
+                    .andExpect(jsonPath("$.financialData").doesNotExist());
+        }
+
+        @Test
+        @WithCompany(orgNumber = "556000-1234")
+        @Sql(statements = {
+                "DELETE FROM documents",
+                "DELETE FROM audit_log",
+                "DELETE FROM applications",
+                "DELETE FROM companies",
+                "INSERT INTO companies (id, org_number, org_number_index, company_name, authorized_signatory) VALUES (703, '556000-1234', X'dedd7d2467a47aac7cc703665899fded7d8013ddecbbbf69e0ff366fd4812ed7', 'Malmö Fastigheter AB', 'Test Person')",
+                "INSERT INTO applications (id, company_id, requested_amount, purpose, status, decision, decision_reason, scoring_result) VALUES (703, 703, 400000.00, 'Expansion', 'REJECTED', 'REJECTED', 'Automatiskt avslag', NULL)"
+        })
+        void companyViewsOwnAutoRejectedApplicationHasNullWorkerName() throws Exception {
+            mockMvc.perform(get("/api/v1/applications/703"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.application.id").value(703))
+                    .andExpect(jsonPath("$.application.status").value("REJECTED"))
+                    .andExpect(jsonPath("$.workerName").doesNotExist());
+        }
+
+        @Test
+        @WithCaseWorker(name = "Karin Handläggare")
+        @Sql(statements = {
+                "DELETE FROM documents",
+                "DELETE FROM audit_log",
+                "DELETE FROM applications",
+                "DELETE FROM case_workers",
+                "DELETE FROM companies",
+                "INSERT INTO case_workers (id, name, email, email_index, password) VALUES (1, 'Karin Handläggare', 'karin@resurs.se', X'01', 'x')",
+                "INSERT INTO companies (id, org_number, org_number_index, company_name, authorized_signatory) VALUES (704, '556000-1234', X'dedd7d2467a47aac7cc703665899fded7d8013ddecbbbf69e0ff366fd4812ed7', 'Malmö Fastigheter AB', 'Test Person')",
+                "INSERT INTO applications (id, company_id, requested_amount, purpose, status) VALUES (704, 704, 400000.00, 'Expansion', 'UNDER_REVIEW')"
+        })
+        void firstViewerIsAssignedAndWorkerNameReturned() throws Exception {
+            mockMvc.perform(get("/api/v1/applications/704"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.workerName").value("Karin Handläggare"));
+
+            Application app = applicationRepository.findById(704L).orElseThrow();
+            assertThat(app.getCaseWorker()).isNotNull();
+            assertThat(app.getCaseWorker().getId()).isEqualTo(1L);
+        }
+
+        @Test
+        @WithCaseWorker(id = 2, name = "Oskar Granskare")
+        @Sql(statements = {
+                "DELETE FROM documents",
+                "DELETE FROM audit_log",
+                "DELETE FROM applications",
+                "DELETE FROM case_workers",
+                "DELETE FROM companies",
+                "INSERT INTO case_workers (id, name, email, email_index, password) VALUES (1, 'Karin Handläggare', 'karin@resurs.se', X'01', 'x')",
+                "INSERT INTO case_workers (id, name, email, email_index, password) VALUES (2, 'Oskar Granskare', 'oskar@resurs.se', X'02', 'x')",
+                "INSERT INTO companies (id, org_number, org_number_index, company_name, authorized_signatory) VALUES (705, '556000-1234', X'dedd7d2467a47aac7cc703665899fded7d8013ddecbbbf69e0ff366fd4812ed7', 'Malmö Fastigheter AB', 'Test Person')",
+                "INSERT INTO applications (id, company_id, case_worker_id, requested_amount, purpose, status) VALUES (705, 705, 1, 400000.00, 'Expansion', 'UNDER_REVIEW')"
+        })
+        void assignedWorkerIsNotReplacedBySecondViewer() throws Exception {
+            mockMvc.perform(get("/api/v1/applications/705"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.workerName").value("Karin Handläggare"));
+
+            Application app = applicationRepository.findById(705L).orElseThrow();
+            assertThat(app.getCaseWorker()).isNotNull();
+            assertThat(app.getCaseWorker().getId()).isEqualTo(1L);
         }
 
         @Test
@@ -331,13 +486,14 @@ class ApplicationControllerIntegrationTest {
         @WithCaseWorker
         @Sql(statements = {
                 "DELETE FROM documents",
+                "DELETE FROM audit_log",
                 "DELETE FROM applications",
                 "DELETE FROM companies",
                 "INSERT INTO companies (id, org_number, org_number_index, company_name, authorized_signatory) VALUES (800, '556000-1234', X'dedd7d2467a47aac7cc703665899fded7d8013ddecbbbf69e0ff366fd4812ed7', 'Company A', 'Test')",
                 "INSERT INTO companies (id, org_number, org_number_index, company_name, authorized_signatory) VALUES (801, '556000-5678', X'a4f37788064f1cf726eadc704db91cdc0b1513e482981ff59641e13f518bbbea', 'Company B', 'Test')",
-                "INSERT INTO applications (id, company_id, requested_amount, purpose, status, audit_log) VALUES (810, 800, 300000.00, 'App A', 'UNDER_REVIEW', '[]')",
-                "INSERT INTO applications (id, company_id, requested_amount, purpose, status, audit_log) VALUES (811, 801, 300000.00, 'App B', 'UNDER_REVIEW', '[]')",
-                "INSERT INTO applications (id, company_id, requested_amount, purpose, status, audit_log) VALUES (812, 800, 300000.00, 'App C', 'APPROVED', '[]')"
+                "INSERT INTO applications (id, company_id, requested_amount, purpose, status) VALUES (810, 800, 300000.00, 'App A', 'UNDER_REVIEW')",
+                "INSERT INTO applications (id, company_id, requested_amount, purpose, status) VALUES (811, 801, 300000.00, 'App B', 'UNDER_REVIEW')",
+                "INSERT INTO applications (id, company_id, requested_amount, purpose, status) VALUES (812, 800, 300000.00, 'App C', 'APPROVED')"
         })
         void caseWorkerSeesOnlyUnderReviewApplications() throws Exception {
             mockMvc.perform(get("/api/v1/applications"))
@@ -353,11 +509,12 @@ class ApplicationControllerIntegrationTest {
         @WithCaseWorker
         @Sql(statements = {
                 "DELETE FROM documents",
+                "DELETE FROM audit_log",
                 "DELETE FROM applications",
                 "DELETE FROM companies",
                 "INSERT INTO companies (id, org_number, org_number_index, company_name, authorized_signatory) VALUES (820, '556000-1234', X'dedd7d2467a47aac7cc703665899fded7d8013ddecbbbf69e0ff366fd4812ed7', 'Company A', 'Test')",
-                "INSERT INTO applications (id, company_id, requested_amount, purpose, status, audit_log) VALUES (830, 820, 300000.00, 'App X', 'APPROVED', '[]')",
-                "INSERT INTO applications (id, company_id, requested_amount, purpose, status, audit_log) VALUES (831, 820, 300000.00, 'App Y', 'REJECTED', '[]')"
+                "INSERT INTO applications (id, company_id, requested_amount, purpose, status) VALUES (830, 820, 300000.00, 'App X', 'APPROVED')",
+                "INSERT INTO applications (id, company_id, requested_amount, purpose, status) VALUES (831, 820, 300000.00, 'App Y', 'REJECTED')"
         })
         void caseWorkerWithNoPendingApplicationsSeesEmptyList() throws Exception {
             mockMvc.perform(get("/api/v1/applications"))
@@ -369,13 +526,14 @@ class ApplicationControllerIntegrationTest {
         @WithCompany(orgNumber = "556000-1234")
         @Sql(statements = {
                 "DELETE FROM documents",
+                "DELETE FROM audit_log",
                 "DELETE FROM applications",
                 "DELETE FROM companies",
                 "INSERT INTO companies (id, org_number, org_number_index, company_name, authorized_signatory) VALUES (840, '556000-1234', X'dedd7d2467a47aac7cc703665899fded7d8013ddecbbbf69e0ff366fd4812ed7', 'Company A', 'Test')",
                 "INSERT INTO companies (id, org_number, org_number_index, company_name, authorized_signatory) VALUES (841, '556000-5678', X'a4f37788064f1cf726eadc704db91cdc0b1513e482981ff59641e13f518bbbea', 'Company B', 'Test')",
-                "INSERT INTO applications (id, company_id, requested_amount, purpose, status, audit_log) VALUES (850, 840, 300000.00, 'Own Under Review', 'UNDER_REVIEW', '[]')",
-                "INSERT INTO applications (id, company_id, requested_amount, purpose, status, audit_log) VALUES (851, 840, 300000.00, 'Own Approved', 'APPROVED', '[]')",
-                "INSERT INTO applications (id, company_id, requested_amount, purpose, status, audit_log) VALUES (852, 841, 300000.00, 'Other Company', 'UNDER_REVIEW', '[]')"
+                "INSERT INTO applications (id, company_id, requested_amount, purpose, status) VALUES (850, 840, 300000.00, 'Own Under Review', 'UNDER_REVIEW')",
+                "INSERT INTO applications (id, company_id, requested_amount, purpose, status) VALUES (851, 840, 300000.00, 'Own Approved', 'APPROVED')",
+                "INSERT INTO applications (id, company_id, requested_amount, purpose, status) VALUES (852, 841, 300000.00, 'Other Company', 'UNDER_REVIEW')"
         })
         void companySeesOnlyItsOwnApplications() throws Exception {
             mockMvc.perform(get("/api/v1/applications"))
@@ -389,12 +547,13 @@ class ApplicationControllerIntegrationTest {
         @WithCompany(orgNumber = "556000-1234")
         @Sql(statements = {
                 "DELETE FROM documents",
+                "DELETE FROM audit_log",
                 "DELETE FROM applications",
                 "DELETE FROM companies",
                 "INSERT INTO companies (id, org_number, org_number_index, company_name, authorized_signatory) VALUES (860, '556000-1234', X'dedd7d2467a47aac7cc703665899fded7d8013ddecbbbf69e0ff366fd4812ed7', 'Company A', 'Test')",
-                "INSERT INTO applications (id, company_id, requested_amount, purpose, status, audit_log) VALUES (870, 860, 300000.00, 'Under Review', 'UNDER_REVIEW', '[]')",
-                "INSERT INTO applications (id, company_id, requested_amount, purpose, status, audit_log) VALUES (871, 860, 300000.00, 'Approved', 'APPROVED', '[]')",
-                "INSERT INTO applications (id, company_id, requested_amount, purpose, status, audit_log) VALUES (872, 860, 300000.00, 'Rejected', 'REJECTED', '[]')"
+                "INSERT INTO applications (id, company_id, requested_amount, purpose, status) VALUES (870, 860, 300000.00, 'Under Review', 'UNDER_REVIEW')",
+                "INSERT INTO applications (id, company_id, requested_amount, purpose, status) VALUES (871, 860, 300000.00, 'Approved', 'APPROVED')",
+                "INSERT INTO applications (id, company_id, requested_amount, purpose, status) VALUES (872, 860, 300000.00, 'Rejected', 'REJECTED')"
         })
         void companySeesAllOwnApplicationsRegardlessOfStatus() throws Exception {
             mockMvc.perform(get("/api/v1/applications"))
@@ -408,11 +567,12 @@ class ApplicationControllerIntegrationTest {
         @WithCompany(orgNumber = "556000-9999")
         @Sql(statements = {
                 "DELETE FROM documents",
+                "DELETE FROM audit_log",
                 "DELETE FROM applications",
                 "DELETE FROM companies",
                 "INSERT INTO companies (id, org_number, org_number_index, company_name, authorized_signatory) VALUES (880, '556000-1234', X'dedd7d2467a47aac7cc703665899fded7d8013ddecbbbf69e0ff366fd4812ed7', 'Company A', 'Test')",
                 "INSERT INTO companies (id, org_number, org_number_index, company_name, authorized_signatory) VALUES (881, '556000-9999', X'f3449df24d42bdb4f840559a40456274c4828b6a115838e6d588e89296eeb1fc', 'Company With No Apps', 'Test')",
-                "INSERT INTO applications (id, company_id, requested_amount, purpose, status, audit_log) VALUES (890, 880, 300000.00, 'App', 'UNDER_REVIEW', '[]')"
+                "INSERT INTO applications (id, company_id, requested_amount, purpose, status) VALUES (890, 880, 300000.00, 'App', 'UNDER_REVIEW')"
         })
         void companyWithNoApplicationsSeesEmptyList() throws Exception {
             mockMvc.perform(get("/api/v1/applications"))
@@ -424,12 +584,13 @@ class ApplicationControllerIntegrationTest {
         @WithCaseWorker
         @Sql(statements = {
                 "DELETE FROM documents",
+                "DELETE FROM audit_log",
                 "DELETE FROM applications",
                 "DELETE FROM companies",
                 "INSERT INTO companies (id, org_number, org_number_index, company_name, authorized_signatory) VALUES (900, '556000-1234', X'dedd7d2467a47aac7cc703665899fded7d8013ddecbbbf69e0ff366fd4812ed7', 'Company A', 'Test')",
-                "INSERT INTO applications (id, company_id, requested_amount, purpose, status, audit_log) VALUES (910, 900, 300000.00, 'Under Review', 'UNDER_REVIEW', '[]')",
-                "INSERT INTO applications (id, company_id, requested_amount, purpose, status, audit_log) VALUES (911, 900, 300000.00, 'Approved', 'APPROVED', '[]')",
-                "INSERT INTO applications (id, company_id, requested_amount, purpose, status, audit_log) VALUES (912, 900, 300000.00, 'Rejected', 'REJECTED', '[]')"
+                "INSERT INTO applications (id, company_id, requested_amount, purpose, status) VALUES (910, 900, 300000.00, 'Under Review', 'UNDER_REVIEW')",
+                "INSERT INTO applications (id, company_id, requested_amount, purpose, status) VALUES (911, 900, 300000.00, 'Approved', 'APPROVED')",
+                "INSERT INTO applications (id, company_id, requested_amount, purpose, status) VALUES (912, 900, 300000.00, 'Rejected', 'REJECTED')"
         })
         void caseWorkerCanFilterByStatus() throws Exception {
             mockMvc.perform(get("/api/v1/applications").param("status", "APPROVED"))
@@ -443,11 +604,12 @@ class ApplicationControllerIntegrationTest {
         @WithCaseWorker
         @Sql(statements = {
                 "DELETE FROM documents",
+                "DELETE FROM audit_log",
                 "DELETE FROM applications",
                 "DELETE FROM companies",
                 "INSERT INTO companies (id, org_number, org_number_index, company_name, authorized_signatory) VALUES (920, '556000-1234', X'dedd7d2467a47aac7cc703665899fded7d8013ddecbbbf69e0ff366fd4812ed7', 'Company A', 'Test')",
-                "INSERT INTO applications (id, company_id, requested_amount, purpose, status, audit_log) VALUES (930, 920, 300000.00, 'A', 'UNDER_REVIEW', '[]')",
-                "INSERT INTO applications (id, company_id, requested_amount, purpose, status, audit_log) VALUES (931, 920, 300000.00, 'B', 'APPROVED', '[]')"
+                "INSERT INTO applications (id, company_id, requested_amount, purpose, status) VALUES (930, 920, 300000.00, 'A', 'UNDER_REVIEW')",
+                "INSERT INTO applications (id, company_id, requested_amount, purpose, status) VALUES (931, 920, 300000.00, 'B', 'APPROVED')"
         })
         void caseWorkerFilterUnderReviewMatchesDefault() throws Exception {
             mockMvc.perform(get("/api/v1/applications").param("status", "UNDER_REVIEW"))
@@ -460,12 +622,13 @@ class ApplicationControllerIntegrationTest {
         @WithCompany(orgNumber = "556000-1234")
         @Sql(statements = {
                 "DELETE FROM documents",
+                "DELETE FROM audit_log",
                 "DELETE FROM applications",
                 "DELETE FROM companies",
                 "INSERT INTO companies (id, org_number, org_number_index, company_name, authorized_signatory) VALUES (940, '556000-1234', X'dedd7d2467a47aac7cc703665899fded7d8013ddecbbbf69e0ff366fd4812ed7', 'Company A', 'Test')",
-                "INSERT INTO applications (id, company_id, requested_amount, purpose, status, audit_log) VALUES (950, 940, 300000.00, 'Under Review', 'UNDER_REVIEW', '[]')",
-                "INSERT INTO applications (id, company_id, requested_amount, purpose, status, audit_log) VALUES (951, 940, 300000.00, 'Approved', 'APPROVED', '[]')",
-                "INSERT INTO applications (id, company_id, requested_amount, purpose, status, audit_log) VALUES (952, 940, 300000.00, 'Rejected', 'REJECTED', '[]')"
+                "INSERT INTO applications (id, company_id, requested_amount, purpose, status) VALUES (950, 940, 300000.00, 'Under Review', 'UNDER_REVIEW')",
+                "INSERT INTO applications (id, company_id, requested_amount, purpose, status) VALUES (951, 940, 300000.00, 'Approved', 'APPROVED')",
+                "INSERT INTO applications (id, company_id, requested_amount, purpose, status) VALUES (952, 940, 300000.00, 'Rejected', 'REJECTED')"
         })
         void companyCanFilterByStatus() throws Exception {
             mockMvc.perform(get("/api/v1/applications").param("status", "APPROVED"))
@@ -479,12 +642,13 @@ class ApplicationControllerIntegrationTest {
         @WithCompany(orgNumber = "556000-1234")
         @Sql(statements = {
                 "DELETE FROM documents",
+                "DELETE FROM audit_log",
                 "DELETE FROM applications",
                 "DELETE FROM companies",
                 "INSERT INTO companies (id, org_number, org_number_index, company_name, authorized_signatory) VALUES (960, '556000-1234', X'dedd7d2467a47aac7cc703665899fded7d8013ddecbbbf69e0ff366fd4812ed7', 'Company A', 'Test')",
                 "INSERT INTO companies (id, org_number, org_number_index, company_name, authorized_signatory) VALUES (961, '556000-5678', X'a4f37788064f1cf726eadc704db91cdc0b1513e482981ff59641e13f518bbbea', 'Company B', 'Test')",
-                "INSERT INTO applications (id, company_id, requested_amount, purpose, status, audit_log) VALUES (970, 960, 300000.00, 'Own', 'UNDER_REVIEW', '[]')",
-                "INSERT INTO applications (id, company_id, requested_amount, purpose, status, audit_log) VALUES (971, 961, 300000.00, 'Other', 'UNDER_REVIEW', '[]')"
+                "INSERT INTO applications (id, company_id, requested_amount, purpose, status) VALUES (970, 960, 300000.00, 'Own', 'UNDER_REVIEW')",
+                "INSERT INTO applications (id, company_id, requested_amount, purpose, status) VALUES (971, 961, 300000.00, 'Other', 'UNDER_REVIEW')"
         })
         void companyFilterDoesNotLeakOtherCompaniesApplications() throws Exception {
             mockMvc.perform(get("/api/v1/applications").param("status", "UNDER_REVIEW"))

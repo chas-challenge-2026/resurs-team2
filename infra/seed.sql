@@ -17,23 +17,37 @@ CREATE TABLE case_workers (
 CREATE TABLE applications (
     id SERIAL PRIMARY KEY,
     company_id INT REFERENCES companies(id),
+    case_worker_id INT REFERENCES case_workers(id),
     requested_amount VARCHAR(512),
     purpose TEXT,
     status VARCHAR(30) DEFAULT 'PENDING_DOCS', -- PENDING_DOCS, UNDER_REVIEW, APPROVED, REJECTED
     decision VARCHAR(20),
     decision_reason TEXT,
     scoring_result TEXT,
-    audit_log TEXT DEFAULT '[]',  -- JSON blob, no separate table
-    created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW()
+    financial_data TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 CREATE TABLE documents (
-    id SERIAL PRIMARY KEY,
+    uuid uuid PRIMARY KEY,
     application_id INT REFERENCES applications(id),
     filename VARCHAR(512),
+    original_filename VARCHAR(512),
     doc_type VARCHAR(50),
-    uploaded_at TIMESTAMP DEFAULT NOW()
+    uploaded_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+
+CREATE TABLE audit_log (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    application_id INT NOT NULL REFERENCES applications(id),
+    sequence_number BIGINT NOT NULL,
+    hash VARCHAR(512) NOT NULL,
+    previous_hash VARCHAR(512) NOT NULL,
+    entry TEXT NOT NULL,
+    timestamp TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
 
 -- NOTE: companies, applications and case workers contain PII. Production seeds

@@ -47,7 +47,7 @@ export function Confirmation({
                 </div>
 
                 <div className={styles.panel}>
-                    <div className={styles.panelHeading}>
+                    <div className={styles.panelHeadingSum}>
                         Sammanfattning
                     </div>
 
@@ -98,7 +98,7 @@ export function Confirmation({
 
                     <button
                         type="submit"
-                        className={styles.submitButton}
+                        className={styles.primaryButton}
                     >
                         Skicka in ansökan
                     </button>

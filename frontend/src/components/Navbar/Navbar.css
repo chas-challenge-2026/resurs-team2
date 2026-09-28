@@ -1,23 +1,27 @@
-/* Layout & Container-strukturer */
+/* Layout & container */
 .navbar-wrapper {
   width: 100%;
   font-family: inherit;
 }
 
-.navbar-top-bar {
-  background-color: #2b2b2b;
-  padding: 8px 0;
-  font-size: 0.85rem;
-  color: #ffffff;
+.navbar-container {
+  max-width: var(--container-width);
+  margin: 0 auto;
+  padding: 0 var(--spacing-lg);
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
-.navbar-container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 20px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+/* Top bar */
+.navbar-top-bar {
+  padding: var(--spacing-sm) 0;
+
+  color: var(--color-white);
+  background-color: var(--color-primary);
+
+  font-size: var(--font-size-sm);
 }
 
 .navbar-top-container {
@@ -28,114 +32,169 @@
 .top-nav-right {
   display: flex;
   align-items: center;
-  gap: 15px;
+  gap: var(--spacing-md);
 }
 
-/* Exakt centrering av skolprojekt-märkningen */
+/* Centrerad skolprojekt-märkning */
 .top-nav-center {
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
+
   pointer-events: none;
 }
 
 .demo-badge {
-  background-color: #fce682;
-  color: #000000;
-  padding: 2px 10px;
-  border-radius: 12px;
-  font-size: 0.75rem;
-  font-weight: bold;
+  padding: 3px 10px;
+
+  color: var(--color-accent-text);
+  background-color: var(--color-accent);
+
+  border-radius: var(--radius-pill);
+
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
   white-space: nowrap;
 }
 
-/* Huvud-navigation (nedre raden) */
+/* Main navigation */
 .navbar-main {
-  background-color: #ffffff;
-  border-bottom: 1px solid #e0e0e0;
-  padding: 15px 0;
+  padding: var(--spacing-md) 0;
+
+  background-color: var(--color-white);
+  border-bottom: 1px solid var(--color-border);
 }
 
 .navbar-brand {
   display: flex;
   flex-direction: column;
+
+  color: var(--color-text-strong);
   text-decoration: none;
 }
 
 .brand-logo-text {
-  font-size: 1.5rem;
+  color: var(--color-primary);
+
+  font-size: var(--font-size-xl);
   font-weight: 800;
-  color: #000000;
   line-height: 1;
 }
 
 .brand-subtext {
-  font-size: 0.75rem;
-  color: #666666;
+  margin-top: 3px;
+
+  color: var(--color-muted);
+
+  font-size: var(--font-size-xs);
   letter-spacing: 0.5px;
 }
 
+/* Main nav links */
 .navbar-nav {
-  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-lg);
+
   margin: 0;
   padding: 0;
-  display: flex;
-  gap: 20px;
+
+  list-style: none;
 }
 
-/* Nollställning av länkfärger för att förhindra lila länkstil (:visited) */
+/* Links */
 .navbar-wrapper a,
 .navbar-wrapper a:visited {
-  color: #ffffff;
+  color: var(--color-white);
   text-decoration: none;
 }
 
 .navbar-main a,
 .navbar-main a:visited {
-  color: #2b2b2b;
-  font-weight: 500;
+  color: var(--color-text);
+  font-weight: var(--font-weight-medium);
 }
 
 .nav-tab,
 .nav-tab:visited {
-  color: #cccccc;
+  color: rgba(255, 255, 255, 0.72);
 }
 
 .nav-tab.active-pill {
-  color: #ffffff;
-  font-weight: bold;
+  color: var(--color-white);
+  font-weight: var(--font-weight-bold);
 }
 
 .login-link,
 .login-link:visited {
-  color: #ffffff;
-  font-weight: bold;
+  color: var(--color-white);
+  font-weight: var(--font-weight-semibold);
 }
 
-/* Hover-effekter */
+/* Hover */
 .navbar-wrapper a:hover,
 .login-link:hover,
 .logout-btn:hover {
-  color: #fce682;
+  color: var(--color-accent);
 }
 
 .navbar-main a:hover {
-  color: #000000;
+  color: var(--color-primary);
 }
 
-/* Utloggningsknapp */
+/* Logout */
 .logout-btn {
+  margin-left: var(--spacing-xs);
+  padding: 0;
+
+  color: var(--color-white);
   background: none;
   border: none;
-  color: #ffffff;
+
+  font-family: inherit;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+
   cursor: pointer;
-  font-size: 0.85rem;
-  text-decoration: underline;
-  padding: 0;
-  margin-left: 5px;
+
+  transition: color var(--transition-fast);
 }
 
 .user-info {
-  color: #e0e0e0;
-  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: var(--font-size-sm);
+}
+
+/* Keyboard focus */
+.navbar-wrapper a:focus-visible,
+.logout-btn:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 3px;
+  border-radius: var(--radius-sm);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .navbar-container {
+    padding: 0 var(--spacing-md);
+  }
+
+  .navbar-top-container {
+    gap: var(--spacing-sm);
+  }
+
+  .top-nav-center {
+    display: none;
+  }
+
+  .navbar-main .navbar-container {
+    align-items: flex-start;
+    gap: var(--spacing-md);
+  }
+
+  .navbar-nav {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: var(--spacing-md);
+  }
 }

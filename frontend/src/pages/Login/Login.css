@@ -1,47 +1,194 @@
 .login-container {
-  padding-top: 80px;
-  background-color: var(--color-primary);
-  min-height: 100vh;
+  width: 100%;
+
+  padding: var(--spacing-3xl) var(--spacing-md);
+
+  background:
+    linear-gradient(
+      135deg,
+      var(--color-primary) 0%,
+      var(--color-primary-hover) 100%
+    );
 }
 
 .login-box {
-  background: var(--color-white);
-  border-radius: var(--radius-lg);
-  padding: var(--spacing-lg);
-  max-width: 500px;
+  width: 100%;
+  max-width: 520px;
+
   margin: 0 auto;
-  box-shadow: var(--shadow-box);
+  padding: var(--spacing-xl);
+
+  background-color: var(--color-white);
+
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: var(--radius-xl);
+
+  box-shadow: var(--shadow-lg);
 }
 
+/* Logo / heading */
+
 .login-logo {
+  margin-bottom: var(--spacing-xl);
+
   text-align: center;
-  margin-bottom: 20px;
-  color: var(--color-primary);
 }
 
 .login-logo h2 {
-  font-weight: bold;
+  margin: 0 0 var(--spacing-sm);
+
+  color: var(--color-primary);
+
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-tight);
+}
+
+.login-logo p {
+  margin: 0;
+
+  color: var(--color-muted);
+
+  line-height: var(--line-height-relaxed);
+}
+
+/* BankID section */
+
+.login-bankid-header {
+  margin-bottom: var(--spacing-lg);
+
+  text-align: center;
 }
 
 .bankid-icon {
-  font-size: 2em;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 56px;
+  height: 56px;
+
+  margin-bottom: var(--spacing-sm);
+
   color: var(--color-primary);
+  background-color: var(--color-primary-soft);
+
+  border-radius: 50%;
+
+  font-size: 1.75rem;
+}
+
+.login-bankid-text {
+  margin: 0;
+
+  color: var(--color-text);
+
+  line-height: var(--line-height-relaxed);
+}
+
+/* Tabs */
+
+.login-box .nav-tabs {
+  margin-bottom: var(--spacing-lg);
+}
+
+.login-box .nav-tabs > li {
+  flex: 1;
+}
+
+.login-box .nav-tabs > li > a {
+  text-align: center;
 }
 
 .login-tab-link {
   cursor: pointer;
 }
 
-.login-bankid-header {
-  text-align: center;
-  margin-bottom: 15px;
+/* Form */
+
+.login-box form {
+  margin-top: var(--spacing-sm);
 }
 
-.login-bankid-text {
-  margin-top: 8px;
+.login-box .form-group:last-of-type {
+  margin-bottom: var(--spacing-lg);
 }
+
+.login-box .btn-block {
+  margin-top: var(--spacing-sm);
+}
+
+/* Test information */
 
 .login-test-info {
-  margin-top: 15px;
-  font-size: 12px;
+  margin-top: var(--spacing-lg);
+  padding: var(--spacing-md);
+
+  color: var(--color-info-text);
+  background-color: var(--color-info-bg);
+
+  border: 1px solid var(--color-info-border);
+  border-radius: var(--radius);
+
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-relaxed);
+}
+
+.login-test-info p {
+  margin: 0;
+}
+
+.login-test-info p + p {
+  margin-top: var(--spacing-sm);
+}
+
+/* Responsive */
+
+@media (max-width: 600px) {
+  .login-container {
+    padding:
+      var(--spacing-xl)
+      var(--spacing-md)
+      var(--spacing-2xl);
+  }
+
+  .login-box {
+    padding: var(--spacing-lg);
+
+    border-radius: var(--radius-lg);
+  }
+
+  .login-logo {
+    margin-bottom: var(--spacing-lg);
+  }
+
+  .login-logo h2 {
+    font-size: var(--font-size-xl);
+  }
+
+  .login-box .nav-tabs {
+    flex-direction: column;
+
+    border-bottom: none;
+  }
+
+  .login-box .nav-tabs > li {
+    width: 100%;
+
+    margin-bottom: var(--spacing-xs);
+  }
+
+  .login-box .nav-tabs > li:last-child {
+    margin-bottom: 0;
+  }
+
+  .login-box .nav-tabs > li > a {
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+  }
+
+  .login-box .nav-tabs > li.active > a {
+    background-color: var(--color-primary-soft);
+    border-color: var(--color-primary);
+  }
 }

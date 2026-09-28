@@ -16,9 +16,6 @@ import type {
   User,
 } from "./auth.types";
 
-const ACCESS_TOKEN_KEY = "accessToken";
-const REFRESH_TOKEN_KEY = "refreshToken";
-
 interface AuthProviderProps {
   children: ReactNode;
 }
@@ -27,42 +24,21 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const saveTokens = useCallback(
-    (accessToken: string, refreshToken: string) => {
-      sessionStorage.setItem(ACCESS_TOKEN_KEY, accessToken);
-      sessionStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
-    },
-    [],
-  );
-
   const clearSession = useCallback(() => {
-    sessionStorage.removeItem(ACCESS_TOKEN_KEY);
-    sessionStorage.removeItem(REFRESH_TOKEN_KEY);
     setUser(null);
   }, []);
 
   useEffect(() => {
     const restoreSession = async () => {
-      const refreshToken = sessionStorage.getItem(REFRESH_TOKEN_KEY);
-
-      if (!refreshToken) {
-        setIsLoading(false);
-        return;
-      }
-
       try {
-        const tokens = await authApi.refresh(refreshToken);
+        const principal = await authApi.me();
 
-        saveTokens(tokens.accessToken, tokens.refreshToken);
-
-        if (tokens.role === "COMPANY") {
-          const company = await authApi.getCurrentCompany(
-            tokens.accessToken,
-          );
+        if (principal.role === "COMPANY") {
+          const company = await authApi.getCurrentCompany();
 
           setUser({
             id: company.orgNumber,
-            name: company.name || tokens.name || "Företag",
+            name: company.name || principal.name || "Företag",
             email: "",
             role: "COMPANY",
           });
@@ -70,10 +46,10 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           return;
         }
 
-        if (tokens.role === "CASEWORKER") {
+        if (principal.role === "CASEWORKER") {
           setUser({
             id: "caseworker",
-            name: tokens.name || "Handläggare",
+            name: principal.name || "Handläggare",
             email: "",
             role: "CASEWORKER",
           });
@@ -91,24 +67,19 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     };
 
     void restoreSession();
-  }, [clearSession, saveTokens]);
+  }, [clearSession]);
 
   const loginCompany = useCallback(
     async (credentials: CompanyCredentials) => {
       setIsLoading(true);
 
       try {
-        const tokens = await authApi.loginCompany(credentials);
-
-        saveTokens(tokens.accessToken, tokens.refreshToken);
-
-        const company = await authApi.getCurrentCompany(
-          tokens.accessToken,
-        );
+        const principal = await authApi.loginCompany(credentials);
+        const company = await authApi.getCurrentCompany();
 
         setUser({
           id: company.orgNumber || credentials.orgNumber,
-          name: company.name || tokens.name || "Företag",
+          name: company.name || principal.name || "Företag",
           email: "",
           role: "COMPANY",
         });
@@ -119,7 +90,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         setIsLoading(false);
       }
     },
-    [clearSession, saveTokens],
+    [clearSession],
   );
 
   const loginCaseWorker = useCallback(
@@ -127,13 +98,11 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       setIsLoading(true);
 
       try {
-        const tokens = await authApi.loginCaseWorker(credentials);
-
-        saveTokens(tokens.accessToken, tokens.refreshToken);
+        const principal = await authApi.loginCaseWorker(credentials);
 
         setUser({
           id: credentials.email,
-          name: tokens.name || credentials.email,
+          name: principal.name || credentials.email,
           email: credentials.email,
           role: "CASEWORKER",
         });
@@ -144,18 +113,14 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         setIsLoading(false);
       }
     },
-    [clearSession, saveTokens],
+    [clearSession],
   );
 
   const logout = useCallback(async () => {
     setIsLoading(true);
 
-    const accessToken = sessionStorage.getItem(ACCESS_TOKEN_KEY);
-
     try {
-      if (accessToken) {
-        await authApi.logout(accessToken);
-      }
+      await authApi.logout();
     } catch (error) {
       console.error("Fel vid utloggning:", error);
     } finally {
@@ -173,18 +138,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       loginCaseWorker,
       logout,
     }),
-    [
-      user,
-      isLoading,
-      loginCompany,
-      loginCaseWorker,
-      logout,
-    ],
+    [user, isLoading, loginCompany, loginCaseWorker, logout],
   );
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

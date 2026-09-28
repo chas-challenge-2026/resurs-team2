@@ -1,32 +1,39 @@
 import { useEffect, useState } from "react";
-import { applicationApi, type Decision } from "../../../api/applicationApi";
-import type { Application } from "../../../types/application";
-import type { ApplicationDocument } from "../../../types/document";
+
+import {
+  applicationApi,
+  type Decision,
+} from "@/api/applicationApi";
+import type { Application } from "@/types/application";
+import type { AuditLog } from "@/types/auditLog";
+import type { ApplicationDocument } from "@/types/document";
+import type { FinancialMetricsData } from "@/schemas/credit-application-schemas/FinancialMetrics.schema";
 
 export const useBackofficeApplication = (id: string | undefined) => {
   const [application, setApplication] = useState<Application | null>(null);
-
   const [documents, setDocuments] = useState<ApplicationDocument[]>([]);
-
-  const [auditLogRaw, setAuditLogRaw] = useState<string>("[]");
-
+  const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [workerName, setWorkerName] = useState<string>("");
-
   const [loading, setLoading] = useState<boolean>(true);
-
   const [decisionLoading, setDecisionLoading] = useState<boolean>(false);
-
   const [error, setError] = useState<string | null>(null);
+  const [financialMetrics, setFinancialMetrics] = useState<FinancialMetricsData | null>(null);
 
   const loadApplication = async (applicationId: string) => {
     const details = await applicationApi.getById(applicationId);
+    const auditLogs = await applicationApi.getAuditLog(applicationId);
+    let financialMetrics: FinancialMetricsData ;
+
+    try {
+      financialMetrics = JSON.parse(details.financialData);
+    } catch {
+      throw new Error("Kunde inte hämta finansiella uppgifter.");
+    }
 
     setApplication(details.application);
-
+    setFinancialMetrics(financialMetrics);
     setDocuments(details.documents);
-
-    setAuditLogRaw(details.auditLogRaw);
-
+    setAuditLogs(auditLogs);
     setWorkerName(details.workerName);
   };
 
@@ -34,7 +41,6 @@ export const useBackofficeApplication = (id: string | undefined) => {
     const load = async () => {
       if (!id) {
         setError("Ansöknings-ID saknas.");
-
         setLoading(false);
         return;
       }
@@ -86,8 +92,9 @@ export const useBackofficeApplication = (id: string | undefined) => {
 
   return {
     application,
+    financialMetrics,
     documents,
-    auditLogRaw,
+    auditLogs,
     workerName,
     loading,
     decisionLoading,
