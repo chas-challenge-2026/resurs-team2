@@ -131,6 +131,7 @@ public class DocumentService {
         }
     }
 
+    @Transactional 
     public void deleteDocument(UUID documentId, UserPrincipal principal) {
         Document document = documentRepository
                 .findByUuid(documentId)
