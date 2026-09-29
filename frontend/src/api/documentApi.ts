@@ -46,32 +46,23 @@ export const documentApi = {
   return response.json();
 },
 
-  async downloadDocument(
-    documentId: number | string,
-  ): Promise<Blob> {
-    const response = await apiFetch(
-      `/api/v1/documents/${documentId}`,
-    );
+  downloadDocument: async (uuid: string): Promise<Blob> => {
+  const response = await apiFetch(`/api/v1/documents/${uuid}`);
 
-    if (!response.ok) {
-      throw new Error("Kunde inte ladda ner dokumentet.");
+  if (!response.ok) {
+    throw new Error("Kunde inte ladda ner dokumentet.");
+  }
+
+  return response.blob();
+},
+
+  deleteDocument: async (uuid: string): Promise<void> => {
+  const response = await apiFetch(`/api/v1/documents/${uuid}`, {
+    method: "DELETE",
+  });
+
+  if (!response.ok) {
+    throw new Error("Kunde inte ta bort dokumentet.");
     }
-
-    return response.blob();
-  },
-
-  async deleteDocument(
-    documentId: number | string,
-  ): Promise<void> {
-    const response = await apiFetch(
-      `/api/v1/documents/${documentId}`,
-      {
-        method: "DELETE",
-      },
-    );
-
-    if (!response.ok) {
-      throw new Error("Kunde inte ta bort dokumentet.");
-    }
-  },
-};
+  }
+}
