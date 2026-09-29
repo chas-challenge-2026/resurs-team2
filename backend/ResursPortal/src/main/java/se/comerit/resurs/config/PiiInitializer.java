@@ -209,9 +209,18 @@ public class PiiInitializer implements ApplicationRunner {
         }
 
         if (auditLogRepository.findByApplication(application, Sort.unsorted()).isEmpty()) {
+            // Same mutex AuditLogService.append takes. This runs single-threaded at
+            // startup so it cannot actually race today, but deriving the sequence number
+            // without the lock would leave a second writer that quietly breaks the
+            // invariant the lock exists to enforce.
+            applicationRepository.lockById(application.getId());
+
             long seq = auditLogRepository.getNextSequenceNumber(application);
-            auditLogRepository.save(new AuditLog(application, seq + 1, "", null, created));
-            auditLogRepository.save(new AuditLog(application, seq + 2, "", null, scoring));
+            // Seed entries are not signed: hash/signature are zero-length placeholders so
+            // the NOT NULL BYTEA columns are satisfied. A chain built this way will not
+            // verify against the real Ed25519 public key.
+            auditLogRepository.save(new AuditLog(application, seq + 1, new byte[0], new byte[0], created));
+            auditLogRepository.save(new AuditLog(application, seq + 2, new byte[0], new byte[0], scoring));
             log.info("Seeded audit log for {}", SEED[0].orgNumber());
         }
     }

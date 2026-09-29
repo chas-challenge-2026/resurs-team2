@@ -2,7 +2,9 @@ package se.comerit.resurs.api.v1.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -15,6 +17,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 
 import se.comerit.resurs.audit.ApplicationCreated;
 import se.comerit.resurs.audit.EtaSet;
@@ -30,12 +33,14 @@ import tools.jackson.databind.ObjectMapper;
 class AuditLogServiceTest {
 
     private AuditLogRepository auditLogRepository;
+    private ApplicationRepository applicationRepository;
     private AuditLogService auditLogService;
 
     @BeforeEach
     void setUp() {
         auditLogRepository = mock(AuditLogRepository.class);
-        auditLogService = new AuditLogService(auditLogRepository, mock(ApplicationRepository.class),
+        applicationRepository = mock(ApplicationRepository.class);
+        auditLogService = new AuditLogService(auditLogRepository, applicationRepository,
                 new ObjectMapper());
     }
 
@@ -124,31 +129,45 @@ class AuditLogServiceTest {
     class Chain {
 
         @Test
-        @DisplayName("First entry uses sequence 1 and an empty previous hash")
+        @DisplayName("First entry uses sequence 1")
         void firstEntryStartsChain() {
             when(auditLogRepository.getNextSequenceNumber(any(Application.class))).thenReturn(0L);
-            when(auditLogRepository.findPreviousHash(any(Application.class))).thenReturn(Optional.empty());
 
             auditLogService.append(application(), new ApplicationCreated("556677-8899"));
 
-            AuditLog log = savedLogs().get(0);
-            assertThat(log.getSequenceNumber()).isEqualTo(1);
-            assertThat(log.getPreviousHash()).isEmpty();
-            assertThat(log.getHash()).isEmpty();
+            assertThat(savedLogs().get(0).getSequenceNumber()).isEqualTo(1);
         }
 
         @Test
-        @DisplayName("Subsequent entry links the previous hash")
-        void subsequentEntryLinksPreviousHash() {
+        @DisplayName("Subsequent entry continues the sequence")
+        void subsequentEntryContinuesSequence() {
             when(auditLogRepository.getNextSequenceNumber(any(Application.class))).thenReturn(1L);
-            when(auditLogRepository.findPreviousHash(any(Application.class)))
-                    .thenReturn(Optional.of("prev-hash"));
 
             auditLogService.append(application(), new ManualDecision("APPROVED", "Anna Andersson", null));
 
-            AuditLog log = savedLogs().get(0);
-            assertThat(log.getSequenceNumber()).isEqualTo(2);
-            assertThat(log.getPreviousHash()).isEqualTo("prev-hash");
+            assertThat(savedLogs().get(0).getSequenceNumber()).isEqualTo(2);
+        }
+
+        @Test
+        @DisplayName("Locks the application before reading the chain, then writes once")
+        void locksApplicationBeforeReadingChain() {
+            when(auditLogRepository.getNextSequenceNumber(any(Application.class))).thenReturn(0L);
+
+            auditLogService.append(application(), new ApplicationCreated("556677-8899"));
+
+            // The lock is what removes the read-then-insert race: it must be taken before
+            // the sequence number and predecessor hash are read, not after, or another
+            // append could commit in between and leave this entry chaining from a hash
+            // that is no longer its predecessor.
+            InOrder inOrder = inOrder(applicationRepository, auditLogRepository);
+            inOrder.verify(applicationRepository).lockById(any());
+            inOrder.verify(auditLogRepository).getNextSequenceNumber(any(Application.class));
+            inOrder.verify(auditLogRepository).findPreviousHash(any(Application.class));
+            inOrder.verify(auditLogRepository).save(any(AuditLog.class));
+
+            // Exactly one insert: no retry loop, because the lock makes a collision
+            // impossible rather than recoverable.
+            verify(auditLogRepository, times(1)).save(any(AuditLog.class));
         }
     }
 }
