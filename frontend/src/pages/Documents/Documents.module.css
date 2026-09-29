@@ -64,12 +64,13 @@
 
 .panelBody {
   padding: var(--spacing-lg);
+  background-color: var(--color-background);
 }
 
 .panelBody p {
   margin-top: 0;
   margin-bottom: var(--spacing-md);
-
+  background-color: var(--color-background);
   line-height: var(--line-height-relaxed);
 }
 
@@ -96,14 +97,13 @@
 
 .formControl {
   display: block;
-
   width: 100%;
   min-height: 46px;
 
   padding: 10px 14px;
 
   color: var(--color-text);
-  background-color: var(--color-white);
+  background-color: var(--color-background);
 
   border: 1px solid var(--color-input-border);
   border-radius: var(--radius);
@@ -145,8 +145,8 @@
   margin-right: var(--spacing-sm);
   padding: 9px 14px;
 
-  color: var(--color-primary);
-  background-color: var(--color-white);
+  color: var(--color-text);
+  background-color: var(--color-background);
 
   border: 1px solid var(--color-border-strong);
   border-radius: var(--radius-pill);
@@ -257,12 +257,13 @@
     box-shadow var(--transition-fast),
     transform var(--transition-fast);
 }
-
 .secondaryButton {
-  color: var(--color-primary);
-  background-color: var(--color-white);
+  color: var(--color-text);
+  background-color: var(--color-background);
+  margin-bottom: 10px;
 
   border: 1px solid var(--color-border-strong);
+
 }
 
 .secondaryButton:hover {
