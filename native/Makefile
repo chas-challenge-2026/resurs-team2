@@ -5,7 +5,7 @@
 
 BUILD_DIR := build
 
-.PHONY: all build test clean rebuild
+.PHONY: all build test clean rebuild demo demo-audit
 
 all: build
 
@@ -19,8 +19,11 @@ test: build
 test-v: build
 	ctest --test-dir $(BUILD_DIR) -V
 
-demo: build
+demo-crypto: build
 	@./$(BUILD_DIR)/crypto/sandbox_test | sed -n '/AesGcmCipher demo/,$$p'
+
+demo-audit: build
+	@cd $(BUILD_DIR)/audit && ./audit_demo
 
 clean:
 	rm -rf $(BUILD_DIR)
