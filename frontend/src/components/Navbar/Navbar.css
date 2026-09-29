@@ -61,7 +61,7 @@
 .navbar-main {
   padding: var(--spacing-md) 0;
 
-  background-color: var(--color-white);
+  background-color: var(--color-navbar);
   border-bottom: 1px solid var(--color-border);
 }
 
@@ -74,7 +74,7 @@
 }
 
 .brand-logo-text {
-  color: var(--color-primary);
+  color: var(--color-text);
 
   font-size: var(--font-size-xl);
   font-weight: 800;
@@ -171,6 +171,23 @@
   outline: 2px solid var(--color-accent);
   outline-offset: 3px;
   border-radius: var(--radius-sm);
+}
+
+.darkmode-button {
+  margin-left: var(--spacing-xs);
+  padding: 0;
+
+  color: var(--color-white);
+  background: none;
+  border: none;
+
+  font-family: inherit;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+
+  cursor: pointer;
+
+  transition: color var(--transition-fast);
 }
 
 /* Responsive */
