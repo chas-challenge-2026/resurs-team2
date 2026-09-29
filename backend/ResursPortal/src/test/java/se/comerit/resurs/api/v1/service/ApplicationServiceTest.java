@@ -41,7 +41,8 @@ import se.comerit.resurs.security.CompanyPrincipal;
  * Unit tests for {@link ApplicationService#submitApplication} and
  * {@link ApplicationService#viewApplication}.
  *
- * <p>Repositories and the {@link ScoringService} are mocked; the submission
+ * <p>
+ * Repositories and the {@link ScoringService} are mocked; the submission
  * flow only persists the application with its serialized financial data, sends
  * the "received" notification, and delegates the scoring to
  * {@link ScoringService#scoreApplication}. A real {@link AuditLogService} is
@@ -72,35 +73,58 @@ class ApplicationServiceTest {
         auditLogRepository = mock(AuditLogRepository.class);
         scoringService = mock(ScoringService.class);
         objectMapper = new ObjectMapper();
-        auditLogService = new AuditLogService(auditLogRepository, mock(ApplicationRepository.class),
+
+        auditLogService = new AuditLogService(
+                auditLogRepository,
+                mock(ApplicationRepository.class),
                 objectMapper);
 
         caseWorkerAssignmentService = mock(CaseWorkerAssignmentService.class);
 
         emailService = mock(EmailService.class);
         etaService = mock(EtaService.class);
-        when(etaService.estimateWithinHours(any(Instant.class), eq(24L))).thenReturn(FIXED_ETA);
+
+        when(etaService.estimateWithinHours(
+                any(Instant.class),
+                eq(24L)))
+                .thenReturn(FIXED_ETA);
 
         applicationService = new ApplicationService(
-                companyRepository, applicationRepository, scoringService, etaService, auditLogService,
-                caseWorkerAssignmentService, objectMapper,
-                emailService, null);
+                companyRepository,
+                applicationRepository,
+                scoringService,
+                etaService,
+                auditLogService,
+                caseWorkerAssignmentService,
+                objectMapper,
+                emailService,
+                null);
+
         try {
             var field = ApplicationService.class.getDeclaredField("self");
             field.setAccessible(true);
             field.set(applicationService, applicationService);
         } catch (ReflectiveOperationException e) {
-            throw new IllegalStateException("Failed to set self reference", e);
+            throw new IllegalStateException(
+                    "Failed to set self reference",
+                    e);
         }
+
         try {
-            var field = ApplicationService.class.getDeclaredField("automatedDecisionHours");
+            var field = ApplicationService.class.getDeclaredField(
+                    "automatedDecisionHours");
             field.setAccessible(true);
             field.setLong(applicationService, 24L);
         } catch (ReflectiveOperationException e) {
-            throw new IllegalStateException("Failed to set automated decision SLA hours", e);
+            throw new IllegalStateException(
+                    "Failed to set automated decision SLA hours",
+                    e);
         }
 
-        company = new Company("556677-8899", "Testbolaget AB", "Kalle Kula");
+        company = new Company(
+                "556677-8899",
+                "Testbolaget AB",
+                "Kalle Kula");
 
         validRequest = new ApplicationRequest(
                 500_000.0,
@@ -129,13 +153,18 @@ class ApplicationServiceTest {
 
     // Application#id has no public setter; clear the id field reflectively to
     // emulate the repository assigning a generated id on save.
-    private static void setApplicationId(Application app, long id) {
+    private static void setApplicationId(
+            Application app,
+            long id) {
+
         try {
             var field = Application.class.getDeclaredField("id");
             field.setAccessible(true);
             field.set(app, id);
         } catch (ReflectiveOperationException e) {
-            throw new IllegalStateException("Failed to assign application id", e);
+            throw new IllegalStateException(
+                    "Failed to assign application id",
+                    e);
         }
     }
 
@@ -147,11 +176,16 @@ class ApplicationServiceTest {
             field.setAccessible(true);
             field.set(app, List.of());
         } catch (ReflectiveOperationException e) {
-            throw new IllegalStateException("Failed to assign documents", e);
+            throw new IllegalStateException(
+                    "Failed to assign documents",
+                    e);
         }
     }
 
-    private Application applicationWithFinancialData(Company owner, String financialData) {
+    private Application applicationWithFinancialData(
+            Company owner,
+            String financialData) {
+
         Application app = new Application(
                 owner,
                 new BigDecimal("300000"),
@@ -161,7 +195,9 @@ class ApplicationServiceTest {
                 null,
                 null,
                 financialData);
+
         setEmptyDocuments(app);
+
         return app;
     }
 
@@ -174,13 +210,20 @@ class ApplicationServiceTest {
         void submitsAndDelegatesScoring() {
             when(companyRepository.findByOrgNumber("556677-8899"))
                     .thenReturn(Optional.of(company));
+
             stubSaveReturnsSavedWithId(42L);
 
-            Long id = applicationService.submitApplication("556677-8899", validRequest);
+            Long id = applicationService.submitApplication(
+                    "556677-8899",
+                    validRequest);
 
             assertThat(id).isEqualTo(42L);
-            verify(scoringService).scoreApplication(42L);
-            verify(applicationRepository).save(any(Application.class));
+
+            verify(scoringService)
+                    .scoreApplication(42L);
+
+            verify(applicationRepository)
+                    .save(any(Application.class));
         }
 
         @Test
@@ -188,19 +231,32 @@ class ApplicationServiceTest {
         void persistsCorrectFields() {
             when(companyRepository.findByOrgNumber("556677-8899"))
                     .thenReturn(Optional.of(company));
+
             stubSaveReturnsSavedWithId(1L);
 
-            applicationService.submitApplication("556677-8899", validRequest);
+            applicationService.submitApplication(
+                    "556677-8899",
+                    validRequest);
 
-            verify(applicationRepository).save(argThat(app ->
-                    app.getCompany().equals(company)
-                    && app.getRequestedAmount().compareTo(new BigDecimal("300000")) == 0
-                    && "Rörelsekapital".equals(app.getPurpose())
-                    && app.getStatus() == ApplicationStatus.SCORING_IN_PROGRESS
-                    && app.getFinancialData() != null
-                    && app.getFinancialData().contains("\"industry\":\"IT\"")
-                    && app.getEstimatedResolutionAt().equals(FIXED_ETA)));
-            verify(etaService).estimateWithinHours(any(Instant.class), eq(24L));
+            verify(applicationRepository)
+                    .save(argThat(app -> app.getCompany().equals(company)
+                            && app.getRequestedAmount()
+                                    .compareTo(
+                                            new BigDecimal("300000")) == 0
+                            && "Rörelsekapital"
+                                    .equals(app.getPurpose())
+                            && app.getStatus() == ApplicationStatus.SCORING_IN_PROGRESS
+                            && app.getFinancialData() != null
+                            && app.getFinancialData()
+                                    .contains(
+                                            "\"industry\":\"IT\"")
+                            && app.getEstimatedResolutionAt()
+                                    .equals(FIXED_ETA)));
+
+            verify(etaService)
+                    .estimateWithinHours(
+                            any(Instant.class),
+                            eq(24L));
         }
 
         @Test
@@ -208,13 +264,20 @@ class ApplicationServiceTest {
         void sendsReceivedEmail() {
             when(companyRepository.findByOrgNumber("556677-8899"))
                     .thenReturn(Optional.of(company));
+
             stubSaveReturnsSavedWithId(1L);
 
-            applicationService.submitApplication("556677-8899", validRequest);
+            applicationService.submitApplication(
+                    "556677-8899",
+                    validRequest);
 
-            verify(emailService).sendApplicationSubmitted(argThat(app ->
-                    app.getId().equals(1L)
-                            && app.getCompany().getAuthorizedSignatory().equals("Kalle Kula")));
+            verify(emailService)
+                    .sendApplicationSubmitted(
+                            argThat(app -> app.getId().equals(1L)
+                                    && app.getCompany()
+                                            .getAuthorizedSignatory()
+                                            .equals(
+                                                    "Kalle Kula")));
         }
     }
 
@@ -227,16 +290,29 @@ class ApplicationServiceTest {
         void applicationCreatedEntryPresent() {
             when(companyRepository.findByOrgNumber("556677-8899"))
                     .thenReturn(Optional.of(company));
+
             stubSaveReturnsSavedWithId(1L);
 
-            applicationService.submitApplication("556677-8899", validRequest);
+            applicationService.submitApplication(
+                    "556677-8899",
+                    validRequest);
 
             ArgumentCaptor<AuditLog> captor = ArgumentCaptor.forClass(AuditLog.class);
-            verify(auditLogRepository, times(2)).save(captor.capture());
-            assertThat(captor.getAllValues()).hasSize(2);
-            assertThat(captor.getAllValues().get(0).getEntry())
-                    .contains("\"action\":\"APPLICATION_CREATED\"")
-                    .contains("\"orgNumber\":\"556677-8899\"");
+
+            verify(auditLogRepository, times(2))
+                    .save(captor.capture());
+
+            assertThat(captor.getAllValues())
+                    .hasSize(2);
+
+            assertThat(
+                    captor.getAllValues()
+                            .get(0)
+                            .getEntry())
+                    .contains(
+                            "\"action\":\"APPLICATION_CREATED\"")
+                    .contains(
+                            "\"orgNumber\":\"556677-8899\"");
         }
 
         @Test
@@ -244,16 +320,29 @@ class ApplicationServiceTest {
         void etaSetEntryPresent() {
             when(companyRepository.findByOrgNumber("556677-8899"))
                     .thenReturn(Optional.of(company));
+
             stubSaveReturnsSavedWithId(1L);
 
-            applicationService.submitApplication("556677-8899", validRequest);
+            applicationService.submitApplication(
+                    "556677-8899",
+                    validRequest);
 
             ArgumentCaptor<AuditLog> captor = ArgumentCaptor.forClass(AuditLog.class);
-            verify(auditLogRepository, times(2)).save(captor.capture());
-            assertThat(captor.getAllValues()).hasSize(2);
-            assertThat(captor.getAllValues().get(1).getEntry())
+
+            verify(auditLogRepository, times(2))
+                    .save(captor.capture());
+
+            assertThat(captor.getAllValues())
+                    .hasSize(2);
+
+            assertThat(
+                    captor.getAllValues()
+                            .get(1)
+                            .getEntry())
                     .contains("\"action\":\"ETA_SET\"")
-                    .contains("\"estimatedResolutionAt\":\"2026-09-26T10:00:00Z\"");
+                    .contains(
+                            "\"estimatedResolutionAt\":"
+                                    + "\"2026-09-26T10:00:00Z\"");
         }
     }
 
@@ -264,17 +353,26 @@ class ApplicationServiceTest {
         @Test
         @DisplayName("Does not save anything when the company is unknown")
         void companyNotFoundNotSaved() {
-            when(companyRepository.findByOrgNumber("unknown")).thenReturn(Optional.empty());
+            when(companyRepository.findByOrgNumber("unknown"))
+                    .thenReturn(Optional.empty());
 
-            assertThatThrownBy(() ->
-                    applicationService.submitApplication("unknown", validRequest))
-                    .isInstanceOf(CompanyNotFoundException.class)
+            assertThatThrownBy(() -> applicationService.submitApplication(
+                    "unknown",
+                    validRequest))
+                    .isInstanceOf(
+                            CompanyNotFoundException.class)
                     .hasMessage("Company not found")
                     .hasMessageNotContaining("unknown");
 
-            verify(applicationRepository, never()).save(any(Application.class));
-            verify(scoringService, never()).scoreApplication(any());
-            verify(emailService, never()).sendApplicationSubmitted(any(Application.class));
+            verify(applicationRepository, never())
+                    .save(any(Application.class));
+
+            verify(scoringService, never())
+                    .scoreApplication(any());
+
+            verify(emailService, never())
+                    .sendApplicationSubmitted(
+                            any(Application.class));
         }
     }
 
@@ -285,33 +383,56 @@ class ApplicationServiceTest {
         @Test
         @DisplayName("Case worker receives the stored financial data")
         void caseWorkerReceivesFinancialData() {
-            Application app = applicationWithFinancialData(company, FINANCIAL_DATA);
-            when(applicationRepository.findByIdWithDocuments(42L)).thenReturn(Optional.of(app));
+            Application app = applicationWithFinancialData(
+                    company,
+                    FINANCIAL_DATA);
+
+            when(applicationRepository
+                    .findByIdWithDocuments(42L))
+                    .thenReturn(Optional.of(app));
 
             ApplicationDetailsResponse response = applicationService.viewApplication(
                     42L,
-                    new CaseWorkerPrincipal(1L, "Karin Handläggare", "karin@resurs.se"));
+                    new CaseWorkerPrincipal(
+                            1L,
+                            "Karin Handläggare",
+                            "karin@resurs.se"));
 
-            assertThat(response.financialData()).isEqualTo(FINANCIAL_DATA);
+            assertThat(response.financialData())
+                    .isEqualTo(FINANCIAL_DATA);
+
             verify(caseWorkerAssignmentService)
-                    .ensureAssigned(eq(42L), any(CaseWorkerPrincipal.class));
+                    .ensureAssigned(
+                            eq(42L),
+                            any(CaseWorkerPrincipal.class));
         }
 
         @Test
-        @DisplayName("Company does not receive financial data on its own application")
-        void companyDoesNotReceiveFinancialData() {
-            Application app = applicationWithFinancialData(company, FINANCIAL_DATA);
-            when(applicationRepository.findByIdWithDocuments(42L)).thenReturn(Optional.of(app));
+        @DisplayName("Company receives the stored financial data on its own application")
+        void companyReceivesFinancialData() {
+            Application app = applicationWithFinancialData(
+                    company,
+                    FINANCIAL_DATA);
+
+            when(applicationRepository
+                    .findByIdWithDocuments(42L))
+                    .thenReturn(Optional.of(app));
 
             ApplicationDetailsResponse response = applicationService.viewApplication(
                     42L,
-                    new CompanyPrincipal(7L, "Testbolaget AB", "556677-8899"));
+                    new CompanyPrincipal(
+                            7L,
+                            "Testbolaget AB",
+                            "556677-8899"));
 
-            assertThat(response.financialData()).isNull();
+            assertThat(response.financialData())
+                    .isEqualTo(FINANCIAL_DATA);
         }
 
-        private static final String FINANCIAL_DATA =
-                "{\"equity\":500000.0,\"totalCapital\":1000000.0,\"netRevenue\":1000000.0,"
-                + "\"requestedAmount\":300000,\"industry\":\"IT\"}";
+        private static final String FINANCIAL_DATA = "{\"equity\":500000.0,"
+                + "\"totalCapital\":1000000.0,"
+                + "\"netRevenue\":1000000.0,"
+                + "\"requestedAmount\":300000,"
+                + "\"industry\":\"IT\"}";
     }
 }

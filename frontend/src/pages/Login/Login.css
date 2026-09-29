@@ -3,12 +3,11 @@
 
   padding: var(--spacing-3xl) var(--spacing-md);
 
-  background:
-    linear-gradient(
-      135deg,
-      var(--color-primary) 0%,
-      var(--color-primary-hover) 100%
-    );
+  background: linear-gradient(
+    135deg,
+    var(--color-primary) 0%,
+    var(--color-primary-hover) 100%
+  );
 }
 
 .login-box {
@@ -52,6 +51,61 @@
   line-height: var(--line-height-relaxed);
 }
 
+/* Tabs */
+
+.login-box .nav-tabs {
+  display: flex;
+  gap: var(--spacing-sm);
+
+  margin-bottom: var(--spacing-xl);
+
+  border-bottom: none;
+}
+
+.login-box .nav-tabs > li {
+  flex: 1;
+}
+
+.login-tab-link {
+  width: 100%;
+  padding: var(--spacing-sm) var(--spacing-md);
+
+  color: var(--color-primary);
+  background-color: var(--color-primary-soft);
+
+  border: 1px solid transparent;
+  border-radius: var(--radius-lg);
+
+  font: inherit;
+  font-weight: var(--font-weight-medium);
+  text-align: center;
+
+  cursor: pointer;
+
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.login-tab-link:hover {
+  border-color: var(--color-primary);
+}
+
+.login-box .nav-tabs > li.active > .login-tab-link {
+  color: var(--color-primary);
+  background-color: var(--color-info-bg);
+
+  border-color: var(--color-primary);
+
+  font-weight: var(--font-weight-semibold);
+}
+
+.login-tab-link:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
 /* BankID section */
 
 .login-bankid-header {
@@ -84,24 +138,6 @@
   color: var(--color-text);
 
   line-height: var(--line-height-relaxed);
-}
-
-/* Tabs */
-
-.login-box .nav-tabs {
-  margin-bottom: var(--spacing-lg);
-}
-
-.login-box .nav-tabs > li {
-  flex: 1;
-}
-
-.login-box .nav-tabs > li > a {
-  text-align: center;
-}
-
-.login-tab-link {
-  cursor: pointer;
 }
 
 /* Form */
@@ -168,27 +204,9 @@
 
   .login-box .nav-tabs {
     flex-direction: column;
-
-    border-bottom: none;
   }
 
   .login-box .nav-tabs > li {
     width: 100%;
-
-    margin-bottom: var(--spacing-xs);
-  }
-
-  .login-box .nav-tabs > li:last-child {
-    margin-bottom: 0;
-  }
-
-  .login-box .nav-tabs > li > a {
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius);
-  }
-
-  .login-box .nav-tabs > li.active > a {
-    background-color: var(--color-primary-soft);
-    border-color: var(--color-primary);
   }
 }

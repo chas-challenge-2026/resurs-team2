@@ -1,6 +1,3 @@
-import type { Application } from "./application";
-import type { ApplicationDocument } from "./document";
-
 export interface FinancialData {
   equity: number;
   totalCapital: number;
@@ -14,11 +11,4 @@ export interface FinancialData {
   investingCashFlow: number;
   interestExpenses: number;
   industry: string;
-}
-
-export interface ApplicationDetails {
-  application: Application;
-  financialData: string | null;
-  workerName: string | null;
-  documents: ApplicationDocument[];
 }

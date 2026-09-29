@@ -26,7 +26,10 @@ export const ReviewApplicationsTable = ({
           </p>
         </div>
 
-        <span className="backoffice-card-count">
+        <span
+          className="backoffice-card-count"
+          aria-label={`${applications.length} ansökningar väntar på granskning`}
+        >
           {applications.length}
         </span>
       </header>
@@ -34,7 +37,10 @@ export const ReviewApplicationsTable = ({
       {applications.length === 0 ? (
         <div className="backoffice-empty">
           <strong>Inga ansökningar väntar</strong>
-          <p>Det finns inga kreditansökningar att granska just nu.</p>
+
+          <p>
+            Det finns inga kreditansökningar att granska just nu.
+          </p>
         </div>
       ) : (
         <div className="backoffice-table-wrapper">
@@ -46,10 +52,11 @@ export const ReviewApplicationsTable = ({
                 <th scope="col">Org.nr</th>
                 <th scope="col">Belopp</th>
                 <th scope="col">Syfte</th>
-                <th scope="col">Scoring</th>
                 <th scope="col">Inlämnad</th>
                 <th scope="col">
-                  <span className="sr-only">Åtgärd</span>
+                  <span className="sr-only">
+                    Åtgärd
+                  </span>
                 </th>
               </tr>
             </thead>
@@ -57,7 +64,9 @@ export const ReviewApplicationsTable = ({
             <tbody>
               {applications.map((app) => (
                 <tr key={app.id}>
-                  <td className="backoffice-id">#{app.id}</td>
+                  <td className="backoffice-id">
+                    #{app.id}
+                  </td>
 
                   <td>
                     <strong className="backoffice-company">
@@ -65,29 +74,35 @@ export const ReviewApplicationsTable = ({
                     </strong>
                   </td>
 
-                  <td>{app.orgNumber}</td>
+                  <td>
+                    {app.orgNumber}
+                  </td>
 
                   <td className="backoffice-amount">
-                    {formatCurrency(app.requestedAmount)}
+                    {formatCurrency(
+                      app.requestedAmount,
+                    )}
                   </td>
 
                   <td className="backoffice-purpose">
                     {app.purpose || "-"}
                   </td>
 
-                  <td>
-                    <span className="backoffice-score">
-                      {app.scoringResult || "-"}
-                    </span>
+                  <td className="backoffice-date">
+                    {formatDateTime(
+                      app.createdAt,
+                    )}
                   </td>
-
-                  <td>{formatDateTime(app.createdAt)}</td>
 
                   <td className="backoffice-table-action">
                     <button
                       type="button"
                       className="btn btn-primary"
-                      onClick={() => navigate(`/backoffice/${app.id}`)}
+                      onClick={() =>
+                        navigate(
+                          `/backoffice/${app.id}`,
+                        )
+                      }
                     >
                       Granska
                     </button>

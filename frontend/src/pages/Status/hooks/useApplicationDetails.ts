@@ -2,7 +2,13 @@ import { useEffect, useState } from "react";
 
 import { applicationApi } from "@/api/applicationApi";
 import type { Application } from "@/types/application";
+import type {
+  FinancialData,
+} from "@/types/applicationDetails";
 import type { ApplicationDocument } from "@/types/document";
+
+
+
 
 export const useApplicationDetails = (
   id: string | undefined,
@@ -14,13 +20,18 @@ export const useApplicationDetails = (
     useState<ApplicationDocument[]>([]);
 
   const [workerName, setWorkerName] =
-    useState<string>("");
+    useState<string | null>(null);
+
+  const [financialData, setFinancialData] =
+    useState<FinancialData | null>(null);
 
   const [loading, setLoading] =
     useState<boolean>(true);
 
   const [error, setError] =
     useState<string | null>(null);
+
+  
 
   useEffect(() => {
     const loadApplication = async () => {
@@ -37,17 +48,21 @@ export const useApplicationDetails = (
         const details =
           await applicationApi.getById(id);
 
-        setApplication(
-          details.application,
-        );
+          console.log("DETAILS:", details);
+          console.log("FINANCIAL DATA RAW:", details.financialData);
 
-        setDocuments(
-          details.documents,
-        );
+        setApplication(details.application);
+        setDocuments(details.documents);
+        setWorkerName(details.workerName);
 
-        setWorkerName(
-          details.workerName,
-        );
+        if (details.financialData) {
+          const parsedFinancialData =
+            JSON.parse(details.financialData) as FinancialData;
+
+          setFinancialData(parsedFinancialData);
+        } else {
+          setFinancialData(null);
+        }
       } catch (err: unknown) {
         if (err instanceof Error) {
           setError(err.message);
@@ -61,6 +76,8 @@ export const useApplicationDetails = (
       }
     };
 
+    
+
     loadApplication();
   }, [id]);
 
@@ -68,6 +85,7 @@ export const useApplicationDetails = (
     application,
     documents,
     workerName,
+    financialData,
     loading,
     error,
   };
