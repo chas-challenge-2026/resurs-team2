@@ -790,7 +790,7 @@ class ApplicationControllerIntegrationTest {
 
 &#x20;       })
 
-&#x20;       void companyCanSeeFinancialData() throws Exception {
+&#x20;       void companyCannotSeeFinancialData() throws Exception {
 
 &#x20;           mockMvc.perform(get("/api/v1/applications/770"))
 
@@ -798,7 +798,7 @@ class ApplicationControllerIntegrationTest {
 
 &#x20;                   .andExpect(jsonPath("$.application.id").value(770))
 
-&#x20;                   .andExpect(jsonPath("$.financialData").value(FINANCIAL_DATA));
+&#x20;                   .andExpect(jsonPath("$.financialData").doesNotExist());
 
 &#x20;       }
 
