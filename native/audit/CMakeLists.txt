@@ -47,3 +47,15 @@ add_test(NAME audit_abi_test COMMAND audit_abi_test)
 add_executable(audit_demo audit_demo.c)
 target_link_libraries(audit_demo PRIVATE resurs_audit)
 
+# --- Stress/benchmark harness (not a ctest - run manually, Release build) ---
+
+add_executable(audit_stress_test
+    tests/audit_stress_test.cpp
+    resurs_audit.cpp
+    hash_chain.cpp
+    signer.cpp
+    audit_key_manager.cpp
+)
+target_include_directories(audit_stress_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(audit_stress_test PRIVATE OpenSSL::Crypto)
+
