@@ -66,6 +66,23 @@ public class PiiInitializer implements ApplicationRunner {
     private static final String DEMO_SCORING_RESULT = "FLAGGED: soliditet=0.28 (OK), "
             + "likviditetsgrad=0.95 (FLAGGED), skuldsättningsgrad=2.1 (OK)";
 
+    /**
+     * Financial figures as serialized by
+     * {@link se.comerit.resurs.api.v1.service.ApplicationService#submitApplication}
+     * into {@code applications.financial_data} (JSON of
+     * {@link se.comerit.resurs.rating.ApplicationData}). The ratios are chosen
+     * to reproduce the seeded {@link #DEMO_SCORING_RESULT}: soliditet
+     * 1 400 000 / 5 000 000 = 0.28, likviditetsgrad 1 900 000 / 2 000 000 =
+     * 0.95, skuldsättningsgrad 2 940 000 / 1 400 000 = 2.1.
+     */
+    private static final String DEMO_FINANCIAL_DATA =
+            "{\"equity\":1400000.0,\"totalCapital\":5000000.0,"
+            + "\"currentAssets\":1900000.0,\"currentLiabilities\":2000000.0,"
+            + "\"totalLiabilities\":2940000.0,\"operatingIncome\":1200000.0,"
+            + "\"netRevenue\":8000000.0,\"requestAmount\":500000,"
+            + "\"operatingCashFlow\":950000.0,\"investingCashFlow\":-450000.0,"
+            + "\"interestExpenses\":300000.0,\"industry\":\"FASTIGHET\"}";
+
     private final PiiCodec codec;
     private final ResursCryptoService crypto;
     private final JdbcTemplate jdbcTemplate;
@@ -146,11 +163,12 @@ public class PiiInitializer implements ApplicationRunner {
         if (rawId.isPresent()) {
             jdbcTemplate.update(
                     "UPDATE applications SET requested_amount = ?, purpose = ?, "
-                            + "decision_reason = ?, scoring_result = ? WHERE id = ?",
+                            + "decision_reason = ?, scoring_result = ?, financial_data = ? WHERE id = ?",
                     codec.encode(DEMO_REQUESTED_AMOUNT),
                     codec.encode(DEMO_APPLICATION_PURPOSE),
                     null,
                     codec.encode(DEMO_SCORING_RESULT),
+                    codec.encode(DEMO_FINANCIAL_DATA),
                     rawId.get());
             log.info("Encrypted seed demo application for {}", SEED[0].orgNumber());
         } else if (applicationRepository.findByCompanyId(company.getId()).isEmpty()) {
@@ -161,12 +179,20 @@ public class PiiInitializer implements ApplicationRunner {
                     ApplicationStatus.UNDER_REVIEW,
                     null,
                     null,
-                    DEMO_SCORING_RESULT));
+                    DEMO_SCORING_RESULT,
+                    DEMO_FINANCIAL_DATA));
             log.info("Seeded demo application for {}", SEED[0].orgNumber());
         }
 
         applicationRepository.findByCompanyId(company.getId()).stream().findFirst()
-                .ifPresent(this::seedAuditLog);
+                .ifPresent(app -> {
+                    if (app.getFinancialData() == null) {
+                        app.setFinancialData(DEMO_FINANCIAL_DATA);
+                        applicationRepository.save(app);
+                        log.info("Backfilled financial data for {}", SEED[0].orgNumber());
+                    }
+                    seedAuditLog(app);
+                });
     }
 
     private void seedAuditLog(Application application) {

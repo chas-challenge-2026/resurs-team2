@@ -3,6 +3,7 @@ package se.comerit.resurs.repository;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
@@ -95,5 +96,19 @@ class ApplicationRepositoryTest {
         Application saved = applicationRepository.save(app);
 
         assertThat(saved.getStatus()).isEqualTo(ApplicationStatus.PENDING_DOCS);
+    }
+
+    @Test
+    void shouldRoundTripEstimatedResolutionAt() {
+        Company company = companyRepository.findByOrgNumber("556000-1234").orElseThrow();
+
+        Application app = new Application(company, new BigDecimal("250000.00"), "Test loan");
+        Instant eta = Instant.parse("2026-09-28T10:00:00Z");
+        app.setEstimatedResolutionAt(eta);
+
+        Application saved = applicationRepository.save(app);
+        Application reloaded = applicationRepository.findById(saved.getId()).orElseThrow();
+
+        assertThat(reloaded.getEstimatedResolutionAt()).isEqualTo(eta);
     }
 }

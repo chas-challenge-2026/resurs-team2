@@ -17,6 +17,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
 import se.comerit.resurs.audit.ApplicationCreated;
+import se.comerit.resurs.audit.EtaSet;
 import se.comerit.resurs.audit.ManualDecision;
 import se.comerit.resurs.audit.ScoringRun;
 import se.comerit.resurs.entity.Application;
@@ -96,6 +97,25 @@ class AuditLogServiceTest {
                     .contains("\"decision\":\"REJECTED\"")
                     .contains("\"worker\":\"Anna Andersson\"")
                     .contains("\"comment\":\"Saknar omsättning\"");
+        }
+
+        @Test
+        @DisplayName("ETA_SET entry carries the ISO-8601 estimated resolution time")
+        void etaSetSerialization() {
+            auditLogService.append(application(), new EtaSet("2026-09-28T10:00:00Z"));
+
+            AuditLog log = savedLogs().get(0);
+            assertThat(log.getEntry())
+                    .isEqualTo("{\"action\":\"ETA_SET\",\"estimatedResolutionAt\":\"2026-09-28T10:00:00Z\"}");
+        }
+
+        @Test
+        @DisplayName("ETA_SET entry omits the estimated resolution time when cleared")
+        void etaSetOmitsNullEstimatedTime() {
+            auditLogService.append(application(), new EtaSet(null));
+
+            AuditLog log = savedLogs().get(0);
+            assertThat(log.getEntry()).isEqualTo("{\"action\":\"ETA_SET\"}");
         }
     }
 

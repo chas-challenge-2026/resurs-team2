@@ -2,9 +2,13 @@ package se.comerit.resurs.api.v1.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
-import static org.mockito.internal.util.Primitives.defaultValue;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.internal.util.Primitives.defaultValue;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -13,6 +17,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Proxy;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -21,6 +26,7 @@ import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
 import org.springframework.mock.web.MockMultipartFile;
 
+import se.comerit.resurs.audit.EtaSet;
 import se.comerit.resurs.api.v1.dto.DocumentDto;
 import se.comerit.resurs.entity.Application;
 import se.comerit.resurs.entity.ApplicationStatus;
@@ -34,6 +40,8 @@ import se.comerit.resurs.repository.DocumentRepository;
 import se.comerit.resurs.security.CompanyPrincipal;
 
 class DocumentServiceTest {
+
+    private static final Instant FIXED_ETA = Instant.parse("2026-09-26T10:00:00Z");
 
     private static FileStorageService stubStorage() {
         return new FileStorageService() {
@@ -62,6 +70,16 @@ class DocumentServiceTest {
         };
     }
 
+    private static void setReviewBusinessDays(DocumentService service) {
+        try {
+            Field field = DocumentService.class.getDeclaredField("reviewBusinessDays");
+            field.setAccessible(true);
+            field.setInt(service, 2);
+        } catch (ReflectiveOperationException e) {
+            throw new IllegalStateException("Failed to set review business days", e);
+        }
+    }
+
     @Test
     void getDocuments_returnsDocumentsForMatchingApplication() {
         Company company = company("556677-8899");
@@ -87,6 +105,7 @@ class DocumentServiceTest {
                 applicationRepository(applications, new AtomicLong(100)),
                 documentRepository(byId, byApplication, new AtomicLong(1000)),
                 emailService,
+                mock(AuditLogService.class), mock(EtaService.class),
                 stubStorage());
 
         List<DocumentDto> result = service.getDocuments(
@@ -112,12 +131,17 @@ class DocumentServiceTest {
         AtomicLong nextDocumentId = new AtomicLong(1L);
 
         EmailService emailService = mock(EmailService.class);
+        AuditLogService auditLogService = mock(AuditLogService.class);
+        EtaService etaService = mock(EtaService.class);
+        when(etaService.estimateBusinessDays(any(Instant.class), eq(2))).thenReturn(FIXED_ETA);
 
         DocumentService service = new DocumentService(
                 applicationRepository(applications, new AtomicLong(50)),
                 documentRepository(documentsById, documentsByApplication, nextDocumentId),
                 emailService,
+                auditLogService, etaService,
                 stubStorage());
+        setReviewBusinessDays(service);
 
         MockMultipartFile file = new MockMultipartFile(
                 "file",
@@ -140,6 +164,12 @@ class DocumentServiceTest {
         assertThat(application.getStatus())
                 .isEqualTo(ApplicationStatus.UNDER_REVIEW);
 
+        // Flagged applications get a manual-review ETA and an ETA_SET entry.
+        assertThat(application.getEstimatedResolutionAt())
+                .isEqualTo(FIXED_ETA);
+        verify(etaService).estimateBusinessDays(any(Instant.class), eq(2));
+        verify(auditLogService).append(application, new EtaSet("2026-09-26T10:00:00Z"));
+
         assertThat(documentsByApplication.get(7L))
                 .hasSize(1);
     }
@@ -152,6 +182,7 @@ class DocumentServiceTest {
                 applicationRepository(new HashMap<>(), new AtomicLong(1L)),
                 documentRepository(new HashMap<>(), new HashMap<>(), new AtomicLong(1L)),
                 emailService,
+                mock(AuditLogService.class), mock(EtaService.class),
                 stubStorage());
 
         MockMultipartFile emptyFile = new MockMultipartFile(
@@ -180,6 +211,7 @@ class DocumentServiceTest {
                 applicationRepository(applications, new AtomicLong(1L)),
                 documentRepository(new HashMap<>(), new HashMap<>(), new AtomicLong(1L)),
                 emailService,
+                mock(AuditLogService.class), mock(EtaService.class),
                 stubStorage());
 
         assertThatThrownBy(() -> service.getDocuments(7L, new CompanyPrincipal(1L, "customer", "556677-8899")))
@@ -208,6 +240,7 @@ class DocumentServiceTest {
                 applicationRepository(applications, new AtomicLong(1L)),
                 documentRepository(byId, Map.of(7L, List.of(document)), new AtomicLong(1L)),
                 emailService,
+                mock(AuditLogService.class), mock(EtaService.class),
                 stubStorage());
 
         assertThatThrownBy(() -> service.downloadDocument(new UUID(0L, 21L),
@@ -231,6 +264,9 @@ class DocumentServiceTest {
         AtomicLong nextDocumentId = new AtomicLong(1L);
 
         EmailService emailService = mock(EmailService.class);
+        AuditLogService auditLogService = mock(AuditLogService.class);
+        EtaService etaService = mock(EtaService.class);
+        when(etaService.estimateBusinessDays(any(Instant.class), eq(2))).thenReturn(FIXED_ETA);
 
         DocumentService service = new DocumentService(
                 applicationRepository(applications, new AtomicLong(50)),
@@ -239,7 +275,9 @@ class DocumentServiceTest {
                         documentsByApplication,
                         nextDocumentId),
                 emailService,
+                auditLogService, etaService,
                 stubStorage());
+        setReviewBusinessDays(service);
 
         String content1 = "%PDF-1.4 first file";
         String content2 = "%PDF-1.4 second file";
@@ -302,6 +340,50 @@ class DocumentServiceTest {
                 downloaded2.resource().getInputStream().readAllBytes(),
                 StandardCharsets.UTF_8))
                 .isEqualTo(content2);
+    }
+
+    @Test
+    void uploadDocumentOnScoringInProgress_keepsStatusAndEta() {
+        Company company = company("556677-8899");
+        Application application = application(company, "Rörelsekapital");
+        setId(application);
+        application.setStatus(ApplicationStatus.SCORING_IN_PROGRESS);
+        application.setEstimatedResolutionAt(FIXED_ETA);
+
+        Map<Long, Application> applications = new HashMap<>();
+        applications.put(7L, application);
+
+        Map<UUID, Document> documentsById = new HashMap<>();
+        Map<Long, List<Document>> documentsByApplication = new HashMap<>();
+        AtomicLong nextDocumentId = new AtomicLong(1L);
+
+        EmailService emailService = mock(EmailService.class);
+        AuditLogService auditLogService = mock(AuditLogService.class);
+
+        DocumentService service = new DocumentService(
+                applicationRepository(applications, new AtomicLong(50)),
+                documentRepository(documentsById, documentsByApplication, nextDocumentId),
+                emailService,
+                auditLogService, mock(EtaService.class),
+                stubStorage());
+
+        MockMultipartFile file = new MockMultipartFile(
+                "file",
+                "report.pdf",
+                "application/pdf",
+                "%PDF-1.4".getBytes(StandardCharsets.UTF_8));
+
+        service.uploadDocument(
+                7L,
+                "AnnualReview",
+                file,
+                new CompanyPrincipal(1L, "customer", "556677-8899"));
+
+        // Scoring owns the SCORING_IN_PROGRESS -> UNDER_REVIEW transition; a
+        // document upload must not move the status or touch the ETA.
+        assertThat(application.getStatus()).isEqualTo(ApplicationStatus.SCORING_IN_PROGRESS);
+        assertThat(application.getEstimatedResolutionAt()).isEqualTo(FIXED_ETA);
+        verify(auditLogService, never()).append(any(), any(EtaSet.class));
     }
 
     private static ApplicationRepository applicationRepository(

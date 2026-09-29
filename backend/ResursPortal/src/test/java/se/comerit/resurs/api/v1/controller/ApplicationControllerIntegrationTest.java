@@ -143,8 +143,12 @@ class ApplicationControllerIntegrationTest {
             assertThat(app.getPurpose()).isEqualTo("Rörelsekapital");
             assertThat(app.getRequestedAmount()).isEqualByComparingTo("300000");
 
-            // Audit log table must contain both expected entries, created before scoring.
-            assertThat(auditLogRepository.findAll()).hasSize(2);
+            // Audit log table carries the full submit+score trail: the submit
+            // transaction wrote APPLICATION_CREATED and a valued ETA_SET
+            // synchronously; the async scoring appended SCORING_RUN and then a
+            // final ETA_SET reflecting its outcome (manual-review refresh or
+            // decision clear).
+            assertThat(auditLogRepository.findAll()).hasSize(4);
             List<String> entries = auditLogRepository.findAll().stream()
                     .sorted((a, b) -> Long.compare(a.getSequenceNumber(), b.getSequenceNumber()))
                     .map(AuditLog::getEntry)
@@ -152,7 +156,11 @@ class ApplicationControllerIntegrationTest {
             assertThat(entries.get(0))
                     .contains("\"action\":\"APPLICATION_CREATED\"")
                     .contains("\"orgNumber\":\"556000-1234\"");
-            assertThat(entries.get(1)).contains("\"action\":\"SCORING_RUN\"");
+            assertThat(entries.get(1))
+                    .contains("\"action\":\"ETA_SET\"")
+                    .contains("\"estimatedResolutionAt\":");
+            assertThat(entries.get(2)).contains("\"action\":\"SCORING_RUN\"");
+            assertThat(entries.get(3)).contains("\"action\":\"ETA_SET\"");
 
             // A decision/reason should be produced by scoring.
             assertThat(app.getDecisionReason()).isNotBlank();
@@ -160,10 +168,17 @@ class ApplicationControllerIntegrationTest {
 
         private void awaitScoringComplete() throws InterruptedException {
             for (int i = 0; i < 50; i++) {
-                boolean scoringRun = auditLogRepository.findAll().stream()
+                List<String> entries = auditLogRepository.findAll().stream()
                         .map(AuditLog::getEntry)
-                        .anyMatch(entry -> entry.contains("SCORING_RUN"));
-                if (scoringRun) {
+                        .toList();
+                boolean scoringRun = entries.stream().anyMatch(entry -> entry.contains("SCORING_RUN"));
+                // The async run writes SCORING_RUN and its outcome ETA_SET as
+                // separate repository transactions; wait for both so the trail
+                // assertions never race the second commit.
+                boolean outcomeEtaSet = entries.stream()
+                        .filter(entry -> entry.contains("\"action\":\"ETA_SET\""))
+                        .count() >= 2;
+                if (scoringRun && outcomeEtaSet) {
                     return;
                 }
                 Thread.sleep(200);
@@ -230,6 +245,10 @@ class ApplicationControllerIntegrationTest {
                     .content(requestJsonWithAmount(50000)))
                     .andExpect(status().isOk());
 
+            // Wait for the async scoring so no in-flight thread races the next
+            // test's table cleanup with a late SCORING_RUN audit insert.
+            awaitScoringComplete();
+
             assertThat(applicationRepository.findAll()).hasSize(1);
         }
 
@@ -247,6 +266,10 @@ class ApplicationControllerIntegrationTest {
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(requestJsonWithAmount(10000000)))
                     .andExpect(status().isOk());
+
+            // Wait for the async scoring so no in-flight thread races the next
+            // test's table cleanup with a late SCORING_RUN audit insert.
+            awaitScoringComplete();
 
             assertThat(applicationRepository.findAll()).hasSize(1);
         }

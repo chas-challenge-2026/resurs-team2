@@ -2,6 +2,8 @@
 
 B2B-kreditansökningsportal för Resurs Bank. Företag ansöker om kredit, laddar upp årsredovisning, och får ett kreditbeslut baserat på finansiella nyckeltal.
 
+Ansökan är **spårbar**: statusflödet (`PENDING_DOCS → SCORING_IN_PROGRESS → UNDER_REVIEW → APPROVED/REJECTED`) och ett uppskattat beslutstidpunkt (`estimatedResolutionAt`, driven av `resurs.sla.*` i `application.properties`) exponeras i API:t.
+
 ## Snabbstart
 
 Projektet byggs med en **enhetlig Makefile** som orkestrerar React-frontenden (Vite/npm), Spring Boot-backenden (Maven/`./mvnw`) och den framtida C++-modulen (CMake). Alla artefakter kopieras till en gemensam `target/`-katalog.
