@@ -16,7 +16,10 @@ interface CreditPanelProps {
   financialMetrics: FinancialMetricsData;
 }
 
-export const CreditPanel: React.FC<CreditPanelProps> = ({ application, financialMetrics }) => {
+export const CreditPanel: React.FC<CreditPanelProps> = ({
+  application,
+  financialMetrics,
+}) => {
   const [showFinancialMetrics, setShowFinancialMetrics] = useState(false);
   const financialMetricsRef = useRef<HTMLDivElement>(null);
 
@@ -46,44 +49,46 @@ export const CreditPanel: React.FC<CreditPanelProps> = ({ application, financial
         {formatDateTime(application.updatedAt)}
       </p>
 
-        <button
-          type="button"
-          className={`btn btn-default ${styles.financialMetricsButton} ${
-            showFinancialMetrics ? styles.financialMetricsButtonActive : ""
-          }`}
-          onClick={() => {
-            if (!showFinancialMetrics) {
-              setShowFinancialMetrics(true);
+      <button
+        type="button"
+        className={
+          showFinancialMetrics
+            ? styles.financialMetricsButtonActive
+            : styles.financialMetricsButton
+        }
+        onClick={() => {
+          if (!showFinancialMetrics) {
+            setShowFinancialMetrics(true);
 
-              setTimeout(() => {
-                financialMetricsRef.current?.scrollIntoView({
-                  behavior: "smooth",
-                  block: "start",
-                });
-              }, 0);
-            } else {
-              setShowFinancialMetrics(false);
-
-              window.scrollTo({
-                top: 0,
+            setTimeout(() => {
+              financialMetricsRef.current?.scrollIntoView({
                 behavior: "smooth",
+                block: "start",
               });
-            }
-          }}
-        >
-          {showFinancialMetrics
-            ? "Dölj finansiella uppgifter"
-            : "Visa finansiella uppgifter"}
-        </button>
+            }, 0);
+          } else {
+            setShowFinancialMetrics(false);
 
-        {showFinancialMetrics && (
-          <div
-            ref={financialMetricsRef}
-            className={styles.financialMetricsContainer}
-          >
-            <FinancialMetricsPanel financialMetrics={financialMetrics} />
-          </div>
-        )}
+            window.scrollTo({
+              top: 0,
+              behavior: "smooth",
+            });
+          }
+        }}
+      >
+        {showFinancialMetrics
+          ? "Dölj finansiella uppgifter"
+          : "Visa finansiella uppgifter"}
+      </button>
+
+      {showFinancialMetrics && (
+        <div
+          ref={financialMetricsRef}
+          className={styles.financialMetricsContainer}
+        >
+          <FinancialMetricsPanel financialMetrics={financialMetrics} />
+        </div>
+      )}
     </Panel>
   );
 };
