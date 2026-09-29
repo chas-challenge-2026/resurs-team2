@@ -35,7 +35,7 @@ export const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
       {documents.length > 0 && (
         <ul className="document-list">
           {documents.map((doc) => (
-            <li key={doc.id}>
+            <li key={doc.uuid}>
               📄 {doc.filename} ({doc.docType})
             </li>
           ))}
