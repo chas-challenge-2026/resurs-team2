@@ -85,6 +85,8 @@ extern "C"
         {
             resurs::audit::PublicKey pub;
             std::memcpy(pub.data(), public_key, resurs::audit::kPubKeyLen);
+            resurs::audit::EvpPkeyPtr parsedPub = resurs::audit::parsePublicKey(pub);
+
             *first_invalid_index = -1;
 
             const char *entryCursor = entries;
@@ -109,7 +111,7 @@ extern "C"
                 resurs::audit::Hash stored;
                 std::memcpy(stored.data(), hashes + i * resurs::audit::kHashLen, resurs::audit::kHashLen);
 
-                if (expected != stored || !resurs::audit::verify(pub, stored, sigCursor, signature_lens[i]))
+                if (expected != stored || !resurs::audit::verify(parsedPub.get(), stored, sigCursor, signature_lens[i]))
                 {
                     *first_invalid_index = static_cast<int>(i);
                     break;

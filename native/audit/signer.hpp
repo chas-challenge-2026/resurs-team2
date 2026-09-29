@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <cstddef>
 
+#include <memory>
 #include <openssl/evp.h>
 
 #include "hash_chain.hpp" // for resurs::audit::Hash
@@ -17,6 +18,12 @@ namespace resurs::audit
 
     using Signature = std::array<std::uint8_t, kSigLen>;
     using PublicKey = std::array<std::uint8_t, kPubKeyLen>;
+    struct EvpPkeyDeleter
+    {
+        void operator()(EVP_PKEY *p) const noexcept { EVP_PKEY_free(p); }
+    };
+
+    using EvpPkeyPtr = std::unique_ptr<EVP_PKEY, EvpPkeyDeleter>;
 
     // Signs a 32-byte chain hash with an Ed25519 private key.
     // privKey must be an EVP_PKEY of type EVP_PKEY_ED25519 (caller owns it).
@@ -28,6 +35,16 @@ namespace resurs::audit
     // verifier must keep going and report an index, not unwind on the first bad
     // entry). Throws std::runtime_error only for a genuine OpenSSL failure.
     bool verify(const PublicKey &pub, const Hash &message,
+                const unsigned char *sig, std::size_t sigLen);
+
+    // Parses a raw 32-byte Ed25519 public key into an EVP_PKEY, once, for reuse
+    // across many verify() calls (e.g. inside a verify_chain loop).
+    // Throws std::runtime_error on OpenSSL failure.
+    EvpPkeyPtr parsePublicKey(const PublicKey &pub);
+
+    // Same as verify(const PublicKey&, ...), but takes an already-parsed key -
+    // avoids re-parsing the same public key on every call.
+    bool verify(EVP_PKEY *pubKey, const Hash &message,
                 const unsigned char *sig, std::size_t sigLen);
 
     // Extracts the raw 32-byte public key from an Ed25519 EVP_PKEY (private or
