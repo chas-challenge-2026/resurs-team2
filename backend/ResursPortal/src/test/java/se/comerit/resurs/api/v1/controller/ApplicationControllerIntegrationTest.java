@@ -394,11 +394,11 @@ class ApplicationControllerIntegrationTest {
                 "INSERT INTO companies (id, org_number, org_number_index, company_name, authorized_signatory) VALUES (770, '556000-1234', X'dedd7d2467a47aac7cc703665899fded7d8013ddecbbbf69e0ff366fd4812ed7', 'Malmö Fastigheter AB', 'Test Person')",
                 "INSERT INTO applications (id, company_id, requested_amount, purpose, status, financial_data) VALUES (770, 770, 300000.00, 'Rörelsekapital', 'UNDER_REVIEW', '" + FINANCIAL_DATA + "')"
         })
-        void companyCannotSeeFinancialData() throws Exception {
+        void companyCanSeeFinancialDataOnOwnApplication() throws Exception {
             mockMvc.perform(get("/api/v1/applications/770"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.application.id").value(770))
-                    .andExpect(jsonPath("$.financialData").doesNotExist());
+                    .andExpect(jsonPath("$.financialData").value(FINANCIAL_DATA));
         }
 
         @Test
