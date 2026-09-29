@@ -12,6 +12,15 @@ endif()
 
 find_package(OpenSSL REQUIRED)
 
+# AddressSanitizer + UndefinedBehaviorSanitizer for every target (use `make asan`).
+# -fno-sanitize-recover makes a UBSan finding abort, so the test fails instead of
+# just printing a warning.
+option(RESURS_SANITIZE "Build with ASAN + UBSan" OFF)
+if(RESURS_SANITIZE)
+    add_compile_options(-fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer)
+    add_link_options(-fsanitize=address,undefined)
+endif()
+
 enable_testing()
 
 add_subdirectory(crypto)

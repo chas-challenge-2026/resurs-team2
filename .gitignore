@@ -19,6 +19,7 @@ dist/
 
 # Native C++
 native/build/
+native/build-asan/
 
 # Local file uploads (created by application-local profile)
 uploads/
