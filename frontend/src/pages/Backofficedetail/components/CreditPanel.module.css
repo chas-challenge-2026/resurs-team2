@@ -1,7 +1,74 @@
-.financialMetricsButtonActive  {
-  transform: translateY(-10px);
+.financialMetricsButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  min-height: 34px;
+  padding: 6px 16px;
+
+  border: 1px solid var(--color-primary);
+  border-radius: 999px;
+
+  background-color: var(--color-surface);
+  color: var(--color-text);
+
+  font-family: var(--font-family);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-tight);
+
+  cursor: pointer;
+  
+  transition:
+    background-color 150ms ease,
+    color 150ms ease,
+    border-color 150ms ease;
 }
 
-.financialMetricsContainer {
-  scroll-margin-top: 20px;
+.financialMetricsButton:hover {
+  background-color: var(--color-info-border);
+  color: var(--color-on-primary);
+}
+
+.financialMetricsButton:focus-visible {
+  outline: 3px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.financialMetricsButtonActive {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  min-height: 34px;
+  padding: 6px 16px;
+
+  border: 1px solid var(--color-primary);
+  border-radius: 999px;
+
+  background-color: var(--color-surface);
+  color: var(--color-text);
+
+  font-family: var(--font-family);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-tight);
+
+  cursor: pointer;
+  margin-bottom: 15px;
+
+  transition:
+    background-color 150ms ease,
+    color 150ms ease,
+    border-color 150ms ease;
+}
+
+.financialMetricsButtonActive:hover {
+ background-color: var(--color-info-border);
+  color: var(--color-on-primary);
+}
+
+.financialMetricsButtonActive:focus-visible {
+  outline: 3px solid var(--color-focus-ring);
+  outline-offset: 2px;
 }
