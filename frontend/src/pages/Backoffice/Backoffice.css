@@ -3,7 +3,9 @@
 .backoffice-page {
   width: 100%;
   max-width: var(--container-width);
+
   margin: 0 auto;
+
   padding:
     var(--spacing-2xl)
     var(--spacing-lg)
@@ -16,6 +18,7 @@
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
+
   gap: var(--spacing-xl);
 
   margin-bottom: var(--spacing-xl);
@@ -37,6 +40,7 @@
 .backoffice-title-row {
   display: flex;
   align-items: center;
+
   gap: 12px;
 }
 
@@ -87,6 +91,7 @@
 .backoffice-user {
   display: flex;
   flex-direction: column;
+
   gap: 2px;
 
   min-width: 190px;
@@ -114,6 +119,7 @@
 .backoffice-content {
   display: flex;
   flex-direction: column;
+
   gap: var(--spacing-lg);
 }
 
@@ -132,6 +138,7 @@
 
 .backoffice-card-primary {
   border-color: var(--color-border-strong);
+
   box-shadow: var(--shadow-box);
 }
 
@@ -139,6 +146,7 @@
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
+
   gap: var(--spacing-md);
 
   padding:
@@ -146,6 +154,7 @@
     var(--spacing-lg);
 
   background-color: var(--color-surface);
+
   border-bottom: 1px solid var(--color-border);
 }
 
@@ -234,12 +243,13 @@
 
 .backoffice-table-wrapper {
   width: 100%;
+
   overflow-x: auto;
 }
 
 .backoffice-table {
   width: 100%;
-  min-width: 900px;
+  min-width: 760px;
 
   border-collapse: collapse;
 }
@@ -282,15 +292,19 @@
 
 .backoffice-table tbody tr {
   transition:
-    background-color var(--transition-fast);
+    background-color
+    var(--transition-fast);
 }
 
 .backoffice-table tbody tr:hover {
   background-color: var(--color-primary-soft);
 }
 
+/* Table content */
+
 .backoffice-id {
   color: var(--color-muted);
+
   font-weight: var(--font-weight-semibold);
 
   white-space: nowrap;
@@ -313,26 +327,13 @@
   max-width: 240px;
 }
 
-.backoffice-score {
-  display: inline-flex;
-
-  padding:
-    4px
-    8px;
-
-  color: var(--color-primary);
-  background-color: var(--color-primary-soft);
-
-  border-radius: var(--radius-pill);
-
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-semibold);
-
+.backoffice-date {
   white-space: nowrap;
 }
 
 .backoffice-table-action {
   text-align: right !important;
+
   white-space: nowrap;
 }
 
@@ -413,6 +414,7 @@
   .backoffice-header {
     align-items: flex-start;
     flex-direction: column;
+
     gap: var(--spacing-md);
   }
 
