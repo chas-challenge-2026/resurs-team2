@@ -73,7 +73,7 @@ class ApplicationServiceTest {
         scoringService = mock(ScoringService.class);
         objectMapper = new ObjectMapper();
         auditLogService = new AuditLogService(auditLogRepository, mock(ApplicationRepository.class),
-                objectMapper);
+                objectMapper, new DummyAuditSigningService());
 
         caseWorkerAssignmentService = mock(CaseWorkerAssignmentService.class);
 

@@ -26,16 +26,22 @@ public class AuditLogService {
     private final AuditLogRepository auditLogRepository;
     private final ApplicationRepository applicationRepository;
     private final ObjectMapper objectMapper;
+    private final AuditSigningService signer;
 
     public AuditLogService(AuditLogRepository auditLogRepository, ApplicationRepository applicationRepository,
-            ObjectMapper objectMapper) {
+            ObjectMapper objectMapper, AuditSigningService signer) {
         this.auditLogRepository = auditLogRepository;
         this.applicationRepository = applicationRepository;
         this.objectMapper = objectMapper;
+        this.signer = signer;
     }
 
     /**
-     * Appends one entry to an application's audit chain.
+     * Appends one signed entry to an application's audit chain.
+     *
+     * <p>The entry JSON is signed together with the predecessor's hash, so the stored
+     * hash and signature commit to both the content and the position of the entry in
+     * the chain. Altering an entry, or reordering it, breaks the chain at that point.
      *
      * <p>Concurrent appends to the same application are serialised, so each entry is
      * assigned the next sequence number and chained to the entry before it. Appending to
@@ -56,13 +62,13 @@ public class AuditLogService {
 
         String entryJson = toJson(entry);
         long seq = auditLogRepository.getNextSequenceNumber(application) + 1;
+        // Empty means the application has no entries yet: sign a new chain from genesis
+        // rather than chaining from a zero-length "link".
         byte[] prevHash = auditLogRepository.findPreviousHash(application).orElse(null);
 
-        // TODO: hash and sign via ResursAuditServiceImpl once it is wired as a bean.
-        // Until then entries are stored with empty hash/signature and the chain is not
-        // verifiable. The predecessor's digest is read above so signing can chain each
-        // entry, and is deliberately not stored: it is derivable from the preceding row.
-        return auditLogRepository.save(new AuditLog(application, seq, new byte[0], new byte[0], entryJson));
+        AuditSigningService.SignedEntry signed = signer.signEntry(entryJson, prevHash);
+        return auditLogRepository.save(
+                new AuditLog(application, seq, signed.hash(), signed.signature(), entryJson));
     }
 
     @Nonnull

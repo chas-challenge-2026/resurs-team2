@@ -61,7 +61,8 @@ class ScoringServiceScoreApplicationTest {
         repository = mock(ApplicationRepository.class);
         auditLogRepository = mock(AuditLogRepository.class);
         objectMapper = new ObjectMapper();
-        auditLogService = new AuditLogService(auditLogRepository, repository, objectMapper);
+        auditLogService = new AuditLogService(auditLogRepository, repository, objectMapper,
+                new DummyAuditSigningService());
         emailService = mock(EmailService.class);
         decisionEngine = mock(DecisionEngine.class);
         etaService = mock(EtaService.class);

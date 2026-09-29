@@ -16,6 +16,8 @@ import org.springframework.security.crypto.argon2.Argon2PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import se.comerit.resurs.api.v1.service.AuditSigningService;
+import se.comerit.resurs.api.v1.service.AuditSigningService.SignedEntry;
 import se.comerit.resurs.api.v1.service.ResursCryptoService;
 import se.comerit.resurs.entity.*;
 import se.comerit.resurs.repository.ApplicationRepository;
@@ -88,13 +90,15 @@ public class PiiInitializer implements ApplicationRunner {
     private final AuditLogRepository auditLogRepository;
     private final CaseWorkerRepository caseWorkerRepository;
     private final Argon2PasswordEncoder argon2;
+    private final AuditSigningService auditSigningService;
 
     public PiiInitializer(PiiCodec codec, ResursCryptoService crypto, JdbcTemplate jdbcTemplate,
             CompanyRepository companyRepository,
             ApplicationRepository applicationRepository,
             AuditLogRepository auditLogRepository,
             CaseWorkerRepository caseWorkerRepository,
-            Argon2PasswordEncoder argon2) {
+            Argon2PasswordEncoder argon2,
+            AuditSigningService auditSigningService) {
         this.codec = codec;
         this.crypto = crypto;
         this.jdbcTemplate = jdbcTemplate;
@@ -103,6 +107,7 @@ public class PiiInitializer implements ApplicationRunner {
         this.auditLogRepository = auditLogRepository;
         this.caseWorkerRepository = caseWorkerRepository;
         this.argon2 = argon2;
+        this.auditSigningService = auditSigningService;
     }
 
     @Override
@@ -216,11 +221,15 @@ public class PiiInitializer implements ApplicationRunner {
             applicationRepository.lockById(application.getId());
 
             long seq = auditLogRepository.getNextSequenceNumber(application);
-            // Seed entries are not signed: hash/signature are zero-length placeholders so
-            // the NOT NULL BYTEA columns are satisfied. A chain built this way will not
-            // verify against the real Ed25519 public key.
-            auditLogRepository.save(new AuditLog(application, seq + 1, new byte[0], new byte[0], created));
-            auditLogRepository.save(new AuditLog(application, seq + 2, new byte[0], new byte[0], scoring));
+            // Signed like any other entry: a zero-length placeholder would not be a chain
+            // link, and the next append would have nothing valid to chain from.
+            byte[] previousHash = null;
+            for (String entry : new String[] { created, scoring }) {
+                SignedEntry signed = auditSigningService.signEntry(entry, previousHash);
+                auditLogRepository.save(
+                        new AuditLog(application, ++seq, signed.hash(), signed.signature(), entry));
+                previousHash = signed.hash();
+            }
             log.info("Seeded audit log for {}", SEED[0].orgNumber());
         }
     }
