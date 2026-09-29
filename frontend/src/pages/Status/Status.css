@@ -214,6 +214,17 @@
 
 /* Scoring */
 
+.status-scoring-panel {
+  position: relative;
+  z-index: 2;
+
+  overflow: visible;
+}
+
+.status-scoring-panel .panel-heading {
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+
 .status-scoring-summary,
 .status-scoring-row {
   display: grid;

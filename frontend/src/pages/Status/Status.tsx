@@ -18,6 +18,7 @@ export const Status = () => {
     application,
     workerName,
     documents,
+    financialData,
     loading,
     error,
   } = useApplicationDetails(id);
@@ -47,7 +48,10 @@ export const Status = () => {
 
       <div className="status-layout">
         <aside className="status-side-column">
-          <ScoringResultPanel scoringResult={application.scoringResult} />
+          <ScoringResultPanel
+            scoringResult={application.scoringResult}
+            financialData={financialData}
+          />
 
           <Panel title="Handläggare">
             <p className="status-worker">

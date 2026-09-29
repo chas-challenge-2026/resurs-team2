@@ -193,6 +193,6 @@ public class ApplicationService {
         if (!app.getCompany().getOrgNumber().equals(orgNumber)) {
             throw new ApplicationNotFoundException(id);
         }
-        return ApplicationMapper.toDetailsResponse(app);
+        return ApplicationMapper.toDetailsResponse(app, app.getFinancialData());
     }
 }
