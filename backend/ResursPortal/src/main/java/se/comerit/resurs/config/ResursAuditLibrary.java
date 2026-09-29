@@ -21,21 +21,31 @@ public interface ResursAuditLibrary extends Library {
     int RESURS_AUDIT_ERR_BUFFER_SMALL = -4;
     int RESURS_AUDIT_ERR_INTERNAL = -5;
 
-    /** Load the Ed25519 signing key (PEM) from {@code keyFilePath}. Call once at startup. */
+    /**
+     * Load the Ed25519 signing key (PEM) from {@code keyFilePath}. Call once at
+     * startup.
+     */
     int resurs_audit_init(String keyFilePath);
 
     /**
      * Hash one audit entry chained to the previous entry's hash, and sign the hash.
      *
-     * @param previousHash    {@code RESURS_AUDIT_HASH_LEN} bytes, or null for the first entry in a chain
+     * @param previousHash    {@code RESURS_AUDIT_HASH_LEN} bytes, or null for the
+     *                        first entry in a chain
      *                        (treated as 32 zero bytes)
      * @param entryJson       entry JSON
-     * @param entryLength     length of {@code entryJson} in bytes (not the Java char count)
-     * @param hashOut         out: {@code RESURS_AUDIT_HASH_LEN} bytes, written in full. On success
+     * @param entryLength     length of {@code entryJson} in bytes (not the Java
+     *                        char count)
+     * @param hashOut         out: {@code RESURS_AUDIT_HASH_LEN} bytes, written in
+     *                        full. On success
      *                        {@code hashOut = SHA-256(previousHash || entryJson)}
      * @param signatureOut    out: at least {@code RESURS_AUDIT_SIG_LEN} bytes
-     * @param signatureLength in/out: caller sets the capacity of {@code signatureOut}; native code
-     *                        sets it to the number of bytes written (always 64 for Ed25519)
+     * @param signatureLength output-only: native code overwrites it with the number
+     *                        of bytes
+     *                        written (always 64 for Ed25519). The incoming value is
+     *                        never read,
+     *                        so {@code signatureOut} must simply be at least
+     *                        {@code RESURS_AUDIT_SIG_LEN} bytes
      */
     int resurs_audit_chain_entry(
             Pointer previousHash, // 32 Bytes | null
@@ -43,9 +53,11 @@ public interface ResursAuditLibrary extends Library {
             Pointer hashOut, Pointer signatureOut, LongByReference signatureLength);
 
     /**
-     * Recompute every hash from the actual entry content and verify every signature.
+     * Recompute every hash from the actual entry content and verify every
+     * signature.
      *
-     * @param hashes            {@code entryCount * RESURS_AUDIT_HASH_LEN} bytes, in chain order
+     * @param hashes            {@code entryCount * RESURS_AUDIT_HASH_LEN} bytes, in
+     *                          chain order
      * @param signatures        {@code entryCount} signatures, same order
      * @param signatureLens     {@code entryCount} {@code size_t} values, same order
      * @param entries           {@code entryCount} JSON blobs back-to-back
@@ -54,16 +66,20 @@ public interface ResursAuditLibrary extends Library {
      * @param entriesLen        total byte length of {@code entries}
      * @param signaturesLen     total byte length of {@code signatures}
      * @param publicKey         {@code RESURS_AUDIT_PUBKEY_LEN} bytes
-     * @param firstInvalidIndex out: -1 if the whole chain verifies, otherwise the index of the
-     *                        first entry failing either the hash or the signature check
-     * @return {@code RESURS_AUDIT_OK} once verification ran to completion, regardless of the
-     * result; error codes are reserved for operational failures (bad args, etc.)
+     * @param firstInvalidIndex out: -1 if the whole chain verifies, otherwise the
+     *                          index of the
+     *                          first entry failing either the hash or the signature
+     *                          check
+     * @return {@code RESURS_AUDIT_OK} once verification ran to completion,
+     *         regardless of the
+     *         result; error codes are reserved for operational failures (bad args,
+     *         etc.)
      */
     int resurs_audit_verify_chain(
             Pointer hashes,
             Pointer signatures,
-            LongByReference signatureLens,
-            Pointer entries, LongByReference entryLens,
+            Pointer signatureLens,
+            Pointer entries, Pointer entryLens,
             long entryCount, long entriesLen, long signaturesLen,
             Pointer publicKey,
             IntByReference firstInvalidIndex);
