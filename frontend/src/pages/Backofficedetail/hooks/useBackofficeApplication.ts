@@ -131,6 +131,14 @@ export const useBackofficeApplication = (
     }
   };
 
+  const handleDocumentDeleted = (documentId: string) => {
+  setDocuments((currentDocuments) =>
+    currentDocuments.filter(
+      (document) => document.uuid !== documentId,
+    ),
+  );
+};
+
   return {
     application,
     financialMetrics,
@@ -141,5 +149,6 @@ export const useBackofficeApplication = (
     decisionLoading,
     error,
     handleDecision,
+    handleDocumentDeleted,
   };
 };
