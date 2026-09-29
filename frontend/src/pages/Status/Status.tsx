@@ -55,7 +55,7 @@ export const Status = () => {
 
           <Panel title="Handläggare">
             <p className="status-worker">
-              {formatWorker(application.status, workerName)}
+              {formatWorker(application.status, workerName ?? undefined)}
             </p>
           </Panel>
         </aside>

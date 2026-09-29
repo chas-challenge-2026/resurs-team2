@@ -149,9 +149,6 @@ export const Backofficedetail = () => {
             scoringResult={
               application.scoringResult
             }
-            financialMetrics={
-              financialMetrics
-            }
           />
         </div>
 
