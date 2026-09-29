@@ -1,0 +1,94 @@
+.metric-tooltip {
+  position: relative;
+
+  display: inline-flex;
+  align-items: center;
+}
+
+.metric-tooltip-trigger {
+  display: inline-flex;
+  align-items: center;
+
+  gap: var(--spacing-xs);
+
+  cursor: help;
+}
+
+.metric-tooltip-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 18px;
+  height: 18px;
+
+  color: var(--color-muted);
+  border: 1px solid var(--color-border);
+  border-radius: 50%;
+
+  font-size: 12px;
+  font-weight: var(--font-weight-bold);
+  line-height: 1;
+}
+
+.metric-tooltip-content {
+  position: absolute;
+  z-index: 20;
+
+  top: calc(100% + 8px);
+  left: 0;
+
+  display: none;
+  flex-direction: column;
+
+  width: 300px;
+  padding: var(--spacing-md);
+
+  color: var(--color-text);
+  background-color: var(--color-white);
+
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+
+  box-shadow: var(--shadow-lg);
+
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-relaxed);
+}
+
+.metric-tooltip:hover .metric-tooltip-content,
+.metric-tooltip:focus-within .metric-tooltip-content {
+  display: flex;
+}
+
+.metric-tooltip-title {
+  margin-bottom: var(--spacing-xs);
+
+  color: var(--color-text-strong);
+}
+
+.metric-tooltip-description {
+  margin-bottom: var(--spacing-sm);
+}
+
+.metric-tooltip-formula {
+  color: var(--color-muted);
+
+  font-weight: var(--font-weight-semibold);
+}
+
+.metric-tooltip-calculation {
+  margin-top: var(--spacing-xs);
+  padding: var(--spacing-sm);
+
+  color: var(--color-text-strong);
+  background-color: var(--color-surface-muted);
+
+  border-radius: var(--radius);
+}
+
+@media (max-width: 600px) {
+  .metric-tooltip-content {
+    width: 260px;
+  }
+}
