@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -285,6 +286,37 @@ class AuthEndpointIntegrationTest {
                     .andExpect(jsonPath("$.role").value("CASEWORKER"))
                     .andExpect(jsonPath("$.name").value("Karin Handläggare"));
         }
+
+        @Test
+        @DisplayName("Blocks case worker login after five failed attempts")
+        void blocksCaseWorkerAfterFiveFailedAttempts() throws Exception {
+            String email = "missing-" + UUID.randomUUID() + "@resurs.se";
+            String ip = UUID.randomUUID().toString();
+            String body = "{\"email\":\"" + email + "\",\"password\":\"wrong-password\"}";
+
+            for (int i = 0; i < 5; i++) {
+                mockMvc.perform(post("/api/v1/auth/login/caseWorker")
+                                .with(request -> {
+                                    request.setRemoteAddr(ip);
+                                    return request;
+                                })
+                                .header("User-Agent", UA)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(body))
+                        .andExpect(status().isUnauthorized());
+            }
+
+            mockMvc.perform(post("/api/v1/auth/login/caseWorker")
+                            .with(request -> {
+                                request.setRemoteAddr(ip);
+                                return request;
+                            })
+                            .header("User-Agent", UA)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(body))
+                    .andExpect(status().isTooManyRequests());
+        }
+
     }
 
     @Nested
