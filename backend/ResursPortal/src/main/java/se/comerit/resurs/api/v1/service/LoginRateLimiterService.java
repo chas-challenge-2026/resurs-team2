@@ -1,22 +1,25 @@
-package se.comerit.resurs.entity;
+package se.comerit.resurs.api.v1.service;
 
 
 import io.github.bucket4j.Bucket;
-import org.springframework.stereotype.Service;
-
 import java.time.Duration;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 
-    @Service
-    public class LoginRateLimiter {
 
-        private static final int EMAIL_LIMIT = 5;
-        private static final int IP_LIMIT = 20;
+    public class LoginRateLimiterService {
+
+        private final int emailLimit;
+        private final int ipLimit;
 
         private final Map<String, Bucket> emailBuckets = new ConcurrentHashMap<>();
         private final Map<String, Bucket> ipBuckets = new ConcurrentHashMap<>();
+
+        public LoginRateLimiterService(int emailLimit, int ipLimit) {
+           this.emailLimit = emailLimit;
+           this.ipLimit = ipLimit;
+        }
 
         public boolean isBlocked(String email, String ip) {
             return getEmailBucket(email).getAvailableTokens() == 0
@@ -31,14 +34,14 @@ import java.util.concurrent.ConcurrentHashMap;
         private Bucket getEmailBucket(String email) {
             return emailBuckets.computeIfAbsent(
                     email,
-                    key -> createBucket(EMAIL_LIMIT)
+                    key -> createBucket(emailLimit)
             );
         }
 
         private Bucket getIpBucket(String ip) {
             return ipBuckets.computeIfAbsent(
                     ip,
-                    key -> createBucket(IP_LIMIT)
+                    key -> createBucket(ipLimit)
             );
         }
 

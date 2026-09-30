@@ -7,7 +7,6 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.CookieValue;
@@ -24,7 +23,7 @@ import se.comerit.resurs.api.v1.dto.CaseWorkerLoginRequest;
 import se.comerit.resurs.api.v1.dto.CompanyLoginRequest;
 import se.comerit.resurs.api.v1.dto.PrincipalResponse;
 import se.comerit.resurs.api.v1.service.AuthService;
-import se.comerit.resurs.entity.LoginRateLimiter;
+import se.comerit.resurs.api.v1.service.LoginRateLimiterService;
 import se.comerit.resurs.exception.InvalidCredentialsException;
 import se.comerit.resurs.security.AuthTokens;
 import se.comerit.resurs.security.SessionCookie;
@@ -46,9 +45,9 @@ import se.comerit.resurs.security.UserPrincipal;
 public class AuthController {
     private final AuthService service;
     private final SessionFingerprint fingerprint;
-    private final LoginRateLimiter rateLimiter;
+    private final LoginRateLimiterService rateLimiter;
 
-    public AuthController(AuthService service, SessionFingerprint fingerprint, LoginRateLimiter rateLimiter) {
+    public AuthController(AuthService service, SessionFingerprint fingerprint, LoginRateLimiterService rateLimiter) {
         this.service = service;
         this.fingerprint = fingerprint;
         this.rateLimiter = rateLimiter;

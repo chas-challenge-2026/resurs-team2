@@ -4,13 +4,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
 
-import se.comerit.resurs.entity.LoginRateLimiter;
-
 class LoginRateLimiterTest {
 
     @Test
     void blocksEmailAfterFiveRecordedFailures() {
-        LoginRateLimiter limiter = new LoginRateLimiter();
+        LoginRateLimiterService limiter = new LoginRateLimiterService(5, 20);
         String email = "user@example.com";
         String ip = "192.0.2.1";
 
@@ -24,7 +22,7 @@ class LoginRateLimiterTest {
 
     @Test
     void blocksIpAfterTwentyRecordedFailures() {
-        LoginRateLimiter limiter = new LoginRateLimiter();
+        LoginRateLimiterService limiter = new LoginRateLimiterService(5,20);
         String ip = "192.0.2.1";
 
         for (int i = 0; i < 20; i++) {
@@ -38,7 +36,7 @@ class LoginRateLimiterTest {
 
     @Test
     void tracksEmailAndIpLimitsIndependently() {
-        LoginRateLimiter limiter = new LoginRateLimiter();
+        LoginRateLimiterService limiter = new LoginRateLimiterService(5,20);
         String email = "user@example.com";
 
         for (int i = 0; i < 5; i++) {
