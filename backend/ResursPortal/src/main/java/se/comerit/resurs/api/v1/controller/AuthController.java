@@ -7,6 +7,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.CookieValue;
@@ -90,19 +91,21 @@ public class AuthController {
         }
 
         try {
-        AuthTokens tokens = service.loginCaseWorker(body.email(), body.password(), fingerprint.of(req));
-
-        rateLimiter.success(email);
+            AuthTokens tokens = service.loginCaseWorker(body.email(), body.password(), fingerprint.of(req));
 
 
-        res.addCookie(SessionCookie.access(tokens.accessToken()));
-        res.addCookie(SessionCookie.refresh(tokens.refreshToken()));
+            res.addCookie(SessionCookie.access(tokens.accessToken()));
+            res.addCookie(SessionCookie.refresh(tokens.refreshToken()));
 
-        return ResponseEntity.ok(PrincipalResponse.from(tokens));
+            return ResponseEntity.ok(PrincipalResponse.from(tokens));
 
-        } catch (InvalidCredentialsException _) {
-        rateLimiter.failed(email, ip);
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        } catch (InvalidCredentialsException _){
+            rateLimiter.recordFailure(email, ip);
+
+            return ResponseEntity
+                    .status(HttpStatus.UNAUTHORIZED)
+                    .build();
+
         }
 
     }
