@@ -113,12 +113,6 @@
   transform: translateY(-1px);
 }
 
-.primaryButton:focus-visible,
-.defaultButton:focus-visible,
-.viewButton:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 3px rgba(252, 230, 130, 0.35);
-}
 
 .primaryButton:active,
 .defaultButton:active,

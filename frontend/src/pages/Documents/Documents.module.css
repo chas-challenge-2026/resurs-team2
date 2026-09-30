@@ -121,12 +121,7 @@
   border-color: var(--color-input-hover-border);
 }
 
-.formControl:focus {
-  outline: none;
 
-  border-color: var(--color-input-focus-border);
-  box-shadow: var(--shadow-input-focus);
-}
 
 /* File input */
 
@@ -216,10 +211,7 @@
   transform: translateY(-1px);
 }
 
-.primaryButton:focus-visible {
-  outline: none;
-  box-shadow: var(--shadow-input-focus);
-}
+
 
 .primaryButton:active:not(:disabled) {
   transform: translateY(0);
@@ -288,11 +280,7 @@
   transform: translateY(-1px);
 }
 
-.secondaryButton:focus-visible,
-.dangerButton:focus-visible {
-  outline: none;
-  box-shadow: var(--shadow-input-focus);
-}
+
 
 .secondaryButton:active,
 .dangerButton:active {

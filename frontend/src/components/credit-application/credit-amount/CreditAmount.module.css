@@ -80,12 +80,7 @@
   border-color: var(--color-input-hover-border);
 }
 
-.formControl:focus {
-  outline: none;
 
-  border-color: var(--color-input-focus-border);
-  box-shadow: var(--shadow-input-focus);
-}
 
 .formControl::placeholder {
   color: var(--color-muted);
@@ -203,11 +198,7 @@
 
 /* Button states */
 
-.primaryButton:focus-visible,
-.secondaryButton:focus-visible {
-  outline: none;
-  box-shadow: var(--shadow-input-focus);
-}
+
 
 .primaryButton:active:not(:disabled),
 .secondaryButton:active:not(:disabled) {

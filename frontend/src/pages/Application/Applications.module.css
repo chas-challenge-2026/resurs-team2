@@ -115,10 +115,7 @@
   transform: translateY(-1px);
 }
 
-.primaryButton:focus-visible {
-  outline: none;
-  box-shadow: var(--shadow-input-focus);
-}
+
 
 .primaryButton:active {
   transform: translateY(0);
