@@ -43,8 +43,9 @@ CREATE TABLE audit_log (
     id UUID DEFAULT RANDOM_UUID() PRIMARY KEY,
     application_id INT NOT NULL REFERENCES applications(id),
     sequence_number BIGINT NOT NULL,
-    hash VARCHAR(512) NOT NULL,
-    previous_hash VARCHAR(512) NOT NULL,
+    hash BYTEA NOT NULL,
+    signature BYTEA NOT NULL,
     entry TEXT NOT NULL,
-    timestamp TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+    timestamp TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uq_audit_log_application_sequence UNIQUE (application_id, sequence_number)
 );
