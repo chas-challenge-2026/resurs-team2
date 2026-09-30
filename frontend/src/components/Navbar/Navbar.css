@@ -167,8 +167,9 @@
 
 /* Keyboard focus */
 .navbar-wrapper a:focus-visible,
-.logout-btn:focus-visible {
-  outline: 2px solid var(--color-accent);
+.logout-btn:focus-visible,
+.darkmode-button:focus-visible {
+  outline: 3px solid var(--color-focus-ring);
   outline-offset: 3px;
   border-radius: var(--radius-sm);
 }
