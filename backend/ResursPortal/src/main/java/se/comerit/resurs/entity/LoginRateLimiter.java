@@ -1,54 +1,52 @@
 package se.comerit.resurs.entity;
 
-import org.springframework.data.redis.core.StringRedisTemplate;
+
+import io.github.bucket4j.Bucket;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
-@Service
-public class LoginRateLimiter {
 
-    private static final int maxEmailAttempts = 5;
-    private static final int maxIpAttempts = 20;
-    private static final Duration Window = Duration.ofMinutes(15);
+    @Service
+    public class LoginRateLimiter {
 
-    private final StringRedisTemplate redisTemplate;
+        private static final int EMAIL_LIMIT = 5;
+        private static final int IP_LIMIT = 20;
 
-    public LoginRateLimiter (StringRedisTemplate redisTemplate) {
-        this.redisTemplate = redisTemplate;
-    }
+        private final Map<String, Bucket> emailBuckets = new ConcurrentHashMap<>();
+        private final Map<String, Bucket> ipBuckets = new ConcurrentHashMap<>();
 
-    public boolean isBlocked(String email, String ip) {
-        return attempts("email:" + email) >= maxEmailAttempts
-                || attempts("ip:" + ip) >= maxIpAttempts;
-    }
+        public boolean isBlocked(String email, String ip) {
+            return getEmailBucket(email).getAvailableTokens() == 0
+                    || getIpBucket(ip).getAvailableTokens() == 0;
+        }
 
-    public void failed(String email, String ip) {
-        increase("email:" + email);
-        increase("ip:" + ip);
-    }
+        public void recordFailure(String email, String ip) {
+            getEmailBucket(email).tryConsume(1);
+            getIpBucket(ip).tryConsume(1);
+        }
 
-    public void success(String email) {
-        redisTemplate.delete(key("email:" + email));
-    }
+        private Bucket getEmailBucket(String email) {
+            return emailBuckets.computeIfAbsent(
+                    email,
+                    key -> createBucket(EMAIL_LIMIT)
+            );
+        }
 
-    private int attempts(String identifier) {
-        String value = redisTemplate.opsForValue().get(key(identifier));
-        return value == null ? 0 : Integer.parseInt(value);
-    }
+        private Bucket getIpBucket(String ip) {
+            return ipBuckets.computeIfAbsent(
+                    ip,
+                    key -> createBucket(IP_LIMIT)
+            );
+        }
 
-    private void increase(String identifier) {
-        String key = key(identifier);
-
-        Long count = redisTemplate.opsForValue().increment(key);
-
-        if (count != null && count == 1) {
-            redisTemplate.expire(key, Window);
+        private Bucket createBucket(int limit) {
+            return Bucket.builder()
+                    .addLimit(rule -> rule
+                            .capacity(limit)
+                            .refillGreedy(limit, Duration.ofMinutes(15)))
+                    .build();
         }
     }
-
-    private String key(String identifier) {
-        return "login:case-worker:" + identifier;
-    }
-
-}
