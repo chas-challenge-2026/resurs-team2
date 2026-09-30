@@ -27,7 +27,7 @@
 .backoffice-eyebrow {
   margin: 0 0 var(--spacing-sm);
 
-  color: var(--color-primary);
+  color: var(--color-text);
 
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-bold);
@@ -327,7 +327,21 @@
   max-width: 240px;
 }
 
-.backoffice-date {
+.backoffice-score {
+  display: inline-flex;
+
+  padding:
+    4px
+    8px;
+
+  color: var(--color-text);
+  background-color: var(--color-primary-soft);
+
+  border-radius: var(--radius-pill);
+
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+
   white-space: nowrap;
 }
 

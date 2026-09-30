@@ -182,7 +182,7 @@
 
 .applicationTable td {
   color: var(--color-text);
-  background-color: var(--color-white);
+  background-color: var(--color-background);
 }
 
 .applicationTable tbody tr:last-child td {
@@ -277,29 +277,31 @@
 .viewButton {
   margin-right: var(--spacing-sm);
 
-  color: var(--color-primary);
-  background-color: var(--color-white);
+  color: var(--color-text);
+  background-color: var(--color-background);
 
-  border: 1px solid var(--color-primary);
+  border: 1px solid var(--color-border-strong);
 }
 
 .viewButton:hover {
   color: var(--color-white);
   background-color: var(--color-primary);
 
+  border-color: var(--color-primary);
+
   transform: translateY(-1px);
 }
 
 .documentButton {
   color: var(--color-text);
-  background-color: var(--color-white);
+  background-color: var(--color-background);
 
   border: 1px solid var(--color-border-strong);
 }
 
 .documentButton:hover {
-  color: var(--color-primary);
-  background-color: var(--color-primary-soft);
+  color: var(--color-white);
+  background-color: var(--color-primary);
 
   border-color: var(--color-primary);
 

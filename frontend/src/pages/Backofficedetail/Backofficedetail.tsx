@@ -30,6 +30,7 @@ export const Backofficedetail = () => {
     decisionLoading,
     error,
     handleDecision,
+    handleDocumentDeleted,
   } = useBackofficeApplication(id);
 
   if (loading) {
@@ -163,9 +164,7 @@ export const Backofficedetail = () => {
             }
           />
 
-          <DocumentsPanel
-            documents={documents}
-          />
+          <DocumentsPanel documents={documents} onDocumentDeleted={handleDocumentDeleted} />
 
           <AuditLogPanel
             auditLogs={auditLogs}

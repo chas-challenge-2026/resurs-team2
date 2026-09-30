@@ -270,7 +270,7 @@
 
 .backoffice-detail-page textarea.form-control {
   min-height: 92px;
-
+  background-color: var(--color-background);
   resize: vertical;
 }
 
