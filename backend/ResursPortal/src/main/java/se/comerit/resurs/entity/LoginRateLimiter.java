@@ -1,16 +1,11 @@
 package se.comerit.resurs.entity;
 
-import org.bouncycastle.util.IPAddress;
 import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.data.redis.core.types.Expiration;
+import org.springframework.stereotype.Service;
 
-import java.awt.*;
-import java.security.Key;
 import java.time.Duration;
 
-import static java.awt.SystemColor.WINDOW;
-import static org.hibernate.engine.internal.Versioning.increment;
-
+@Service
 public class LoginRateLimiter {
 
     private static final int maxEmailAttempts = 5;
