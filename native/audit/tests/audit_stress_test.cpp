@@ -202,35 +202,6 @@ int main(int argc, char** argv) {
     }
     const double sig_only_ms = ms_since(sig_only_start);
 
-    // --- step 5: diagnostic - split verify()'s own cost into "EVP_MD_CTX
-    // alloc/free churn" vs. "the actual Ed25519 DigestVerifyInit+DigestVerify
-    // math", by talking to OpenSSL directly here (signer.cpp's verify() always
-    // does new+free per call; there is no reuse variant to call into). This is
-    // throwaway diagnostic code, not something resurs_audit.cpp should adopt
-    // as-is - it exists to decide whether EVP_MD_CTX_reset is worth doing for
-    // real.
-    const auto ctx_churn_start = Clock::now();
-    {
-        for (size_t i = 0; i < entry_count; ++i) {
-            EVP_MD_CTX* ctx = EVP_MD_CTX_new();
-            EVP_MD_CTX_free(ctx);
-        }
-    }
-    const double ctx_churn_ms = ms_since(ctx_churn_start);
-
-    const auto verify_reused_ctx_start = Clock::now();
-    {
-        EVP_MD_CTX* ctx = EVP_MD_CTX_new();
-        for (size_t i = 0; i < entry_count; ++i) {
-            EVP_MD_CTX_reset(ctx);
-            EVP_DigestVerifyInit(ctx, nullptr, nullptr, nullptr, parsedPub.get());
-            EVP_DigestVerify(ctx, flat_sigs.data() + i * RESURS_AUDIT_SIG_LEN, RESURS_AUDIT_SIG_LEN,
-                              flat_hashes.data() + i * RESURS_AUDIT_HASH_LEN, RESURS_AUDIT_HASH_LEN);
-        }
-        EVP_MD_CTX_free(ctx);
-    }
-    const double verify_reused_ctx_ms = ms_since(verify_reused_ctx_start);
-
     resurs_audit_shutdown();
 
     // --- report ---
@@ -241,9 +212,6 @@ int main(int argc, char** argv) {
     std::printf("  breakdown, isolated:\n");
     std::printf("    chainHash only (%zux):                       %s\n", entry_count, format_ms(hash_only_ms).c_str());
     std::printf("    verify (signature) only (%zux):              %s\n", entry_count, format_ms(sig_only_ms).c_str());
-    std::printf("  diagnostic (step 5, EVP_MD_CTX churn vs. real crypto math):\n");
-    std::printf("    EVP_MD_CTX new+free only, no crypto (%zux):  %s\n", entry_count, format_ms(ctx_churn_ms).c_str());
-    std::printf("    verify with reused EVP_MD_CTX (%zux):        %s\n", entry_count, format_ms(verify_reused_ctx_ms).c_str());
     std::printf("\n");
     std::printf("peak RSS before generation: %ld KB\n", rss_before_gen);
     std::printf("peak RSS after generation:  %ld KB\n", rss_after_gen);
