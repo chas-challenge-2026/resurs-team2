@@ -199,7 +199,7 @@ public class ResursAuditServiceImpl {
             IntByReference firstInvalidIndex = new IntByReference(VALID_CHAIN);
             int rc = library.resurs_audit_verify_chain(hashesMem, signaturesMem, signatureLensMem,
                     entriesMem, entryLensMem, count, entriesLen, signaturesLen,
-                    publicKeyMem, firstInvalidIndex);
+                    0, null, publicKeyMem, firstInvalidIndex);
             if (rc != ResursAuditLibrary.RESURS_AUDIT_OK) {
                 throw new CryptoException(rc);
             }
