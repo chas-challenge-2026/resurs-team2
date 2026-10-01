@@ -170,6 +170,7 @@ int main(int argc, char** argv) {
         flat_hashes.data(), flat_sigs.data(), sig_lens.data(),
         flat_entries.data(), entry_lens.data(),
         entry_count, flat_entries.size(), flat_sigs.size(),
+        0, nullptr,
         resurs::audit::AuditKeyManager::instance().publicKey().data(),
         &first_invalid);
     const double verify_ms = ms_since(verify_start);

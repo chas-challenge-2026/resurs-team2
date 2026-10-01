@@ -105,7 +105,7 @@ int main(void)
     printf("=== 4. resurs_audit_verify_chain: verifying the intact chain ===\n");
     int first_invalid = -2;
     must(resurs_audit_verify_chain(hashes, signatures, signature_lens, entries_buf,
-                                   entry_lens, 3, off, 3 * RESURS_AUDIT_SIG_LEN, pub, &first_invalid),
+                                   entry_lens, 3, off, 3 * RESURS_AUDIT_SIG_LEN, 0, NULL, pub, &first_invalid),
          "resurs_audit_verify_chain");
     printf("first_invalid_index = %d  (chain is intact)\n\n", first_invalid);
 
@@ -126,7 +126,7 @@ int main(void)
 
     first_invalid = -2;
     must(resurs_audit_verify_chain(hashes, signatures, signature_lens, entries_buf,
-                                   entry_lens, 3, off, 3 * RESURS_AUDIT_SIG_LEN, pub, &first_invalid),
+                                   entry_lens, 3, off, 3 * RESURS_AUDIT_SIG_LEN, 0, NULL, pub, &first_invalid),
          "resurs_audit_verify_chain");
     printf("first_invalid_index = %d  (tampering detected: entries[%d]'s content no longer "
            "matches its stored hash)\n\n",

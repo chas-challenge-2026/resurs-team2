@@ -34,6 +34,19 @@ static int read_last_n_bytes(const char *path, unsigned char *out, size_t n)
     return (r == n) ? 0 : -1;
 }
 
+/* Verifies the segment of `count` records starting at global position `start`.
+ * The arrays are the caller's slice of the chain, not the whole chain. */
+static int verify_segment(const unsigned char *hashes, const unsigned char *signatures,
+                          const size_t *signature_lens, const char *entries,
+                          const size_t *entry_lens, size_t count, size_t entries_len,
+                          size_t start, const unsigned char *prev_hash,
+                          const unsigned char *pub, int *first_invalid)
+{
+    return resurs_audit_verify_chain(hashes, signatures, signature_lens, entries, entry_lens,
+                                     count, entries_len, count * RESURS_AUDIT_SIG_LEN,
+                                     start, prev_hash, pub, first_invalid);
+}
+
 int main(void)
 {
     const char *key_path = "audit_abi_key.pem";
@@ -106,18 +119,18 @@ int main(void)
     int first_invalid = -2;
     check(resurs_audit_verify_chain(NULL, signatures, signature_lens, entries_buf,
                                     entry_lens, 3, off, 3 * RESURS_AUDIT_SIG_LEN,
-                                    pub, &first_invalid) == RESURS_AUDIT_ERR_INVALID_ARG,
+                                    0, NULL, pub, &first_invalid) == RESURS_AUDIT_ERR_INVALID_ARG,
           "verify_chain(NULL hashes) -> INVALID_ARG");
     check(resurs_audit_verify_chain(hashes, signatures, signature_lens, entries_buf,
                                     entry_lens, 0, off, 3 * RESURS_AUDIT_SIG_LEN,
-                                    pub, &first_invalid) == RESURS_AUDIT_ERR_INVALID_ARG,
+                                    0, NULL, pub, &first_invalid) == RESURS_AUDIT_ERR_INVALID_ARG,
           "verify_chain(entry_count == 0) -> INVALID_ARG");
 
     /* --- verify_chain: intact chain --- */
     first_invalid = -2;
     int rc = resurs_audit_verify_chain(hashes, signatures, signature_lens, entries_buf,
                                        entry_lens, 3, off, 3 * RESURS_AUDIT_SIG_LEN,
-                                       pub, &first_invalid);
+                                       0, NULL, pub, &first_invalid);
     check(rc == RESURS_AUDIT_OK, "verify_chain(intact) -> OK");
     check(first_invalid == -1, "verify_chain(intact) -> first_invalid_index == -1");
 
@@ -130,7 +143,7 @@ int main(void)
         first_invalid = -2;
         int rc2 = resurs_audit_verify_chain(hashes, signatures, signature_lens, entries_buf,
                                             bad_entry_lens, 3, off, 3 * RESURS_AUDIT_SIG_LEN,
-                                            pub, &first_invalid);
+                                            0, NULL, pub, &first_invalid);
         check(rc2 == RESURS_AUDIT_ERR_INVALID_ARG,
               "verify_chain: inflated entry_lens[0] past entries_len -> INVALID_ARG, not a crash");
     }
@@ -140,7 +153,7 @@ int main(void)
     first_invalid = -2;
     rc = resurs_audit_verify_chain(hashes, signatures, signature_lens, entries_buf,
                                    entry_lens, 3, off, 3 * RESURS_AUDIT_SIG_LEN,
-                                   pub, &first_invalid);
+                                   0, NULL, pub, &first_invalid);
     check(rc == RESURS_AUDIT_OK, "verify_chain(tampered entry) -> OK");
     check(first_invalid == 1, "tampered entries[1] -> first_invalid_index == 1");
     entries_buf[entry_offset[1]] ^= 0x01; /* restore */
@@ -150,7 +163,7 @@ int main(void)
     first_invalid = -2;
     rc = resurs_audit_verify_chain(hashes, signatures, signature_lens, entries_buf,
                                    entry_lens, 3, off, 3 * RESURS_AUDIT_SIG_LEN,
-                                   pub, &first_invalid);
+                                   0, NULL, pub, &first_invalid);
     check(rc == RESURS_AUDIT_OK, "verify_chain(tampered signature) -> OK");
     check(first_invalid == 2, "tampered signatures[2] -> first_invalid_index == 2");
     signatures[2 * RESURS_AUDIT_SIG_LEN] ^= 0x01; /* restore */
@@ -164,7 +177,7 @@ int main(void)
     first_invalid = -2;
     rc = resurs_audit_verify_chain(hashes, signatures, signature_lens, entries_buf,
                                    entry_lens, 3, off, 3 * RESURS_AUDIT_SIG_LEN,
-                                   pub, &first_invalid);
+                                   0, NULL, pub, &first_invalid);
     check(rc == RESURS_AUDIT_OK, "verify_chain(swapped hashes) -> OK");
     check(first_invalid != -1, "swapped hashes[0]/hashes[1] is detected");
 
@@ -172,6 +185,66 @@ int main(void)
     memcpy(saved_hash, hashes, RESURS_AUDIT_HASH_LEN);
     memcpy(hashes, hashes + RESURS_AUDIT_HASH_LEN, RESURS_AUDIT_HASH_LEN);
     memcpy(hashes + RESURS_AUDIT_HASH_LEN, saved_hash, RESURS_AUDIT_HASH_LEN);
+
+    /* --- chunked verify: every segment [s, s+c) of the fixture verifies intact --- */
+    int seg_ok = 1;
+    for (size_t s = 0; s < 3; s++)
+    {
+        for (size_t c = 1; s + c <= 3; c++)
+        {
+            size_t seg_len = (s + c < 3 ? entry_offset[s + c] : off) - entry_offset[s];
+            const unsigned char *anchor = (s > 0) ? hashes + (s - 1) * RESURS_AUDIT_HASH_LEN : NULL;
+            first_invalid = -2;
+            rc = verify_segment(hashes + s * RESURS_AUDIT_HASH_LEN, signatures + s * RESURS_AUDIT_SIG_LEN,
+                                signature_lens + s, entries_buf + entry_offset[s], entry_lens + s,
+                                c, seg_len, s, anchor, pub, &first_invalid);
+            if (rc != RESURS_AUDIT_OK || first_invalid != -1)
+                seg_ok = 0;
+        }
+    }
+    check(seg_ok, "chunked: every segment of the fixture verifies intact");
+
+    /* --- chunked verify: tamper each record, every segment containing it reports
+     * that record at its GLOBAL index --- */
+    int tamper_ok = 1;
+    for (size_t t = 0; t < 3; t++)
+    {
+        entries_buf[entry_offset[t]] ^= 0x01;
+        for (size_t s = 0; s < 3; s++)
+        {
+            for (size_t c = 1; s + c <= 3; c++)
+            {
+                if (t < s || t >= s + c)
+                    continue;
+                size_t seg_len = (s + c < 3 ? entry_offset[s + c] : off) - entry_offset[s];
+                const unsigned char *anchor = (s > 0) ? hashes + (s - 1) * RESURS_AUDIT_HASH_LEN : NULL;
+                first_invalid = -2;
+                rc = verify_segment(hashes + s * RESURS_AUDIT_HASH_LEN, signatures + s * RESURS_AUDIT_SIG_LEN,
+                                    signature_lens + s, entries_buf + entry_offset[s], entry_lens + s,
+                                    c, seg_len, s, anchor, pub, &first_invalid);
+                if (rc != RESURS_AUDIT_OK || first_invalid != (int)t)
+                    tamper_ok = 0;
+            }
+        }
+        entries_buf[entry_offset[t]] ^= 0x01; /* restore */
+    }
+    check(tamper_ok, "chunked: tampered record reported at its global index in every segment containing it");
+
+    /* --- chunked verify: wrong anchor for a segment starting at 1 --- */
+    unsigned char bogus_anchor[RESURS_AUDIT_HASH_LEN];
+    memset(bogus_anchor, 0xAA, sizeof bogus_anchor);
+    first_invalid = -2;
+    rc = verify_segment(hashes + RESURS_AUDIT_HASH_LEN, signatures + RESURS_AUDIT_SIG_LEN,
+                        signature_lens + 1, entries_buf + entry_offset[1], entry_lens + 1,
+                        2, off - entry_offset[1], 1, bogus_anchor, pub, &first_invalid);
+    check(rc == RESURS_AUDIT_OK && first_invalid == 1,
+          "chunked: wrong anchor reports the first record of the segment at its global index");
+
+    /* --- chunked verify: start_index > 0 without prev_hash -> INVALID_ARG --- */
+    check(verify_segment(hashes + RESURS_AUDIT_HASH_LEN, signatures + RESURS_AUDIT_SIG_LEN,
+                         signature_lens + 1, entries_buf + entry_offset[1], entry_lens + 1,
+                         2, off - entry_offset[1], 1, NULL, pub, &first_invalid) == RESURS_AUDIT_ERR_INVALID_ARG,
+          "chunked: start_index > 0 with prev_hash NULL -> INVALID_ARG");
 
     /* --- shutdown --- */
     resurs_audit_shutdown();
@@ -188,7 +261,7 @@ int main(void)
     first_invalid = -2;
     rc = resurs_audit_verify_chain(hashes, signatures, signature_lens, entries_buf,
                                    entry_lens, 3, off, 3 * RESURS_AUDIT_SIG_LEN,
-                                   pub, &first_invalid);
+                                   0, NULL, pub, &first_invalid);
     check(rc == RESURS_AUDIT_OK, "verify_chain after shutdown -> OK");
     check(first_invalid == -1, "verify_chain after shutdown still verifies the intact chain");
 
