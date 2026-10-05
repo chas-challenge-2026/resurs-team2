@@ -1,6 +1,7 @@
 #include "key_manager.hpp"
 #include "aes_gcm_cipher.hpp"
 #include "hmac_sha256.hpp"
+#include "test_util.h"
 
 #include <cstring>
 #include <cstdint>
@@ -20,17 +21,6 @@ namespace
 {
 
     namespace fs = std::filesystem;
-
-    int g_failures = 0;
-
-    void check(bool ok, const char *name)
-    {
-        std::printf("%s %s\n", ok ? "[PASS]" : "[FAIL]", name);
-        if (!ok)
-        {
-            ++g_failures;
-        }
-    }
 
     // Prints a byte buffer as a labelled hex line (demo output only)
     void dump(const char *label, const unsigned char *p, std::size_t n)
@@ -177,68 +167,66 @@ namespace
         fs::path path_;
     };
 
-}
-
-int main()
-{
-    // --- KeyManager ---
-    auto &km = resurs::KeyManager::instance();
-
-    check(!km.isLoaded(), "isLoaded() false before load");
-
-    check(throws_runtime_error([&]
-                               { (void)km.key(); }),
-          "key() before load throws");
-
-    resurs::Key k{};
-    resurs::Key lk{};
-    for (std::size_t i = 0; i < k.size(); ++i)
+    void test_key_manager()
     {
-        k[i] = static_cast<std::uint8_t>(i + 1);
-        lk[i] = static_cast<std::uint8_t>(0x80 + i);
+        auto &km = resurs::KeyManager::instance();
+
+        check(!km.isLoaded(), "isLoaded() false before load");
+
+        check(throws_runtime_error([&]
+                                   { (void)km.key(); }),
+              "key() before load throws");
+
+        resurs::Key k{};
+        resurs::Key lk{};
+        for (std::size_t i = 0; i < k.size(); ++i)
+        {
+            k[i] = static_cast<std::uint8_t>(i + 1);
+            lk[i] = static_cast<std::uint8_t>(0x80 + i);
+        }
+        km.loadFromBytes(k, lk);
+        check(km.key() == k, "loadFromBytes -> key() round-trip");
+        check(km.lookupKey() == lk, "loadFromBytes -> lookupKey() round-trip");
+        check(km.isLoaded(), "isLoaded() true after loadFromBytes");
+
+        km.cleanse();
+        check(!km.isLoaded(), "isLoaded() false after cleanse");
+        check(throws_runtime_error([&]
+                                   { (void)km.key(); }),
+              "key() after cleanse throws");
+        check(throws_runtime_error([&]
+                                   { (void)km.lookupKey(); }),
+              "lookupKey() after cleanse throws");
+
+        TempKeyFile good(64);
+        TempKeyFile too_short(63);
+        TempKeyFile too_long(65);
+
+        bool loaded_ok = true;
+        try
+        {
+            km.loadFromFile(good.path());
+        }
+        catch (...)
+        {
+            loaded_ok = false;
+        }
+        check(loaded_ok, "loadFromFile(64 bytes) succeeds");
+
+        check(throws_runtime_error([&]
+                                   { km.loadFromFile(too_short.path()); }),
+              "loadFromFile(63 bytes) throws");
+        check(throws_runtime_error([&]
+                                   { km.loadFromFile(too_long.path()); }),
+              "loadFromFile(65 bytes) throws");
+        check(throws_runtime_error([&]
+                                   { km.loadFromFile("/nonexistent/resurs.key"); }),
+              "loadFromFile(missing) throws");
+
+        km.cleanse();
     }
-    km.loadFromBytes(k, lk);
-    check(km.key() == k, "loadFromBytes -> key() round-trip");
-    check(km.lookupKey() == lk, "loadFromBytes -> lookupKey() round-trip");
-    check(km.isLoaded(), "isLoaded() true after loadFromBytes");
 
-    km.cleanse();
-    check(!km.isLoaded(), "isLoaded() false after cleanse");
-    check(throws_runtime_error([&]
-                               { (void)km.key(); }),
-          "key() after cleanse throws");
-    check(throws_runtime_error([&]
-                               { (void)km.lookupKey(); }),
-          "lookupKey() after cleanse throws");
-
-    TempKeyFile good(64);
-    TempKeyFile too_short(63);
-    TempKeyFile too_long(65);
-
-    bool loaded_ok = true;
-    try
-    {
-        km.loadFromFile(good.path());
-    }
-    catch (...)
-    {
-        loaded_ok = false;
-    }
-    check(loaded_ok, "loadFromFile(64 bytes) succeeds");
-
-    check(throws_runtime_error([&]
-                               { km.loadFromFile(too_short.path()); }),
-          "loadFromFile(63 bytes) throws");
-    check(throws_runtime_error([&]
-                               { km.loadFromFile(too_long.path()); }),
-          "loadFromFile(65 bytes) throws");
-    check(throws_runtime_error([&]
-                               { km.loadFromFile("/nonexistent/resurs.key"); }),
-          "loadFromFile(missing) throws");
-
-    km.cleanse();
-
-    // --- hmacSha256 ---
+    void test_hmac()
     {
         resurs::Key hk{};
         RAND_bytes(hk.data(), static_cast<int>(hk.size()));
@@ -269,7 +257,8 @@ int main()
         dump("hmac(556000-1234)", a1.data(), a1.size());
     }
 
-    // --- AesGcmCipher rejects an input whose length would not fit an int ---
+    // AesGcmCipher rejects an input whose length would not fit an int
+    void test_aes_rejects_over_int_max()
     {
         resurs::Key ek{};
         resurs::Nonce en{};
@@ -286,7 +275,7 @@ int main()
               "AesGcmCipher::encrypt rejects an over-int-max input");
     }
 
-    // --- AesGcmCipher demo, variation 1: random keys ---
+    void test_aes_gcm_random_keys()
     {
         resurs::Key rand_aes{};
         resurs::Key rand_lookup{};
@@ -295,9 +284,11 @@ int main()
         crypto_demo("random keys", rand_aes, rand_lookup, /*dump_keys=*/true);
     }
 
-    // --- AesGcmCipher demo, variation 2: real generated key file ---
+    // Leaves KeyManager cleansed on every path, like the other tests.
+    void test_aes_gcm_real_key_file()
     {
 #ifdef RESURS_REAL_KEY_FILE
+        auto &km = resurs::KeyManager::instance();
         const char *real_key = RESURS_REAL_KEY_FILE;
         if (fs::exists(real_key))
         {
@@ -314,8 +305,8 @@ int main()
             if (loaded)
             {
                 crypto_demo("real key file", km.key(), km.lookupKey(), /*dump_keys=*/false);
-                km.cleanse();
             }
+            km.cleanse();
         }
         else
         {
@@ -326,6 +317,15 @@ int main()
 #endif
     }
 
-    std::printf("\n%d failure(s)\n", g_failures);
-    return g_failures == 0 ? 0 : 1;
+}
+
+int main()
+{
+    test_key_manager();
+    test_hmac();
+    test_aes_rejects_over_int_max();
+    test_aes_gcm_random_keys();
+    test_aes_gcm_real_key_file();
+
+    return test_summary();
 }

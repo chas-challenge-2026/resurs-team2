@@ -1,17 +1,9 @@
 #include "resurs_crypto.h"
+#include "test_util.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-static int g_failures = 0;
-
-static void check(int ok, const char *name)
-{
-    printf("%s %s\n", ok ? "[PASS]" : "[FAIL]", name);
-    if (!ok)
-        g_failures++;
-}
 
 static int write_file(const char *path, const unsigned char *data, size_t n)
 {
@@ -353,6 +345,5 @@ int main(void)
     remove("abi_key64.bin");
     remove("abi_key63.bin");
 
-    printf("\n%d failure(s)\n", g_failures);
-    return g_failures == 0 ? 0 : 1;
+    return test_summary();
 }
