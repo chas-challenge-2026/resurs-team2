@@ -23,9 +23,15 @@ target_compile_definitions(crypto_sandbox_test PRIVATE
 
 add_test(NAME crypto_sandbox_test COMMAND crypto_sandbox_test)
 
-# --- Local ABI test (links against libresurs_crypto.so) ---
+# --- Local ABI tests (link against libresurs_crypto.so) ---
+# One executable per area, so ctest reports each separately. Each uses its own
+# key file, so they are safe to run in parallel (ctest -j).
 
-add_executable(crypto_abi_test crypto_abi_test.c)
+set(CRYPTO_ABI_TESTS init roundtrip buffers raw bounds hmac)
 
-target_link_libraries(crypto_abi_test PRIVATE resurs_crypto)
-add_test(NAME crypto_abi_test COMMAND crypto_abi_test)
+foreach(name IN LISTS CRYPTO_ABI_TESTS)
+    set(target crypto_abi_${name}_test)
+    add_executable(${target} ${target}.c)
+    target_link_libraries(${target} PRIVATE resurs_crypto)
+    add_test(NAME ${target} COMMAND ${target})
+endforeach()
