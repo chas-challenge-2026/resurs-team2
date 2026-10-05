@@ -4,7 +4,7 @@
   margin-bottom: var(--spacing-lg);
   padding: var(--spacing-xl);
 
-  background-color: var(--color-white);
+  background-color: var(--color-background);
 
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
@@ -45,7 +45,7 @@
   display: block;
 
   margin-bottom: var(--spacing-sm);
-
+  
   color: var(--color-text-strong);
 
   font-size: var(--font-size-sm);
@@ -61,7 +61,7 @@
   padding: 10px 14px;
 
   color: var(--color-text);
-  background-color: var(--color-white);
+  background-color: var(--color-background);
 
   border: 1px solid var(--color-input-border);
   border-radius: var(--radius);
@@ -80,12 +80,7 @@
   border-color: var(--color-input-hover-border);
 }
 
-.formControl:focus {
-  outline: none;
 
-  border-color: var(--color-input-focus-border);
-  box-shadow: var(--shadow-input-focus);
-}
 
 .formControl::placeholder {
   color: var(--color-muted);
@@ -188,9 +183,9 @@
 /* Secondary */
 
 .secondaryButton {
-  color: var(--color-primary);
-  background-color: var(--color-white);
-
+  color: var(--color-text);
+  background-color: var(--color-background);
+  margin-right: 10px;
   border: 1px solid var(--color-border-strong);
 }
 
@@ -203,11 +198,7 @@
 
 /* Button states */
 
-.primaryButton:focus-visible,
-.secondaryButton:focus-visible {
-  outline: none;
-  box-shadow: var(--shadow-input-focus);
-}
+
 
 .primaryButton:active:not(:disabled),
 .secondaryButton:active:not(:disabled) {

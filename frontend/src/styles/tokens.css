@@ -10,6 +10,7 @@
 
   /* Neutral colors */
   --color-white: #ffffff;
+  --color-navbar: #ffffff;
 
   --color-background: #f7f7f5;
   --color-surface: #ffffff;
@@ -51,6 +52,9 @@
   --color-input-hover-border: #87979f;
   --color-input-focus-border: var(--color-primary);
   --color-input-focus-shadow: rgba(0, 37, 56, 0.16);
+
+  /* Focus */
+  --color-focus-ring: #005fcc;
 
   /* Spacing */
   --spacing-xs: 4px;
@@ -109,4 +113,84 @@
   /* Transitions */
   --transition-fast: 150ms ease;
   --transition-base: 200ms ease;
+}
+
+html[data-theme="dark"] {
+  color-scheme: dark;
+
+  /* Brand */
+  --color-primary: #002538;
+  --color-primary-hover: #145d8c;
+  --color-primary-soft: #10344a;
+
+  --color-accent: #fce682;
+  --color-accent-hover: #f8dc5f;
+  --color-accent-text: #111111;
+
+  /* Neutral colors */
+  --color-navbar: #111f2e;
+  --color-background: #071722;
+  --color-surface: #111f2e;
+  --color-surface-muted: #18293a;
+
+  --color-text: #e6eef5;
+  --color-text-strong: #f7fafc;
+  --color-muted: #9caebe;
+
+  --color-border: #334554;
+  --color-border-strong: #5f7484;
+
+  /* Status colors */
+  --color-success: #22c55e;
+  --color-success-hover: #16a34a;
+  --color-success-bg: #0d2b20;
+  --color-success-border: #1d6043;
+  --color-success-text: #86efac;
+
+  --color-danger: #ef4444;
+  --color-danger-hover: #dc2626;
+  --color-danger-bg: #321719;
+  --color-danger-border: #713035;
+  --color-danger-text: #fca5a5;
+
+  --color-warning: #f59e0b;
+  --color-warning-hover: #d97706;
+  --color-warning-bg: #30230d;
+  --color-warning-border: #684817;
+  --color-warning-text: #fcd34d;
+
+  --color-info: #4da3ff;
+  --color-info-bg: #102a3d;
+  --color-info-border: #24547a;
+  --color-info-text: #93c5fd;
+
+  /* Semantic interaction colors */
+  --color-link: #4da3ff;
+  --color-link-hover: #7bc4ff;
+  --color-on-primary: #ffffff;
+  --color-on-primary-muted: #e6eef5;
+  --color-warning-action-text: #111111;
+  --color-success-action-text: #071722;
+  --color-danger-action-text: #071722;
+  --color-info-action-text: #071722;
+
+  /* Inputs / focus */
+  --color-input-border: #6d8292;
+  --color-input-hover-border: #9fb1bf;
+  --color-input-focus-border: #176ea6;
+  --color-input-focus-shadow: rgba(23, 110, 166, 0.38);
+
+  /* Focus */
+  --color-focus-ring: #66c2ff;
+
+  /* Start page image overlay */
+  --hero-overlay-start: rgba(7, 23, 34, 0.58);
+  --hero-overlay-end: rgba(7, 23, 34, 0.82);
+  --hero-badge-bg: rgba(7, 23, 34, 0.82);
+  --shadow-input-error: 0 0 0 3px var(--color-danger);
+
+  /* Shadows */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.32);
+  --shadow-box: 0 6px 18px rgba(0, 0, 0, 0.32);
+  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.42);
 }

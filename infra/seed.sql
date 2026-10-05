@@ -45,10 +45,11 @@ CREATE TABLE audit_log (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     application_id INT NOT NULL REFERENCES applications(id),
     sequence_number BIGINT NOT NULL,
-    hash VARCHAR(512) NOT NULL,
-    previous_hash VARCHAR(512) NOT NULL,
+    hash BYTEA NOT NULL,
+    signature BYTEA NOT NULL,
     entry TEXT NOT NULL,
-    timestamp TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+    timestamp TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    CONSTRAINT uq_audit_log_application_sequence UNIQUE (application_id, sequence_number)
 );
 
 -- NOTE: companies, applications and case workers contain PII. Production seeds

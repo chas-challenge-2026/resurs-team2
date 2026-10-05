@@ -49,9 +49,9 @@ class AuditControllerIntegrationTest {
                 "DELETE FROM companies",
                 "INSERT INTO companies (id, org_number, company_name, authorized_signatory) VALUES (600, '556000-1234', 'Audit Bolag AB', 'Test Person')",
                 "INSERT INTO applications (id, company_id, requested_amount, purpose, status) VALUES (600, 600, 150000.00, 'Företagslån', 'UNDER_REVIEW')",
-                "INSERT INTO audit_log (application_id, sequence_number, hash, previous_hash, entry, timestamp) VALUES (600, 1, '', '', '{\"action\":\"APPLICATION_CREATED\",\"orgNumber\":\"556000-1234\"}', '2026-01-15T10:00:05')",
-                "INSERT INTO audit_log (application_id, sequence_number, hash, previous_hash, entry, timestamp) VALUES (600, 2, '', '', '{\"action\":\"SCORING_RUN\",\"result\":\"REVIEW\",\"flags\":\"1\"}', '2026-01-15T10:00:03')",
-                "INSERT INTO audit_log (application_id, sequence_number, hash, previous_hash, entry, timestamp) VALUES (600, 3, '', '', '{\"action\":\"MANUAL_DECISION\",\"decision\":\"APPROVED\",\"worker\":\"Karin Handläggare\"}', '2026-01-15T10:00:01')"
+                "INSERT INTO audit_log (application_id, sequence_number, hash, signature, entry, timestamp) VALUES (600, 1, X'', X'', '{\"action\":\"APPLICATION_CREATED\",\"orgNumber\":\"556000-1234\"}', '2026-01-15T10:00:05')",
+                "INSERT INTO audit_log (application_id, sequence_number, hash, signature, entry, timestamp) VALUES (600, 2, X'', X'', '{\"action\":\"SCORING_RUN\",\"result\":\"REVIEW\",\"flags\":\"1\"}', '2026-01-15T10:00:03')",
+                "INSERT INTO audit_log (application_id, sequence_number, hash, signature, entry, timestamp) VALUES (600, 3, X'', X'', '{\"action\":\"MANUAL_DECISION\",\"decision\":\"APPROVED\",\"worker\":\"Karin Handläggare\"}', '2026-01-15T10:00:01')"
         })
         void returnsAllLogsInSequenceOrderByDefault() throws Exception {
             mockMvc.perform(get("/api/v1/applications/600/audit-log"))
@@ -74,9 +74,9 @@ class AuditControllerIntegrationTest {
                 "DELETE FROM companies",
                 "INSERT INTO companies (id, org_number, company_name, authorized_signatory) VALUES (600, '556000-1234', 'Audit Bolag AB', 'Test Person')",
                 "INSERT INTO applications (id, company_id, requested_amount, purpose, status) VALUES (600, 600, 150000.00, 'Företagslån', 'UNDER_REVIEW')",
-                "INSERT INTO audit_log (application_id, sequence_number, hash, previous_hash, entry, timestamp) VALUES (600, 1, '', '', '{\"action\":\"APPLICATION_CREATED\"}', '2026-01-15T10:00:05')",
-                "INSERT INTO audit_log (application_id, sequence_number, hash, previous_hash, entry, timestamp) VALUES (600, 2, '', '', '{\"action\":\"SCORING_RUN\"}', '2026-01-15T10:00:03')",
-                "INSERT INTO audit_log (application_id, sequence_number, hash, previous_hash, entry, timestamp) VALUES (600, 3, '', '', '{\"action\":\"MANUAL_DECISION\"}', '2026-01-15T10:00:01')"
+                "INSERT INTO audit_log (application_id, sequence_number, hash, signature, entry, timestamp) VALUES (600, 1, X'', X'', '{\"action\":\"APPLICATION_CREATED\"}', '2026-01-15T10:00:05')",
+                "INSERT INTO audit_log (application_id, sequence_number, hash, signature, entry, timestamp) VALUES (600, 2, X'', X'', '{\"action\":\"SCORING_RUN\"}', '2026-01-15T10:00:03')",
+                "INSERT INTO audit_log (application_id, sequence_number, hash, signature, entry, timestamp) VALUES (600, 3, X'', X'', '{\"action\":\"MANUAL_DECISION\"}', '2026-01-15T10:00:01')"
         })
         void supportsSequenceDescendingSort() throws Exception {
             mockMvc.perform(get("/api/v1/applications/600/audit-log")
@@ -96,9 +96,9 @@ class AuditControllerIntegrationTest {
                 "DELETE FROM companies",
                 "INSERT INTO companies (id, org_number, company_name, authorized_signatory) VALUES (600, '556000-1234', 'Audit Bolag AB', 'Test Person')",
                 "INSERT INTO applications (id, company_id, requested_amount, purpose, status) VALUES (600, 600, 150000.00, 'Företagslån', 'UNDER_REVIEW')",
-                "INSERT INTO audit_log (application_id, sequence_number, hash, previous_hash, entry, timestamp) VALUES (600, 1, '', '', '{\"action\":\"APPLICATION_CREATED\"}', '2026-01-15T10:00:05')",
-                "INSERT INTO audit_log (application_id, sequence_number, hash, previous_hash, entry, timestamp) VALUES (600, 2, '', '', '{\"action\":\"SCORING_RUN\"}', '2026-01-15T10:00:03')",
-                "INSERT INTO audit_log (application_id, sequence_number, hash, previous_hash, entry, timestamp) VALUES (600, 3, '', '', '{\"action\":\"MANUAL_DECISION\"}', '2026-01-15T10:00:01')"
+                "INSERT INTO audit_log (application_id, sequence_number, hash, signature, entry, timestamp) VALUES (600, 1, X'', X'', '{\"action\":\"APPLICATION_CREATED\"}', '2026-01-15T10:00:05')",
+                "INSERT INTO audit_log (application_id, sequence_number, hash, signature, entry, timestamp) VALUES (600, 2, X'', X'', '{\"action\":\"SCORING_RUN\"}', '2026-01-15T10:00:03')",
+                "INSERT INTO audit_log (application_id, sequence_number, hash, signature, entry, timestamp) VALUES (600, 3, X'', X'', '{\"action\":\"MANUAL_DECISION\"}', '2026-01-15T10:00:01')"
         })
         void supportsTimestampAscendingSortIndependentOfSequence() throws Exception {
             mockMvc.perform(get("/api/v1/applications/600/audit-log")
@@ -118,8 +118,8 @@ class AuditControllerIntegrationTest {
                 "DELETE FROM companies",
                 "INSERT INTO companies (id, org_number, company_name, authorized_signatory) VALUES (600, '556000-1234', 'Audit Bolag AB', 'Test Person')",
                 "INSERT INTO applications (id, company_id, requested_amount, purpose, status) VALUES (600, 600, 150000.00, 'Företagslån', 'UNDER_REVIEW')",
-                "INSERT INTO audit_log (application_id, sequence_number, hash, previous_hash, entry, timestamp) VALUES (600, 1, '', '', '{\"action\":\"APPLICATION_CREATED\"}', '2026-01-15T10:00:00')",
-                "INSERT INTO audit_log (application_id, sequence_number, hash, previous_hash, entry, timestamp) VALUES (600, 2, '', '', '{\"action\":\"SCORING_RUN\"}', '2026-01-15T10:00:01')"
+                "INSERT INTO audit_log (application_id, sequence_number, hash, signature, entry, timestamp) VALUES (600, 1, X'', X'', '{\"action\":\"APPLICATION_CREATED\"}', '2026-01-15T10:00:00')",
+                "INSERT INTO audit_log (application_id, sequence_number, hash, signature, entry, timestamp) VALUES (600, 2, X'', X'', '{\"action\":\"SCORING_RUN\"}', '2026-01-15T10:00:01')"
         })
         void owningCompanyCanReadItsOwnLog() throws Exception {
             mockMvc.perform(get("/api/v1/applications/600/audit-log"))
@@ -138,7 +138,7 @@ class AuditControllerIntegrationTest {
                 "DELETE FROM companies",
                 "INSERT INTO companies (id, org_number, company_name, authorized_signatory) VALUES (600, '556000-1234', 'Audit Bolag AB', 'Test Person')",
                 "INSERT INTO applications (id, company_id, requested_amount, purpose, status) VALUES (600, 600, 150000.00, 'Företagslån', 'UNDER_REVIEW')",
-                "INSERT INTO audit_log (application_id, sequence_number, hash, previous_hash, entry, timestamp) VALUES (600, 1, '', '', '{\"action\":\"APPLICATION_CREATED\"}', '2026-01-15T10:00:00')"
+                "INSERT INTO audit_log (application_id, sequence_number, hash, signature, entry, timestamp) VALUES (600, 1, X'', X'', '{\"action\":\"APPLICATION_CREATED\"}', '2026-01-15T10:00:00')"
         })
         void otherCompanysLogIsNotLeaked() throws Exception {
             mockMvc.perform(get("/api/v1/applications/600/audit-log"))

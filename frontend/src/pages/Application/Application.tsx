@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 
 import type { Application as ApplicationType } from "../../types/application";
 import { applicationApi } from "../../api/applicationApi";
+import { formatDateTimeShort } from "@/utils/dateUtils";
 
 import styles from "./Applications.module.css";
 
@@ -76,23 +77,6 @@ export function Application() {
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("sv-SE").format(amount) + " kr";
-  };
-
-  const formatDateTime = (value: string) => {
-    if (!value) {
-      return "-";
-    }
-
-    const date = new Date(value);
-
-    if (Number.isNaN(date.getTime())) {
-      return value;
-    }
-
-    return new Intl.DateTimeFormat("sv-SE", {
-      dateStyle: "short",
-      timeStyle: "short",
-    }).format(date);
   };
 
   if (loading) {
@@ -183,7 +167,7 @@ export function Application() {
                       </span>
                     </td>
 
-                    <td>{formatDateTime(application.createdAt)}</td>
+                    <td>{formatDateTimeShort(application.createdAt)}</td>
 
                     <td className={styles.actionCell}>
                       <button

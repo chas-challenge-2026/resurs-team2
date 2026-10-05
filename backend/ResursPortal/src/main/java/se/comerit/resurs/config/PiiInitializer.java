@@ -1,6 +1,7 @@
 package se.comerit.resurs.config;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -16,6 +17,8 @@ import org.springframework.security.crypto.argon2.Argon2PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import se.comerit.resurs.api.v1.service.AuditSigningService;
+import se.comerit.resurs.api.v1.service.AuditSigningService.SignedEntry;
 import se.comerit.resurs.api.v1.service.ResursCryptoService;
 import se.comerit.resurs.entity.*;
 import se.comerit.resurs.repository.ApplicationRepository;
@@ -30,6 +33,12 @@ import se.comerit.resurs.repository.CompanyRepository;
  * in place with the active {@link PiiCodec} encryption plus the derived blind
  * index. Rows that are already encrypted (or created through the application)
  * are left untouched, and any seed row missing from the database is inserted.
+ *
+ * <p>The demo audit entries are handled the same way in both directions: they are
+ * encrypted in place, and any that arrived unsigned are signed in place, so the
+ * seeded chain verifies rather than being a run of unsigned placeholders. Only
+ * the seed application is rewritten, and only where a row carries no signature
+ * at all -- see {@link #signUnsignedEntries}.
  *
  * <p>The raw lookups and rewrites go through {@link JdbcTemplate} directly so
  * the plaintext columns are never read back through
@@ -48,6 +57,10 @@ public class PiiInitializer implements ApplicationRunner {
     private static final Logger log = LoggerFactory.getLogger(PiiInitializer.class);
 
     record SeedCompany(String orgNumber, String name, String authorizedSignatory) {
+    }
+
+    /** A stored audit entry, read raw so the entry column is decoded explicitly. */
+    private record AuditRow(UUID id, byte[] hash, byte[] signature, String entry) {
     }
 
     private static final SeedCompany[] SEED = {
@@ -88,13 +101,15 @@ public class PiiInitializer implements ApplicationRunner {
     private final AuditLogRepository auditLogRepository;
     private final CaseWorkerRepository caseWorkerRepository;
     private final Argon2PasswordEncoder argon2;
+    private final AuditSigningService auditSigningService;
 
     public PiiInitializer(PiiCodec codec, ResursCryptoService crypto, JdbcTemplate jdbcTemplate,
             CompanyRepository companyRepository,
             ApplicationRepository applicationRepository,
             AuditLogRepository auditLogRepository,
             CaseWorkerRepository caseWorkerRepository,
-            Argon2PasswordEncoder argon2) {
+            Argon2PasswordEncoder argon2,
+            AuditSigningService auditSigningService) {
         this.codec = codec;
         this.crypto = crypto;
         this.jdbcTemplate = jdbcTemplate;
@@ -103,6 +118,7 @@ public class PiiInitializer implements ApplicationRunner {
         this.auditLogRepository = auditLogRepository;
         this.caseWorkerRepository = caseWorkerRepository;
         this.argon2 = argon2;
+        this.auditSigningService = auditSigningService;
     }
 
     @Override
@@ -209,11 +225,84 @@ public class PiiInitializer implements ApplicationRunner {
         }
 
         if (auditLogRepository.findByApplication(application, Sort.unsorted()).isEmpty()) {
+            // Same mutex AuditLogService.append takes. This runs single-threaded at
+            // startup so it cannot actually race today, but deriving the sequence number
+            // without the lock would leave a second writer that quietly breaks the
+            // invariant the lock exists to enforce.
+            applicationRepository.lockById(application.getId());
+
             long seq = auditLogRepository.getNextSequenceNumber(application);
-            auditLogRepository.save(new AuditLog(application, seq + 1, "", null, created));
-            auditLogRepository.save(new AuditLog(application, seq + 2, "", null, scoring));
+            // Signed like any other entry: a zero-length placeholder would not be a chain
+            // link, and the next append would have nothing valid to chain from.
+            byte[] previousHash = null;
+            for (String entry : new String[] { created, scoring }) {
+                SignedEntry signed = auditSigningService.signEntry(entry, previousHash);
+                auditLogRepository.save(
+                        new AuditLog(application, ++seq, signed.hash(), signed.signature(), entry));
+                previousHash = signed.hash();
+            }
             log.info("Seeded audit log for {}", SEED[0].orgNumber());
+        } else {
+            signUnsignedEntries(application);
         }
+    }
+
+    /**
+     * Signs the audit entries of the seed application that arrived unsigned, rewriting
+     * them in place.
+     *
+     * <p>These are the rows {@code data.sql} inserts with empty hash and signature, and
+     * rows written before signing was wired in -- the same situation the encryption
+     * above exists for. Entries are read back through {@link PiiCodec#decode} because
+     * the signature covers the plaintext entry while the column holds the encrypted
+     * one.</p>
+     *
+     * <p>An entry commits to the link before it, so the chain is walked front to back:
+     * a row that already carries both is left untouched and supplies the link for the
+     * next one, and a row that carries neither is signed over the plaintext entry and
+     * the link ahead of it. When every row is signed this finds nothing to do, so it is
+     * a no-op on every start after the first.</p>
+     *
+     * <p>What counts as signed is that a row carries a whole link and signature, not
+     * that they verify: a row is only rewritten when it is missing them. Verifying
+     * against the public key is left to whoever reads the chain, which needs the key
+     * rather than a signer bound to it.</p>
+     */
+    private void signUnsignedEntries(Application application) {
+        List<AuditRow> rows = jdbcTemplate.query(
+                "SELECT id, hash, signature, entry FROM audit_log WHERE application_id = ? "
+                        + "ORDER BY sequence_number",
+                (rs, rowNum) -> new AuditRow(
+                        rs.getObject(1, UUID.class), rs.getBytes(2), rs.getBytes(3), rs.getString(4)),
+                application.getId());
+
+        byte[] previousHash = null;
+        int signed = 0;
+        for (AuditRow row : rows) {
+            if (isSigned(row)) {
+                previousHash = row.hash();
+                continue;
+            }
+            SignedEntry entry = auditSigningService.signEntry(codec.decode(row.entry()), previousHash);
+            jdbcTemplate.update("UPDATE audit_log SET hash = ?, signature = ? WHERE id = ?",
+                    entry.hash(), entry.signature(), row.id());
+            previousHash = entry.hash();
+            signed++;
+        }
+
+        if (signed > 0) {
+            log.info("Signed {} unsigned seed audit log entries for {}", signed, SEED[0].orgNumber());
+        }
+    }
+
+    /**
+     * Whether a row carries a whole chain link and signature. The unsigned placeholders
+     * are zero-length, so a row that is short of either is one to sign.
+     */
+    private static boolean isSigned(AuditRow row) {
+        return row.hash() != null && row.signature() != null
+                && row.hash().length == AuditSigningService.HASH_LEN
+                && row.signature().length == AuditSigningService.SIGNATURE_LEN;
     }
 
     private Optional<Long> queryLong(String sql, Object... args) {

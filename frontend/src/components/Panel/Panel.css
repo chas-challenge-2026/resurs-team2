@@ -2,8 +2,8 @@
   overflow: hidden;
 
   margin-bottom: var(--spacing-lg);
-
-  background-color: var(--color-white);
+  
+  background-color: var(--color-background);
 
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
@@ -15,7 +15,7 @@
   padding: 14px var(--spacing-lg);
 
   color: var(--color-text-strong);
-  background-color: var(--color-surface-muted);
+  background-color: var(--color-background);
 
   border-bottom: 1px solid var(--color-border);
 
@@ -26,7 +26,7 @@
 
 .panel-body {
   padding: var(--spacing-lg);
-
+  
   color: var(--color-text);
 }
 

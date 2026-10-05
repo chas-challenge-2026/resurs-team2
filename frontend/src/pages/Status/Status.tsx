@@ -7,6 +7,7 @@ import { DocumentsPanel } from "./components/DocumentsPanel";
 import { StatusHeader } from "./components/StatusHeader";
 import { useApplicationDetails } from "./hooks/useApplicationDetails";
 import { formatWorker } from "./utils/statusFormatters";
+import { ScoringResultPanel } from "./components/ScoringResultPanel";
 
 import "./Status.css";
 
@@ -17,6 +18,7 @@ export const Status = () => {
     application,
     workerName,
     documents,
+    financialData,
     loading,
     error,
   } = useApplicationDetails(id);
@@ -46,15 +48,14 @@ export const Status = () => {
 
       <div className="status-layout">
         <aside className="status-side-column">
-          <Panel title="Scoringresultat">
-            <p className="status-scoring-result">
-              {application.scoringResult || "Ingen scoring tillgänglig."}
-            </p>
-          </Panel>
+          <ScoringResultPanel
+            scoringResult={application.scoringResult}
+            financialData={financialData}
+          />
 
           <Panel title="Handläggare">
             <p className="status-worker">
-              {formatWorker(application.status, workerName)}
+              {formatWorker(application.status, workerName ?? undefined)}
             </p>
           </Panel>
         </aside>

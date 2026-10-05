@@ -2,7 +2,10 @@ package se.comerit.resurs.api.v1.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -15,6 +18,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 
 import se.comerit.resurs.audit.ApplicationCreated;
 import se.comerit.resurs.audit.EtaSet;
@@ -29,14 +33,28 @@ import tools.jackson.databind.ObjectMapper;
 
 class AuditLogServiceTest {
 
+    private static final byte[] SIGNED_HASH = new byte[AuditSigningService.HASH_LEN];
+    private static final byte[] SIGNED_SIGNATURE = new byte[AuditSigningService.SIGNATURE_LEN];
+    /** A whole chain link: the signer rejects anything shorter. */
+    private static final byte[] PREV_HASH = new byte[AuditSigningService.HASH_LEN];
+
     private AuditLogRepository auditLogRepository;
+    private ApplicationRepository applicationRepository;
+    private AuditSigningService signer;
     private AuditLogService auditLogService;
 
     @BeforeEach
     void setUp() {
         auditLogRepository = mock(AuditLogRepository.class);
-        auditLogService = new AuditLogService(auditLogRepository, mock(ApplicationRepository.class),
-                new ObjectMapper());
+        applicationRepository = mock(ApplicationRepository.class);
+        signer = mock(AuditSigningService.class);
+        when(signer.signEntry(any(), any()))
+                .thenReturn(new AuditSigningService.SignedEntry(SIGNED_HASH, SIGNED_SIGNATURE));
+        when(auditLogRepository.save(any(AuditLog.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        auditLogService = new AuditLogService(auditLogRepository, applicationRepository,
+                new ObjectMapper(), signer);
     }
 
     private Application application() {
@@ -124,7 +142,7 @@ class AuditLogServiceTest {
     class Chain {
 
         @Test
-        @DisplayName("First entry uses sequence 1 and an empty previous hash")
+        @DisplayName("First entry uses sequence 1")
         void firstEntryStartsChain() {
             when(auditLogRepository.getNextSequenceNumber(any(Application.class))).thenReturn(0L);
             when(auditLogRepository.findPreviousHash(any(Application.class))).thenReturn(Optional.empty());
@@ -133,22 +151,110 @@ class AuditLogServiceTest {
 
             AuditLog log = savedLogs().get(0);
             assertThat(log.getSequenceNumber()).isEqualTo(1);
-            assertThat(log.getPreviousHash()).isEmpty();
-            assertThat(log.getHash()).isEmpty();
+            // The predecessor is looked up on every append, the first one included: an
+            // empty result is what marks genesis. Nothing about the link is stored --
+            // the predecessor is whatever row holds sequence_number 0.
+            verify(auditLogRepository).findPreviousHash(any(Application.class));
         }
 
         @Test
-        @DisplayName("Subsequent entry links the previous hash")
-        void subsequentEntryLinksPreviousHash() {
+        @DisplayName("Subsequent entry continues the sequence and reads the predecessor hash")
+        void subsequentEntryContinuesSequence() {
             when(auditLogRepository.getNextSequenceNumber(any(Application.class))).thenReturn(1L);
             when(auditLogRepository.findPreviousHash(any(Application.class)))
-                    .thenReturn(Optional.of("prev-hash"));
+                    .thenReturn(Optional.of(PREV_HASH));
 
             auditLogService.append(application(), new ManualDecision("APPROVED", "Anna Andersson", null));
 
             AuditLog log = savedLogs().get(0);
             assertThat(log.getSequenceNumber()).isEqualTo(2);
-            assertThat(log.getPreviousHash()).isEqualTo("prev-hash");
+            // The predecessor's digest feeds the signer; it is never persisted as a link.
+            verify(auditLogRepository).findPreviousHash(any(Application.class));
+        }
+
+        @Test
+        @DisplayName("Locks the application before reading the chain, then writes once")
+        void locksApplicationBeforeReadingChain() {
+            when(auditLogRepository.getNextSequenceNumber(any(Application.class))).thenReturn(0L);
+
+            auditLogService.append(application(), new ApplicationCreated("556677-8899"));
+
+            // The lock is what removes the read-then-insert race: it must be taken before
+            // the sequence number and predecessor hash are read, not after, or another
+            // append could commit in between and leave this entry chaining from a hash
+            // that is no longer its predecessor.
+            InOrder inOrder = inOrder(applicationRepository, auditLogRepository);
+            inOrder.verify(applicationRepository).lockById(any());
+            inOrder.verify(auditLogRepository).getNextSequenceNumber(any(Application.class));
+            inOrder.verify(auditLogRepository).findPreviousHash(any(Application.class));
+            inOrder.verify(auditLogRepository).save(any(AuditLog.class));
+
+            // Exactly one insert: no retry loop, because the lock makes a collision
+            // impossible rather than recoverable.
+            verify(auditLogRepository, times(1)).save(any(AuditLog.class));
+        }
+    }
+
+    @Nested
+    @DisplayName("Signing")
+    class Signing {
+
+        @Test
+        @DisplayName("The entry is stored with the signer's link and signature")
+        void storesWhatTheSignerReturned() {
+            auditLogService.append(application(), new ApplicationCreated("556677-8899"));
+
+            AuditLog log = savedLogs().get(0);
+            assertThat(log.getHash()).isEqualTo(SIGNED_HASH);
+            assertThat(log.getSignature()).isEqualTo(SIGNED_SIGNATURE);
+        }
+
+        @Test
+        @DisplayName("The predecessor's hash is what the new entry is signed over")
+        void signsOverThePredecessor() {
+            when(auditLogRepository.findPreviousHash(any(Application.class)))
+                    .thenReturn(Optional.of(PREV_HASH));
+
+            auditLogService.append(application(), new ManualDecision("APPROVED", "Anna Andersson", null));
+
+            // The entry JSON is what the link commits to, chained to the entry before it.
+            verify(signer).signEntry(
+                    "{\"action\":\"MANUAL_DECISION\",\"decision\":\"APPROVED\",\"worker\":\"Anna Andersson\"}",
+                    PREV_HASH);
+        }
+
+        @Test
+        @DisplayName("An application with no entries starts a new chain at genesis")
+        void startsANewChainAtGenesis() {
+            when(auditLogRepository.findPreviousHash(any(Application.class))).thenReturn(Optional.empty());
+
+            auditLogService.append(application(), new ApplicationCreated("556677-8899"));
+
+            // null, not an empty array: an empty predecessor is not a chain link.
+            verify(signer).signEntry(any(), isNull());
+        }
+
+        @Test
+        @DisplayName("Two appends produce a chain that verifies end to end")
+        void appendedEntriesFormAVerifiableChain() {
+            // Same signer the "test" profile injects, so this covers the real wiring
+            // rather than a stub: entry 2 must chain from the link entry 1 stored.
+            AuditSigningService realSigner = new DummyAuditSigningService();
+            AuditLogService service = new AuditLogService(auditLogRepository, applicationRepository,
+                    new ObjectMapper(), realSigner);
+            Application app = application();
+
+            when(auditLogRepository.findPreviousHash(app)).thenReturn(Optional.empty());
+            AuditLog first = service.append(app, new ApplicationCreated("556677-8899"));
+            when(auditLogRepository.findPreviousHash(app)).thenReturn(Optional.of(first.getHash()));
+            AuditLog second = service.append(app, new EtaSet("2026-09-28T10:00:00Z"));
+
+            assertThat(realSigner.verifyChain(
+                    List.of(first.getHash(), second.getHash()),
+                    List.of(first.getSignature(), second.getSignature()),
+                    List.of(first.getEntry(), second.getEntry()),
+                    new byte[AuditSigningService.PUBLIC_KEY_LEN]))
+                    .isEqualTo(AuditSigningService.VALID_CHAIN);
         }
     }
 }
