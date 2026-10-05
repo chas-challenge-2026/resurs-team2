@@ -1,5 +1,5 @@
 import type { Application } from "@/types/application";
-
+import { formatDateTime } from "@/utils/dateUtils";
 import { Panel } from "@/components/Panel/Panel";
 
 interface ApplicationDetailsPanelProps {
@@ -12,22 +12,6 @@ const formatCurrency = (value: number) =>
     currency: "SEK",
     maximumFractionDigits: 0,
   }).format(value);
-
-const formatDateTime = (value: string) => {
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    return value;
-  }
-
-  return new Intl.DateTimeFormat("sv-SE", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(date);
-};
 
 export const ApplicationDetailsPanel = ({
   application,

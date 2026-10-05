@@ -4,7 +4,6 @@ import { formatTime } from "@/utils/dateUtils";
 import type { ApplicationSummary } from "../../types/applicationSummary";
 import { applicationApi } from "../../api/applicationApi";
 import { useAuth } from "../../components/hooks/useAuth";
-
 import styles from "./dashboard.module.css";
 
 export function Dashboard() {
@@ -13,7 +12,7 @@ export function Dashboard() {
 
   const [applications, setApplications] = useState<ApplicationSummary[]>([]);
 
-  const [loading, setLoading] = useState<boolean>(true);
+  const [loading, setLoading] = useState(true);
 
   const [error, setError] = useState<string | null>(null);
 
@@ -26,12 +25,7 @@ export function Dashboard() {
         const data = await applicationApi.getAll();
 
         setApplications(data.content);
-      } catch (err: unknown) {
-        if (err instanceof Error) {
-          setError(err.message);
-        } else {
-          setError("Kunde inte hämta ansökningarna.");
-        }
+      } catch (err: unknown) { setError( err instanceof Error? err.message : "Kunde inte hämta ansökningarna.",);
       } finally {
         setLoading(false);
       }
@@ -75,90 +69,196 @@ export function Dashboard() {
     }
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("sv-SE").format(amount) + " kr";
-  };
+  const formatCurrency = (amount: number) =>
+    new Intl.NumberFormat("sv-SE").format(amount) +
+    " kr";
 
   return (
-    <main className={styles.page}>
+    <main
+      id="main-content"
+      className={styles.page}
+    >
       <div className={styles.container}>
-        <section className={styles.jumbotron}>
-          <h1>Välkommen, {user?.name ?? "Företag"}!</h1>
+        <section
+          className={styles.jumbotron}
+          aria-labelledby="dashboard-heading"
+        >
+          <h1 id="dashboard-heading">
+            Välkommen, {user?.name ?? "Företag"}!
+          </h1>
 
-          <p>Ansök om företagskredit hos Resurs Bank via denna portal.</p>
+          <p>
+            Ansök om företagskredit hos Resurs Bank
+            via denna portal.
+          </p>
 
           <div className={styles.actions}>
             <button
               type="button"
               className={styles.primaryButton}
-              onClick={() => navigate("/credit-application")}
+              onClick={() =>
+                navigate("/credit-application")
+              }
             >
-              <span className={styles.icon}>+</span> Ny kreditansökan
+              <span
+                className={styles.icon}
+                aria-hidden="true"
+              >
+                +
+              </span>
+
+              Ny kreditansökan
             </button>
 
             <button
               type="button"
               className={styles.defaultButton}
-              onClick={() => navigate("/applications")}
+              onClick={() =>
+                navigate("/applications")
+              }
             >
-              <span className={styles.listIcon}>☷</span> Mina ansökningar
+              <span
+                className={styles.listIcon}
+                aria-hidden="true"
+              >
+                ☷
+              </span>
+
+              Mina ansökningar
             </button>
           </div>
         </section>
 
-        {loading && <p>Laddar ansökningar...</p>}
-
-        {error && <div role="alert">{error}</div>}
-
-        {!loading && !error && applications.length === 0 && (
-          <p>Du har inga kreditansökningar ännu.</p>
+        {loading && (
+          <p
+            role="status"
+            aria-live="polite"
+          >
+            Laddar ansökningar...
+          </p>
         )}
 
-        {!loading && !error && applications.length > 0 && (
-          <section className={styles.applicationsSection}>
-            <h3>Senaste ansökningar</h3>
-
-            <table className={styles.applicationTable}>
-              <thead>
-                <tr>
-                  <th>#</th>
-                  <th>Belopp</th>
-                  <th>Status</th>
-                  <th>Datum</th>
-                  <th></th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {applications.map((application) => (
-                  <tr key={application.id}>
-                    <td>{application.id}</td>
-
-                    <td>{formatCurrency(application.requestedAmount)}</td>
-
-                    <td>
-                      <span className={getStatusClass(application.status)}>
-                        {formatStatus(application.status)}
-                      </span>
-                    </td>
-
-                    <td>{formatTime(application.createdAt)}</td>
-
-                    <td>
-                      <button
-                        type="button"
-                        className={styles.viewButton}
-                        onClick={() => navigate(`/status/${application.id}`)}
-                      >
-                        Visa
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </section>
+        {error && (
+          <div role="alert">
+            {error}
+          </div>
         )}
+
+        {!loading &&
+          !error &&
+          applications.length === 0 && (
+            <p>
+              Du har inga kreditansökningar ännu.
+            </p>
+          )}
+
+        {!loading &&
+          !error &&
+          applications.length > 0 && (
+            <section
+              className={styles.applicationsSection}
+              aria-labelledby="recent-applications-heading"
+            >
+              <h2 id="recent-applications-heading">
+                Senaste ansökningar
+              </h2>
+
+              <div className={styles.tableWrapper}>
+                <table
+                  className={
+                    styles.applicationTable
+                  }
+                >
+                  <caption
+                    className={styles.srOnly}
+                  >
+                    Senaste kreditansökningar
+                  </caption>
+
+                  <thead>
+                    <tr>
+                      <th scope="col">#</th>
+
+                      <th scope="col">
+                        Belopp
+                      </th>
+
+                      <th scope="col">
+                        Status
+                      </th>
+
+                      <th scope="col">
+                        Datum
+                      </th>
+
+                      <th scope="col">
+                        <span
+                          className={styles.srOnly}
+                        >
+                          Åtgärd
+                        </span>
+                      </th>
+                    </tr>
+                  </thead>
+
+                  <tbody>
+                    {applications.map(
+                      (application) => (
+                        <tr
+                          key={application.id}
+                        >
+                          <td>
+                            {application.id}
+                          </td>
+
+                          <td>
+                            {formatCurrency(
+                              application.requestedAmount,
+                            )}
+                          </td>
+
+                          <td>
+                            <span
+                              className={getStatusClass(
+                                application.status,
+                              )}
+                            >
+                              {formatStatus(
+                                application.status,
+                              )}
+                            </span>
+                          </td>
+
+                          <td>
+                            {formatTime(
+                              application.createdAt,
+                            )}
+                          </td>
+
+                          <td>
+                            <button
+                              type="button"
+                              className={
+                                styles.viewButton
+                              }
+                              aria-label={`Visa ansökan ${application.id}`}
+                              onClick={() =>
+                                navigate(
+                                  `/status/${application.id}`,
+                                )
+                              }
+                            >
+                              Visa
+                            </button>
+                          </td>
+                        </tr>
+                      ),
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          )}
       </div>
     </main>
   );

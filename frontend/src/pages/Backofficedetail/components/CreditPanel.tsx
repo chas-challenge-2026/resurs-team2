@@ -3,12 +3,8 @@ import type { Application } from "../../../types/application";
 import type { FinancialMetricsData } from "@/schemas/credit-application-schemas/FinancialMetrics.schema";
 import { Panel } from "../../../components/Panel/Panel";
 import { FinancialMetricsPanel } from "./financialMetricsPanel";
-import {
-  formatCurrency,
-  formatDateTime,
-  formatStatus,
-  getStatusBadgeClass,
-} from "../utils/backofficeFormatters";
+import { formatCurrency, formatStatus, getStatusBadgeClass } from "../utils/backofficeFormatters";
+import { formatDateTimeShort } from "@/utils/dateUtils";
 import styles from "./CreditPanel.module.css";
 
 interface CreditPanelProps {
@@ -41,12 +37,12 @@ export const CreditPanel: React.FC<CreditPanelProps> = ({
       </p>
 
       <p>
-        <strong>Inlämnad:</strong> {formatDateTime(application.createdAt)}
+        <strong>Inlämnad:</strong> {formatDateTimeShort(application.createdAt)}
       </p>
 
       <p>
         <strong>Senast uppdaterad:</strong>{" "}
-        {formatDateTime(application.updatedAt)}
+        {formatDateTimeShort(application.updatedAt)}
       </p>
 
       <button
