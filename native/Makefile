@@ -20,7 +20,7 @@ test-v: build
 	ctest --test-dir $(BUILD_DIR) -V
 
 demo-crypto: build
-	@./$(BUILD_DIR)/crypto/sandbox_test | sed -n '/AesGcmCipher demo/,$$p'
+	@./$(BUILD_DIR)/crypto/tests/sandbox_test | sed -n '/AesGcmCipher demo/,$$p'
 
 demo-audit: build
 	@cd $(BUILD_DIR)/audit && ./audit_demo
