@@ -103,7 +103,10 @@ public class AuthController {
 
             return ResponseEntity
                     .status(HttpStatus.UNAUTHORIZED)
-                    .build();
+        } catch (InvalidCredentialsException e){
+            rateLimiter.recordFailure(email, ip);
+
+            throw e;
 
         }
 
