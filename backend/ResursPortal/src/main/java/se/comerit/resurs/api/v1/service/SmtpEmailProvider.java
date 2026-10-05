@@ -32,9 +32,9 @@ public class SmtpEmailProvider implements EmailProvider {
             message.setSubject(subject);
             message.setText(body);
             mailSender.send(message);
-            log.info("Email sent to {} with subject '{}'", to, subject);
-        } catch (Exception e) {
-            log.error("Failed to send email to {} with subject '{}': {}", to, subject, e.getMessage());
+            log.info("Email sent successfully");
+        } catch (Exception _) {
+            log.error("Email delivery failed");
         }
     }
 }

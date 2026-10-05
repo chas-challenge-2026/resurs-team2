@@ -64,7 +64,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     @ExceptionHandler(ConstraintViolationException.class)
     public ResponseEntity<ProblemDetail> handleConstraintViolation(ConstraintViolationException e) {
         ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(
-                HttpStatus.BAD_REQUEST, e.getMessage());
+                HttpStatus.BAD_REQUEST, "Request validation failed");
         problemDetail.setTitle("Constraint Violation");
         problemDetail.setType(PROBLEM_TYPE_DEFAULT);
         return ResponseEntity.badRequest().body(problemDetail);
