@@ -70,7 +70,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return ResponseEntity.badRequest().body(problemDetail);
     }
 
-    @ExceptionHandler({AccessDeniedException.class, AuthorizationDeniedException.class})
+    @ExceptionHandler({ AccessDeniedException.class, AuthorizationDeniedException.class })
     public ResponseEntity<ProblemDetail> handleAccessDenied(Exception e) {
         ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(
                 HttpStatus.FORBIDDEN, "Forbidden");
@@ -88,14 +88,15 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         problemDetail.setType(PROBLEM_TYPE_DEFAULT);
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(problemDetail);
     }
+
     @ExceptionHandler(DocumentNotFoundException.class)
     public ResponseEntity<ProblemDetail> handleDocumentNotFound(DocumentNotFoundException e) {
         ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(
                 HttpStatus.NOT_FOUND, e.getMessage());
         problemDetail.setTitle("Document Not Found");
         problemDetail.setType(PROBLEM_TYPE_DEFAULT);
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(problemDetail); }
-
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(problemDetail);
+    }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ProblemDetail> handleGeneralError(Exception e) {
