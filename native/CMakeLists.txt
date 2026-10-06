@@ -12,6 +12,14 @@ endif()
 
 find_package(OpenSSL REQUIRED)
 
+# gcov instrumentation for `make coverage`. Use a separate build dir: the
+# instrumented .so is slower and writes .gcda files next to its objects.
+option(RESURS_COVERAGE "Build native code with gcov coverage instrumentation" OFF)
+if(RESURS_COVERAGE)
+    add_compile_options(--coverage -O0)
+    add_link_options(--coverage)
+endif()
+
 enable_testing()
 
 add_subdirectory(crypto)
