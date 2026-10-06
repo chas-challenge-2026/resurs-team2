@@ -12,6 +12,7 @@ import { creditAmountSchema, type CreditAmountData } from "../../schemas/credit-
 
 import { Confirmation } from "../../components/credit-application/confirmation/Confirmation";
 import { confirmationSchema, type ConfirmationFormData } from "../../schemas/credit-application-schemas/Confirmation.schema";
+import { BankIdSignature } from "../../components/credit-application/bankid-signature/BankIdSignature";
 import { ApplicationRequestSchema } from "../../schemas/ApplicationRequest.schema";
 import { applicationApi } from "../../api/applicationApi";
 import { companyApi } from "../../api/companyApi";
@@ -105,16 +106,11 @@ export function CreditApplication() {
     handleStepChange(4);
   };
 
-  // Validates step 4 before the user proceeds.
-  const handleConfirmationSubmit = async () => {
-    const result = confirmationSchema.safeParse(confirmation);
-
-    if (!result.success) {
-      console.log(result.error);
-      return;
-    }
-
-    const applicationData = {
+  // Builds the payload the signatory signs. Shared by step 4 (which validates
+  // it before letting the user through) and step 5 (which signs and submits
+  // it), so the two steps can never disagree about what is being signed.
+  const buildApplicationRequest = () =>
+    ApplicationRequestSchema.safeParse({
       equity: financialMetrics.equity,
       totalCapital: financialMetrics.totalCapital,
       currentAssets: financialMetrics.currentAssets,
@@ -124,32 +120,58 @@ export function CreditApplication() {
       netRevenue: financialMetrics.netRevenue,
       requestedAmount: creditAmount.requestedAmount,
       purpose: creditAmount.purpose,
-    };
+    });
 
-const applicationResult =
-  ApplicationRequestSchema.safeParse(applicationData);
+  // Validates step 4 before the user proceeds to signing. Nothing is submitted
+  // here: the application only leaves the browser once it is signed.
+  const handleConfirmationSubmit = () => {
+    const result = confirmationSchema.safeParse(confirmation);
 
-if (!applicationResult.success) {
-  console.log(applicationResult.error);
-  return;
-}
+    if (!result.success) {
+      console.log(result.error);
+      return;
+    }
 
-try {
-  const applicationId = await applicationApi.create(applicationResult.data);
+    const applicationResult = buildApplicationRequest();
 
-  console.log("Kreditansökan skapad:", applicationId);
+    if (!applicationResult.success) {
+      console.log(applicationResult.error);
+      return;
+    }
 
-  navigate(`/status/${applicationId}`);
-} catch (error) {
-  console.error("Kunde inte skapa kreditansökan:", error);
-}
-}
+    handleStepChange(5);
+  };
+
+  // Signs with BankID and submits as part of the same call. Rejects so the
+  // signing step can show the failure and let the user retry.
+  const handleSign = async () => {
+    const applicationResult = buildApplicationRequest();
+
+    if (!applicationResult.success) {
+      console.log(applicationResult.error);
+      throw new Error("Ansökan kunde inte valideras.");
+    }
+
+    try {
+      const applicationId = await applicationApi.create(
+        applicationResult.data,
+      );
+
+      console.log("Kreditansökan skapad:", applicationId);
+
+      navigate(`/status/${applicationId}`);
+    } catch (error) {
+      console.error("Kunde inte skapa kreditansökan:", error);
+      throw error;
+    }
+  };
 
   const steps = [
     "1. Företagsuppgifter",
     "2. Finansiella nyckeltal",
     "3. Kreditbelopp",
     "4. Bekräftelse",
+    "5. Signera med BankID",
   ];
 
   if (loadingCompany) {
@@ -225,6 +247,15 @@ try {
           onChange={setConfirmation}
           onPrevious={() => handleStepChange(3)}
           onSubmit={handleConfirmationSubmit}
+        />
+      )}
+
+      {currentStep === 5 && (
+        <BankIdSignature
+          companyName={companyInformation.companyName}
+          orgNumber={companyInformation.orgNumber}
+          onPrevious={() => handleStepChange(4)}
+          onSign={handleSign}
         />
       )}
     </main>
