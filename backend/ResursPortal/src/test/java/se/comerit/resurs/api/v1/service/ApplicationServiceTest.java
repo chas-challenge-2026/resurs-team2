@@ -30,6 +30,7 @@ import se.comerit.resurs.entity.Application;
 import se.comerit.resurs.entity.ApplicationStatus;
 import se.comerit.resurs.entity.AuditLog;
 import se.comerit.resurs.entity.Company;
+import se.comerit.resurs.exception.BankIdSigningException;
 import se.comerit.resurs.exception.CompanyNotFoundException;
 import se.comerit.resurs.repository.ApplicationRepository;
 import se.comerit.resurs.repository.AuditLogRepository;
@@ -379,6 +380,36 @@ class ApplicationServiceTest {
             verify(emailService, never())
                     .sendApplicationSubmitted(
                             any(Application.class));
+        }
+
+        @Test
+        @DisplayName("Does not save anything when BankID signing fails")
+        void signingFailureNotSaved() {
+            when(companyRepository.findByOrgNumber("556677-8899"))
+                    .thenReturn(Optional.of(company));
+
+            when(bankIdSigningService.sign(any(), any()))
+                    .thenThrow(BankIdSigningException.signingFailed());
+
+            assertThatThrownBy(() -> applicationService.submitApplication(
+                    "556677-8899",
+                    validRequest))
+                    .isInstanceOf(BankIdSigningException.class);
+
+            // Signing comes before any write, so a refused signature must leave
+            // no trace: no application, no scoring, no email, no audit entry.
+            verify(applicationRepository, never())
+                    .save(any(Application.class));
+
+            verify(scoringService, never())
+                    .scoreApplication(any());
+
+            verify(emailService, never())
+                    .sendApplicationSubmitted(
+                            any(Application.class));
+
+            verify(auditLogRepository, never())
+                    .save(any(AuditLog.class));
         }
     }
 
