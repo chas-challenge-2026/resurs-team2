@@ -25,6 +25,11 @@ public class DebtRatioCheck implements ScoringCheck {
         final double rejectThreshold = config.debtRatio().reject();
         final double flagThreshold = config.debtRatio().flag();
 
+        if(data.equity() <= 0) {
+            return reject("AVSLAG: Eget kapital är noll eller negativt, skuldsättningsgrad kan inte beräknas.",
+                    data.equity(), 0.0, -35);
+        }
+
         if (debtRatio > rejectThreshold)
             return reject("AVSLAG: Skuldsättningsgrad för hög (" + fmt(debtRatio)
                     + " > " + rejectThreshold + "). ",

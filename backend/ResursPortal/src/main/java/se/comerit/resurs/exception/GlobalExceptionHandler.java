@@ -64,13 +64,13 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     @ExceptionHandler(ConstraintViolationException.class)
     public ResponseEntity<ProblemDetail> handleConstraintViolation(ConstraintViolationException e) {
         ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(
-                HttpStatus.BAD_REQUEST, e.getMessage());
+                HttpStatus.BAD_REQUEST, "Request validation failed");
         problemDetail.setTitle("Constraint Violation");
         problemDetail.setType(PROBLEM_TYPE_DEFAULT);
         return ResponseEntity.badRequest().body(problemDetail);
     }
 
-    @ExceptionHandler({AccessDeniedException.class, AuthorizationDeniedException.class})
+    @ExceptionHandler({ AccessDeniedException.class, AuthorizationDeniedException.class })
     public ResponseEntity<ProblemDetail> handleAccessDenied(Exception e) {
         ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(
                 HttpStatus.FORBIDDEN, "Forbidden");
@@ -88,6 +88,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         problemDetail.setType(PROBLEM_TYPE_DEFAULT);
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(problemDetail);
     }
+  
     @ExceptionHandler(BankIdSigningException.class)
     public ResponseEntity<ProblemDetail> handleBankIdSigning(BankIdSigningException e) {
         // The signing step failed while the session itself is valid, so this is a
@@ -107,8 +108,8 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
                 HttpStatus.NOT_FOUND, e.getMessage());
         problemDetail.setTitle("Document Not Found");
         problemDetail.setType(PROBLEM_TYPE_DEFAULT);
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(problemDetail); }
-
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(problemDetail);
+    }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ProblemDetail> handleGeneralError(Exception e) {
