@@ -25,4 +25,9 @@ set_target_properties(resurs_crypto PROPERTIES
     VISIBILITY_INLINES_HIDDEN ON
 )
 
+# --- Narrated demo (not a test - run manually to see the flow) ---
+
+add_executable(crypto_demo crypto_demo.c)
+target_link_libraries(crypto_demo PRIVATE resurs_crypto)
+
 add_subdirectory(tests)

@@ -22,17 +22,6 @@ namespace
 
     namespace fs = std::filesystem;
 
-    // Prints a byte buffer as a labelled hex line (demo output only)
-    void dump(const char *label, const unsigned char *p, std::size_t n)
-    {
-        std::printf("  %-14s (%2zu)  ", label, n);
-        for (std::size_t i = 0; i < n; ++i)
-        {
-            std::printf("%02x", p[i]);
-        }
-        std::printf("\n");
-    }
-
     // True if fn() throws std::runtime_error (and nothing else)
     template <typename Fn>
     bool throws_runtime_error(Fn fn)
@@ -73,12 +62,11 @@ namespace
     // Runs the AES-GCM + HMAC checks against one (aes, lookup) key pair.
     // Called once with random keys and once with the real generated key file,
     // so both paths exercise the same behaviour.
-    void crypto_demo(const char *label,
-                     const resurs::Key &aes,
-                     const resurs::Key &lookup,
-                     bool dump_keys)
+    void test_aes_gcm_with_keys(const char *label,
+                                const resurs::Key &aes,
+                                const resurs::Key &lookup)
     {
-        std::printf("\n--- AesGcmCipher demo: %s ---\n", label);
+        std::printf("\n--- AesGcmCipher: %s ---\n", label);
 
         resurs::Nonce nonce{};
         RAND_bytes(nonce.data(), static_cast<int>(nonce.size()));
@@ -116,18 +104,6 @@ namespace
         check(h1 == h2, "hmacSha256 deterministic for the same input");
         check(h1 != resurs::hmacSha256("556000-9999", lookup),
               "hmacSha256 differs for different input");
-
-        // output
-        std::printf("  plaintext      : \"%s\"\n", plain.c_str());
-        if (dump_keys)
-        {
-            dump("aes key", aes.data(), aes.size());
-            dump("lookup key", lookup.data(), lookup.size());
-        }
-        dump("nonce", nonce.data(), nonce.size());
-        dump("ciphertext+tag", ct.data(), ct.size());
-        dump("hmac", h1.data(), h1.size());
-        std::printf("  decrypted      : \"%s\"\n", back.c_str());
     }
 
     // Creates a temp file with `nbytes` random bytes on construction
@@ -253,8 +229,6 @@ namespace
             empty_ok = false;
         }
         check(empty_ok, "hmacSha256 accepts empty input");
-
-        dump("hmac(556000-1234)", a1.data(), a1.size());
     }
 
     // AesGcmCipher rejects an input whose length would not fit an int
@@ -281,7 +255,7 @@ namespace
         resurs::Key rand_lookup{};
         RAND_bytes(rand_aes.data(), static_cast<int>(rand_aes.size()));
         RAND_bytes(rand_lookup.data(), static_cast<int>(rand_lookup.size()));
-        crypto_demo("random keys", rand_aes, rand_lookup, /*dump_keys=*/true);
+        test_aes_gcm_with_keys("random keys", rand_aes, rand_lookup);
     }
 
     // Leaves KeyManager cleansed on every path, like the other tests.
@@ -304,7 +278,7 @@ namespace
             check(loaded, "real key file loads (exactly 64 bytes)");
             if (loaded)
             {
-                crypto_demo("real key file", km.key(), km.lookupKey(), /*dump_keys=*/false);
+                test_aes_gcm_with_keys("real key file", km.key(), km.lookupKey());
             }
             km.cleanse();
         }
