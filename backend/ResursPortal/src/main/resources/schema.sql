@@ -26,6 +26,8 @@ CREATE TABLE applications (
     scoring_result TEXT,
     financial_data TEXT,
     estimated_resolution_at TIMESTAMP WITH TIME ZONE,
+    bankid_signature TEXT,
+    bankid_signed_at TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
