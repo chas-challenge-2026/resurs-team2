@@ -56,6 +56,7 @@ class ApplicationServiceTest {
     private ApplicationRepository applicationRepository;
     private AuditLogRepository auditLogRepository;
     private ScoringService scoringService;
+    private BankIdSigningService bankIdSigningService;
     private EtaService etaService;
     private AuditLogService auditLogService;
     private CaseWorkerAssignmentService caseWorkerAssignmentService;
@@ -72,6 +73,13 @@ class ApplicationServiceTest {
         applicationRepository = mock(ApplicationRepository.class);
         auditLogRepository = mock(AuditLogRepository.class);
         scoringService = mock(ScoringService.class);
+        bankIdSigningService = mock(BankIdSigningService.class);
+        when(bankIdSigningService.sign(any(), any()))
+                .thenReturn(new BankIdSigningService.BankIdSignature(
+                        "order-1",
+                        "MOCK-SIG-ORDER1",
+                        "Kalle Kula",
+                        FIXED_ETA.minusSeconds(60)));
         objectMapper = new ObjectMapper();
         auditLogService = new AuditLogService(auditLogRepository, mock(ApplicationRepository.class),
                 objectMapper, new DummyAuditSigningService());
@@ -90,6 +98,7 @@ class ApplicationServiceTest {
                 companyRepository,
                 applicationRepository,
                 scoringService,
+                bankIdSigningService,
                 etaService,
                 auditLogService,
                 caseWorkerAssignmentService,
@@ -296,15 +305,15 @@ class ApplicationServiceTest {
 
             ArgumentCaptor<AuditLog> captor = ArgumentCaptor.forClass(AuditLog.class);
 
-            verify(auditLogRepository, times(2))
+            verify(auditLogRepository, times(3))
                     .save(captor.capture());
 
             assertThat(captor.getAllValues())
-                    .hasSize(2);
+                    .hasSize(3);
 
             assertThat(
                     captor.getAllValues()
-                            .get(0)
+                            .get(1)
                             .getEntry())
                     .contains(
                             "\"action\":\"APPLICATION_CREATED\"")
@@ -326,15 +335,15 @@ class ApplicationServiceTest {
 
             ArgumentCaptor<AuditLog> captor = ArgumentCaptor.forClass(AuditLog.class);
 
-            verify(auditLogRepository, times(2))
+            verify(auditLogRepository, times(3))
                     .save(captor.capture());
 
             assertThat(captor.getAllValues())
-                    .hasSize(2);
+                    .hasSize(3);
 
             assertThat(
                     captor.getAllValues()
-                            .get(1)
+                            .get(2)
                             .getEntry())
                     .contains("\"action\":\"ETA_SET\"")
                     .contains(

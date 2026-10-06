@@ -139,20 +139,23 @@ class ApplicationLifecycleIntegrationTest {
                 .andExpect(jsonPath("$.application.status").value("UNDER_REVIEW"))
                 .andExpect(jsonPath("$.application.estimatedResolutionAt").exists());
 
-        // The submit transaction wrote APPLICATION_CREATED then a valued
-        // ETA_SET synchronously. The asynchronous scoring appended SCORING_RUN
-        // and then refreshed the ETA to the manual-review SLA with another
-        // ETA_SET. This locks the per-submission trail.
+        // The submit transaction recorded the BankID signature, then wrote
+        // APPLICATION_CREATED and a valued ETA_SET synchronously. The
+        // asynchronous scoring appended SCORING_RUN and then refreshed the ETA
+        // to the manual-review SLA with another ETA_SET. This locks the
+        // per-submission trail; the signature leads because it was taken
+        // before anything was written.
         List<AuditLog> trail = auditLogRepository.findAll().stream()
                 .sorted(Comparator.comparingLong(AuditLog::getSequenceNumber))
                 .toList();
-        assertThat(trail).hasSize(4);
-        assertThat(trail.get(0).getEntry()).contains("\"action\":\"APPLICATION_CREATED\"");
-        assertThat(trail.get(1).getEntry())
+        assertThat(trail).hasSize(5);
+        assertThat(trail.get(0).getEntry()).contains("\"action\":\"APPLICATION_SIGNED\"");
+        assertThat(trail.get(1).getEntry()).contains("\"action\":\"APPLICATION_CREATED\"");
+        assertThat(trail.get(2).getEntry())
                 .contains("\"action\":\"ETA_SET\"")
                 .contains("\"estimatedResolutionAt\":");
-        assertThat(trail.get(2).getEntry()).contains("\"action\":\"SCORING_RUN\"");
-        assertThat(trail.get(3).getEntry())
+        assertThat(trail.get(3).getEntry()).contains("\"action\":\"SCORING_RUN\"");
+        assertThat(trail.get(4).getEntry())
                 .contains("\"action\":\"ETA_SET\"")
                 .contains("\"estimatedResolutionAt\":");
 
