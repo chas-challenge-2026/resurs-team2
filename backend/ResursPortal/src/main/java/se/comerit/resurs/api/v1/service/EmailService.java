@@ -51,8 +51,7 @@ public class EmailService {
     }
 
     public void sendAdditionalInformationNeeded(Application app) {
-        // TODO: Create proper template
-        sendFromTemplate("status-updated", app);
+        sendFromTemplate("additional-information-requested", app);
     }
 
     public void sendDecision(Application app) {
