@@ -3,7 +3,7 @@ Ytterligare information krävs - #[(${app.id})]
 Hej [(${app.company.authorizedSignatory})]!
 
 Din ansökan [(${app.id})] behöver ytterligare information.
-[($(comment))]
+[(${comment})]
 
 
 När nya dokument är upploadded så kommer vi granska ärendet.
