@@ -92,7 +92,8 @@ public final class ApplicationMapper {
                 app.getScoringResult(),
                 app.getEstimatedResolutionAt(),
                 app.getCreatedAt(),
-                app.getUpdatedAt());
+                app.getUpdatedAt(),
+                app.getEstimatedResolutionAt());
     }
 
     public static DocumentResponse toDocumentResponse(Document document) {
