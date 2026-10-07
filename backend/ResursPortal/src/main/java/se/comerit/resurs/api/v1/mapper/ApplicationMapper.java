@@ -44,6 +44,7 @@ public final class ApplicationMapper {
         return switch (decision) {
             case APPROVED -> ApplicationStatus.APPROVED;
             case REJECTED -> ApplicationStatus.REJECTED;
+            case DOCUMENTS_NEEDED -> ApplicationStatus.PENDING_DOCS;
         };
     }
 
@@ -69,14 +70,15 @@ public final class ApplicationMapper {
                 toResponse(app),
                 workerName,
                 app.getDocuments().stream().map(ApplicationMapper::toDocumentResponse).toList(),
-            financialData);
+                financialData);
     }
 
     public static AuditLogResponse toAuditLogResponse(AuditLog log) {
         return new AuditLogResponse(
                 log.getSequenceNumber(),
                 log.getTimestamp(),
-                OBJECT_MAPPER.readValue(log.getEntry(), new TypeReference<Map<String, Object>>() {}));
+                OBJECT_MAPPER.readValue(log.getEntry(), new TypeReference<Map<String, Object>>() {
+                }));
     }
 
     public static ApplicationResponse toResponse(Application app) {
