@@ -50,6 +50,10 @@ public class EmailService {
         sendFromTemplate("status-updated", app);
     }
 
+    public void sendAdditionalInformationNeeded(Application app) {
+        sendFromTemplate("additional-information-requested", app);
+    }
+
     public void sendDecision(Application app) {
         sendFromTemplate("decision", app);
     }
@@ -58,6 +62,9 @@ public class EmailService {
         Map<String, Object> model = new LinkedHashMap<>();
         model.put("app", app);
         model.put("financial", parseFinancialData(app));
+        model.put("status", app.getStatus());
+        model.put("comment", app.getDecisionReason());
+
         EmailMessage message = render(template, model);
         emailProvider.send(recipientAddress(app), message.subject(), message.body());
     }
