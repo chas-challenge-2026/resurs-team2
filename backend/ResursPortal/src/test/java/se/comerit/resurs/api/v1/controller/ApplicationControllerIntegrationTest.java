@@ -144,23 +144,27 @@ class ApplicationControllerIntegrationTest {
             assertThat(app.getRequestedAmount()).isEqualByComparingTo("300000");
 
             // Audit log table carries the full submit+score trail: the submit
-            // transaction wrote APPLICATION_CREATED and a valued ETA_SET
-            // synchronously; the async scoring appended SCORING_RUN and then a
-            // final ETA_SET reflecting its outcome (manual-review refresh or
-            // decision clear).
-            assertThat(auditLogRepository.findAll()).hasSize(4);
+            // transaction recorded the BankID signature, then wrote
+            // APPLICATION_CREATED and a valued ETA_SET synchronously; the async
+            // scoring appended SCORING_RUN and then a final ETA_SET reflecting
+            // its outcome (manual-review refresh or decision clear). The
+            // signature comes first because signing is what happened first.
+            assertThat(auditLogRepository.findAll()).hasSize(5);
             List<String> entries = auditLogRepository.findAll().stream()
                     .sorted((a, b) -> Long.compare(a.getSequenceNumber(), b.getSequenceNumber()))
                     .map(AuditLog::getEntry)
                     .toList();
             assertThat(entries.get(0))
-                    .contains("\"action\":\"APPLICATION_CREATED\"")
+                    .contains("\"action\":\"APPLICATION_SIGNED\"")
                     .contains("\"orgNumber\":\"556000-1234\"");
             assertThat(entries.get(1))
+                    .contains("\"action\":\"APPLICATION_CREATED\"")
+                    .contains("\"orgNumber\":\"556000-1234\"");
+            assertThat(entries.get(2))
                     .contains("\"action\":\"ETA_SET\"")
                     .contains("\"estimatedResolutionAt\":");
-            assertThat(entries.get(2)).contains("\"action\":\"SCORING_RUN\"");
-            assertThat(entries.get(3)).contains("\"action\":\"ETA_SET\"");
+            assertThat(entries.get(3)).contains("\"action\":\"SCORING_RUN\"");
+            assertThat(entries.get(4)).contains("\"action\":\"ETA_SET\"");
 
             // A decision/reason should be produced by scoring.
             assertThat(app.getDecisionReason()).isNotBlank();

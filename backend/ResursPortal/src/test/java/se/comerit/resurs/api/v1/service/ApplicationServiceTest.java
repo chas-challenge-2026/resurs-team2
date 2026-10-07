@@ -30,6 +30,7 @@ import se.comerit.resurs.entity.Application;
 import se.comerit.resurs.entity.ApplicationStatus;
 import se.comerit.resurs.entity.AuditLog;
 import se.comerit.resurs.entity.Company;
+import se.comerit.resurs.exception.BankIdSigningException;
 import se.comerit.resurs.exception.CompanyNotFoundException;
 import se.comerit.resurs.repository.ApplicationRepository;
 import se.comerit.resurs.repository.AuditLogRepository;
@@ -56,6 +57,7 @@ class ApplicationServiceTest {
     private ApplicationRepository applicationRepository;
     private AuditLogRepository auditLogRepository;
     private ScoringService scoringService;
+    private BankIdSigningService bankIdSigningService;
     private EtaService etaService;
     private AuditLogService auditLogService;
     private CaseWorkerAssignmentService caseWorkerAssignmentService;
@@ -72,6 +74,13 @@ class ApplicationServiceTest {
         applicationRepository = mock(ApplicationRepository.class);
         auditLogRepository = mock(AuditLogRepository.class);
         scoringService = mock(ScoringService.class);
+        bankIdSigningService = mock(BankIdSigningService.class);
+        when(bankIdSigningService.sign(any(), any()))
+                .thenReturn(new BankIdSigningService.BankIdSignature(
+                        "order-1",
+                        "MOCK-SIG-ORDER1",
+                        "Kalle Kula",
+                        FIXED_ETA.minusSeconds(60)));
         objectMapper = new ObjectMapper();
         auditLogService = new AuditLogService(auditLogRepository, mock(ApplicationRepository.class),
                 objectMapper, new DummyAuditSigningService());
@@ -90,6 +99,7 @@ class ApplicationServiceTest {
                 companyRepository,
                 applicationRepository,
                 scoringService,
+                bankIdSigningService,
                 etaService,
                 auditLogService,
                 caseWorkerAssignmentService,
@@ -296,15 +306,15 @@ class ApplicationServiceTest {
 
             ArgumentCaptor<AuditLog> captor = ArgumentCaptor.forClass(AuditLog.class);
 
-            verify(auditLogRepository, times(2))
+            verify(auditLogRepository, times(3))
                     .save(captor.capture());
 
             assertThat(captor.getAllValues())
-                    .hasSize(2);
+                    .hasSize(3);
 
             assertThat(
                     captor.getAllValues()
-                            .get(0)
+                            .get(1)
                             .getEntry())
                     .contains(
                             "\"action\":\"APPLICATION_CREATED\"")
@@ -326,15 +336,15 @@ class ApplicationServiceTest {
 
             ArgumentCaptor<AuditLog> captor = ArgumentCaptor.forClass(AuditLog.class);
 
-            verify(auditLogRepository, times(2))
+            verify(auditLogRepository, times(3))
                     .save(captor.capture());
 
             assertThat(captor.getAllValues())
-                    .hasSize(2);
+                    .hasSize(3);
 
             assertThat(
                     captor.getAllValues()
-                            .get(1)
+                            .get(2)
                             .getEntry())
                     .contains("\"action\":\"ETA_SET\"")
                     .contains(
@@ -370,6 +380,36 @@ class ApplicationServiceTest {
             verify(emailService, never())
                     .sendApplicationSubmitted(
                             any(Application.class));
+        }
+
+        @Test
+        @DisplayName("Does not save anything when BankID signing fails")
+        void signingFailureNotSaved() {
+            when(companyRepository.findByOrgNumber("556677-8899"))
+                    .thenReturn(Optional.of(company));
+
+            when(bankIdSigningService.sign(any(), any()))
+                    .thenThrow(BankIdSigningException.signingFailed());
+
+            assertThatThrownBy(() -> applicationService.submitApplication(
+                    "556677-8899",
+                    validRequest))
+                    .isInstanceOf(BankIdSigningException.class);
+
+            // Signing comes before any write, so a refused signature must leave
+            // no trace: no application, no scoring, no email, no audit entry.
+            verify(applicationRepository, never())
+                    .save(any(Application.class));
+
+            verify(scoringService, never())
+                    .scoreApplication(any());
+
+            verify(emailService, never())
+                    .sendApplicationSubmitted(
+                            any(Application.class));
+
+            verify(auditLogRepository, never())
+                    .save(any(AuditLog.class));
         }
     }
 
