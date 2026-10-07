@@ -117,11 +117,11 @@ export function Documents() {
     }
   };
 
-  const handleDownload = async (documentId: string, filename: string) => {
+  const handleDownload = async (uuid: string, filename: string) => {
     try {
       setError(null);
 
-      const blob = await documentApi.downloadDocument(documentId);
+      const blob = await documentApi.downloadDocument(uuid);
 
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
@@ -144,14 +144,14 @@ export function Documents() {
     navigate("/application");
   };
 
-  const handleDelete = async (documentId: string) => {
+  const handleDelete = async (uuid: string) => {
     try {
       setError(null);
 
-      await documentApi.deleteDocument(documentId);
+      await documentApi.deleteDocument(uuid);
 
       setDocuments((currentDocuments) =>
-        currentDocuments.filter((document) => document.uuid !== documentId),
+        currentDocuments.filter((document) => document.uuid !== uuid),
       );
     } catch (error) {
       console.error("Kunde inte ta bort dokument:", error);
