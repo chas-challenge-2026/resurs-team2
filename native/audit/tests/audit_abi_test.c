@@ -1,17 +1,9 @@
 #include "resurs_audit.h"
+#include "test_util.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-static int g_failures = 0;
-
-static void check(int ok, const char *name)
-{
-    printf("%s %s\n", ok ? "[PASS]" : "[FAIL]", name);
-    if (!ok)
-        g_failures++;
-}
 
 /* Reads the last n bytes of a file. Used to strip the fixed-size Ed25519
  * SubjectPublicKeyInfo DER header (12 bytes) and keep only the raw 32-byte
@@ -195,6 +187,5 @@ int main(void)
     remove(key_path);
     remove(pub_der_path);
 
-    printf("\n%d failure(s)\n", g_failures);
-    return g_failures == 0 ? 0 : 1;
+    return test_summary();
 }
