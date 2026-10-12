@@ -6,7 +6,7 @@ import type { AuditLog } from "@/types/auditLog";
 import { apiFetch } from "./apiFetch";
 import type { PaginatedResponse } from "@/types/PaginatedResponse.ts";
 
-export type Decision = "APPROVED" | "REJECTED";
+export type Decision = "APPROVED" | "REJECTED" | "DOCUMENTS_NEEDED";
 
 export interface DecisionRequest {
   decision: Decision;
