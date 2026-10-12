@@ -17,8 +17,15 @@ target_link_libraries(audit_sandbox_test PRIVATE OpenSSL::Crypto)
 
 add_test(NAME audit_sandbox_test COMMAND audit_sandbox_test)
 
-# --- Local ABI test (links against libresurs_audit.so) ---
+# --- Local ABI tests (link against libresurs_audit.so) ---
+# One executable per area, so ctest reports each separately. Each uses its own
+# key files, so they are safe to run in parallel (ctest -j).
 
-add_executable(audit_abi_test audit_abi_test.c)
-target_link_libraries(audit_abi_test PRIVATE resurs_audit)
-add_test(NAME audit_abi_test COMMAND audit_abi_test)
+set(AUDIT_ABI_TESTS init chain verify tamper)
+
+foreach(name IN LISTS AUDIT_ABI_TESTS)
+    set(target audit_abi_${name}_test)
+    add_executable(${target} ${target}.c)
+    target_link_libraries(${target} PRIVATE resurs_audit)
+    add_test(NAME ${target} COMMAND ${target})
+endforeach()

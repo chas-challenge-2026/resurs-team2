@@ -62,7 +62,7 @@ test_native: native-build
 # The full audit scope: the audit ITs the default surefire run skips by name, covering
 # signing and verification against the real Ed25519 module (RealAuditSigningIT) and the
 # seeded chain that startup signs and re-signs in place (SeedAuditSigningIT). The C++
-# half of the audit scope runs as part of test_native (audit_sandbox_test, audit_abi_test).
+# half of the audit scope runs as part of test_native (audit_sandbox_test, audit_abi_*_test).
 #
 # Depends on build-native because the tests load the library from $(LIBS_DIR), which is
 # where the JNA library path points.
