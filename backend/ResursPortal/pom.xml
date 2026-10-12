@@ -19,6 +19,7 @@
 
     <properties>
         <java.version>25</java.version>
+        <testcontainers.version>1.21.4</testcontainers.version>
     </properties>
 
 
@@ -83,6 +84,21 @@
             <groupId>com.h2database</groupId>
             <artifactId>h2</artifactId>
             <scope>runtime</scope>
+        </dependency>
+
+        <!-- Real-PostgreSQL integration tests (BlockModificationTriggerIT etc.):
+             the H2 suite runs MODE=PostgreSQL and cannot emulate plpgsql triggers. -->
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>postgresql</artifactId>
+            <version>${testcontainers.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>${testcontainers.version}</version>
+            <scope>test</scope>
         </dependency>
 
         <dependency>
