@@ -81,6 +81,26 @@ public class Application {
     @Nullable
     private Instant estimatedResolutionAt;
 
+    /**
+     * The BankID signature covering this application, produced by the signatory
+     * in the step immediately before submission. Opaque evidence that the order
+     * completed, not something this portal verifies.
+     *
+     * <p>
+     * Not PII, so stored as-is rather than through
+     * {@link PiiAttributeConverter}. Null only for applications that predate
+     * signing -- the seeded demo row -- which is why the column is nullable.
+     * Who signed is carried by the {@code APPLICATION_SIGNED} audit entry, next
+     * to the organisation number it already records.
+     */
+    @Column(name = "bankid_signature", columnDefinition = "TEXT")
+    @Nullable
+    private String bankidSignature;
+
+    @Column(name = "bankid_signed_at")
+    @Nullable
+    private Instant bankidSignedAt;
+
     @OneToMany(fetch = FetchType.LAZY, mappedBy = "application")
     @OrderBy("uploadedAt DESC")
     private List<Document> documents;
@@ -236,6 +256,24 @@ public class Application {
 
     public void setEstimatedResolutionAt(@Nullable Instant estimatedResolutionAt) {
         this.estimatedResolutionAt = estimatedResolutionAt;
+    }
+
+    @Nullable
+    public String getBankidSignature() {
+        return bankidSignature;
+    }
+
+    public void setBankidSignature(@Nullable String bankidSignature) {
+        this.bankidSignature = bankidSignature;
+    }
+
+    @Nullable
+    public Instant getBankidSignedAt() {
+        return bankidSignedAt;
+    }
+
+    public void setBankidSignedAt(@Nullable Instant bankidSignedAt) {
+        this.bankidSignedAt = bankidSignedAt;
     }
 
     @Nonnull

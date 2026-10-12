@@ -5,7 +5,7 @@
 
 BUILD_DIR := build
 
-.PHONY: all build test clean rebuild demo demo-audit
+.PHONY: all build test test-v clean rebuild demo-crypto demo-audit
 
 all: build
 
@@ -20,10 +20,29 @@ test-v: build
 	ctest --test-dir $(BUILD_DIR) -V
 
 demo-crypto: build
-	@./$(BUILD_DIR)/crypto/sandbox_test | sed -n '/AesGcmCipher demo/,$$p'
+	@cd $(BUILD_DIR)/crypto && ./crypto_demo
 
 demo-audit: build
 	@cd $(BUILD_DIR)/audit && ./audit_demo
+
+# Line/branch coverage of the crypto and audit modules from the ctest suites.
+# Separate build dir (inside build/, so it is git-ignored and removed by clean).
+# Old .gcda counters are deleted first, so each run reports only that run.
+.PHONY: coverage
+COVERAGE_DIR := $(BUILD_DIR)/coverage
+
+coverage:
+	cmake -S . -B $(COVERAGE_DIR) -DRESURS_COVERAGE=ON -DCMAKE_BUILD_TYPE=Debug
+	cmake --build $(COVERAGE_DIR)
+	find $(COVERAGE_DIR) -name '*.gcda' -delete
+	ctest --test-dir $(COVERAGE_DIR) --output-on-failure
+	mkdir -p $(COVERAGE_DIR)/report
+	gcovr --root . --object-directory $(COVERAGE_DIR) \
+		--filter 'crypto/' --filter 'audit/' \
+		--exclude '.*/tests/' --exclude '.*_test\.(c|cpp)$$' --exclude '.*_demo\.c$$' \
+		--exclude-throw-branches --exclude-unreachable-branches \
+		--txt --html-details $(COVERAGE_DIR)/report/index.html --print-summary
+	@echo "HTML report: $(COVERAGE_DIR)/report/index.html"
 
 clean:
 	rm -rf $(BUILD_DIR)

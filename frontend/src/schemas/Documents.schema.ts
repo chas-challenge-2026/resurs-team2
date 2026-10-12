@@ -27,17 +27,17 @@ export const documentUploadSchema = z.object({
 });
 
 export const documentSchema = z.object({
-  id: z.string(),
+  uuid: z.uuid(),
+  applicationId: z.number(),
   filename: z.string(),
   docType: documentTypeSchema,
   uploadedAt: z.string(),
 });
 
-export type DocumentType = z.infer<
-typeof documentTypeSchema >;
+export type DocumentType = z.infer<typeof documentTypeSchema>;
 
 export type DocumentUploadData = z.infer<
-typeof documentUploadSchema >;
+  typeof documentUploadSchema
+>;
 
-export type DocumentData = z.infer<
-typeof documentSchema >;
+export type DocumentData = z.infer<typeof documentSchema>;

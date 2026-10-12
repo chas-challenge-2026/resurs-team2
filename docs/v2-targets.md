@@ -8,7 +8,7 @@
 | Java | 11 | 21 |
 | Databasåtkomst | JdbcTemplate i controllers | JPA/Hibernate, repository-pattern |
 | Frontend | Thymeleaf + Bootstrap 3 + jQuery | React 18 wizard |
-| Auth | BankID mock (hardcoded) | BankID-mock lyft till egen service, utbytbar mot skarp integration senare |
+| Auth | BankID mock (hardcoded) | BankID-mock lyft till egen service, utbytbar mot skarp integration senare (genomfört — `BankIdService` + `BankIdSigningService`) |
 | Lösenord | MD5 | bcrypt via Spring Security (genomfört — MD5 borttaget) |
 | Audit log | JSON-blob i TEXT-kolumn | Separat audit_log-tabell med index, hashkedja för manipulationsdetektion |
 | Företagsvalidering | Mockad utan felhantering | Egen service med tydligt klientgränssnitt, mockat i MVP, utbytbart mot skarpa anrop |
@@ -28,6 +28,7 @@ Browser (React 18)
                   │    ├── AuditService (skriver till audit_log-tabell)
                   │    ├── CompanyValidationService (klientgränssnitt, mockat i MVP)
                   │    ├── BankIdService (mockad klient, utbytbar)
+                  │    ├── BankIdSigningService (mockad klient, utbytbar)
                   │    └── NotificationService (e-post via Spring Mail)
                   ├── Repository (JPA, Spring Data)
                   └── JNA Bridge → native/libresurs.so (PII-kryptering, audit-signering)
@@ -65,9 +66,10 @@ CREATE TABLE audit_events (
 - Exponera båda via JNA bridge (`libresurs.so`)
 
 ### 5. BankID-mock som egen service
-- Lyft BankID-mock ur `AuthController` till en egen service med tydligt klientgränssnitt
-- Behåll mock (happy path) i v2, gör den utbytbar mot en skarp BankID-integration senare
-- Validera juridisk firmatecknarbehörighet i mock-flödet
+- Lyft BankID-mock ur `AuthController` till en egen service med tydligt klientgränssnitt (genomfört — `BankIdService`)
+- Behåll mock (happy path) i v2, gör den utbytbar mot en skarp BankID-integration senare (genomfört — `resurs.bankid.mode` styr båda halvorna, `mock` är default och `real` utan implementation startar inte applikationen)
+- Validera juridisk firmatecknarbehörighet i mock-flödet (genomfört — `MockBankIdSigningService` hämtar signeraren ur `companies.authorized_signatory` och vägrar om den saknas)
+- Signering av ansökan, inte bara inloggning: wizard-steg 5 anropar `BankIdSigningService`, som `ApplicationService.submitApplication` kräver innan något skrivs (genomfört)
 
 ### 6. @Transactional
 - Wrappa application-skapande (company + application + audit) i en transaktion

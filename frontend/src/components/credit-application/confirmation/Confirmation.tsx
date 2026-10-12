@@ -83,47 +83,46 @@ export function Confirmation({
         </section>
 
         <div className={styles.checkbox}>
-          <input
-            id="financialConfirmation"
-            name="financialConfirmation"
-            type="checkbox"
-            checked={data.financialConfirmation}
-            onChange={(event) =>
-              onChange({
-                financialConfirmation:
-                  event.target.checked,
-              })
-            }
-            aria-describedby={
-              submitted &&
-              !data.financialConfirmation
-                ? "financialConfirmation-error"
-                : undefined
-            }
-            aria-invalid={
-              submitted &&
-              !data.financialConfirmation
-            }
-          />
+  <input
+    id="financialConfirmation"
+    name="financialConfirmation"
+    type="checkbox"
+    checked={data.financialConfirmation}
+    onChange={(event) =>
+      onChange({
+        financialConfirmation: event.target.checked,
+      })
+    }
+    aria-describedby={
+      submitted && !data.financialConfirmation
+        ? "financialConfirmation-error"
+        : undefined
+    }
+    aria-invalid={
+      submitted && !data.financialConfirmation
+    }
+  />
 
-          <label htmlFor="financialConfirmation">
-            Jag intygar att de finansiella uppgifterna
-            är korrekta och hämtade från senaste
-            årsredovisningen.
-          </label>
+  <div className={styles.checkboxContent}>
+    <label htmlFor="financialConfirmation">
+      Jag intygar att de finansiella uppgifterna
+      är korrekta och hämtade från senaste
+      årsredovisningen.
+    </label>
 
-          {submitted &&
-            !data.financialConfirmation && (
-              <p
-                id="financialConfirmation-error"
-                className={styles.errorText}
-                role="alert"
-              >
-                Du måste intyga att de finansiella
-                uppgifterna är korrekta.
-              </p>
-            )}
-        </div>
+    {submitted &&
+      !data.financialConfirmation && (
+        <p
+          id="financialConfirmation-error"
+          className={styles.errorText}
+          role="alert"
+        >
+          Du måste intyga att de finansiella
+          uppgifterna är korrekta.
+        </p>
+      )}
+  </div>
+</div>
 
         <div className={styles.buttonGroup}>
           <button

@@ -144,23 +144,27 @@ class ApplicationControllerIntegrationTest {
             assertThat(app.getRequestedAmount()).isEqualByComparingTo("300000");
 
             // Audit log table carries the full submit+score trail: the submit
-            // transaction wrote APPLICATION_CREATED and a valued ETA_SET
-            // synchronously; the async scoring appended SCORING_RUN and then a
-            // final ETA_SET reflecting its outcome (manual-review refresh or
-            // decision clear).
-            assertThat(auditLogRepository.findAll()).hasSize(4);
+            // transaction recorded the BankID signature, then wrote
+            // APPLICATION_CREATED and a valued ETA_SET synchronously; the async
+            // scoring appended SCORING_RUN and then a final ETA_SET reflecting
+            // its outcome (manual-review refresh or decision clear). The
+            // signature comes first because signing is what happened first.
+            assertThat(auditLogRepository.findAll()).hasSize(5);
             List<String> entries = auditLogRepository.findAll().stream()
                     .sorted((a, b) -> Long.compare(a.getSequenceNumber(), b.getSequenceNumber()))
                     .map(AuditLog::getEntry)
                     .toList();
             assertThat(entries.get(0))
-                    .contains("\"action\":\"APPLICATION_CREATED\"")
+                    .contains("\"action\":\"APPLICATION_SIGNED\"")
                     .contains("\"orgNumber\":\"556000-1234\"");
             assertThat(entries.get(1))
+                    .contains("\"action\":\"APPLICATION_CREATED\"")
+                    .contains("\"orgNumber\":\"556000-1234\"");
+            assertThat(entries.get(2))
                     .contains("\"action\":\"ETA_SET\"")
                     .contains("\"estimatedResolutionAt\":");
-            assertThat(entries.get(2)).contains("\"action\":\"SCORING_RUN\"");
-            assertThat(entries.get(3)).contains("\"action\":\"ETA_SET\"");
+            assertThat(entries.get(3)).contains("\"action\":\"SCORING_RUN\"");
+            assertThat(entries.get(4)).contains("\"action\":\"ETA_SET\"");
 
             // A decision/reason should be produced by scoring.
             assertThat(app.getDecisionReason()).isNotBlank();
@@ -305,7 +309,7 @@ class ApplicationControllerIntegrationTest {
                 "DELETE FROM companies",
                 "INSERT INTO companies (id, org_number, org_number_index, company_name, authorized_signatory) VALUES (700, '556000-1234', X'dedd7d2467a47aac7cc703665899fded7d8013ddecbbbf69e0ff366fd4812ed7', 'Malmö Fastigheter AB', 'Test Person')",
                 "INSERT INTO applications (id, company_id, requested_amount, purpose, status, decision, decision_reason, scoring_result) VALUES (700, 700, 300000.00, 'Rörelsekapital', 'UNDER_REVIEW', NULL, NULL, NULL)",
-                "INSERT INTO documents (uuid, application_id, filename, doc_type) VALUES ('00000000-0000-0000-0000-000000000700', 700, 'bokaplan.pdf', 'BOKFORING')"
+                "INSERT INTO documents (uuid, application_id, original_filename, doc_type) VALUES ('00000000-0000-0000-0000-000000000700', 700, 'bokaplan.pdf', 'BOKFORING')"
         })
         void companyCanViewOwnApplication() throws Exception {
             mockMvc.perform(get("/api/v1/applications/700"))
