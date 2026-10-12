@@ -1,24 +1,24 @@
 package se.comerit.resurs.api.v1.service;
 
-import java.util.List;
-import java.util.Optional;
+import jakarta.annotation.Nonnull;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
-import tools.jackson.databind.ObjectMapper;
-
-import jakarta.annotation.Nonnull;
-import se.comerit.resurs.audit.ApplicationCreated;
 import se.comerit.resurs.api.v1.dto.ApplicationDetailsResponse;
 import se.comerit.resurs.api.v1.dto.ApplicationRequest;
 import se.comerit.resurs.api.v1.dto.ApplicationResponse;
+import se.comerit.resurs.api.v1.dto.PaginatedResponse;
 import se.comerit.resurs.api.v1.mapper.ApplicationMapper;
+import se.comerit.resurs.audit.ApplicationCreated;
+import se.comerit.resurs.audit.EtaSet;
 import se.comerit.resurs.entity.Application;
 import se.comerit.resurs.entity.ApplicationStatus;
 import se.comerit.resurs.entity.Company;
@@ -30,11 +30,19 @@ import se.comerit.resurs.repository.CompanyRepository;
 import se.comerit.resurs.security.CaseWorkerPrincipal;
 import se.comerit.resurs.security.UserPrincipal;
 
+import tools.jackson.databind.ObjectMapper;
+
+import java.time.Instant;
+import java.time.format.DateTimeFormatter;
+import java.util.Optional;
+
 @Service
 public class ApplicationService {
+
     private final CompanyRepository companyRepository;
     private final ApplicationRepository applicationRepository;
     private final ScoringService scoringService;
+    private final EtaService etaService;
     private final AuditLogService auditLogService;
     private final CaseWorkerAssignmentService caseWorkerAssignmentService;
     private final ObjectMapper objectMapper;
@@ -44,13 +52,24 @@ public class ApplicationService {
     @Value("${resurs.scoring.delay-ms:20000}")
     private long scoringDelayMs;
 
-    public ApplicationService(CompanyRepository companyRepository, ApplicationRepository applicationRepository,
-            ScoringService scoringService, AuditLogService auditLogService,
-            CaseWorkerAssignmentService caseWorkerAssignmentService, ObjectMapper objectMapper,
-            EmailService emailService, @Lazy ApplicationService self) {
+    @Value("${resurs.sla.automated-decision-hours:24}")
+    private long automatedDecisionHours;
+
+    public ApplicationService(
+            CompanyRepository companyRepository,
+            ApplicationRepository applicationRepository,
+            ScoringService scoringService,
+            EtaService etaService,
+            AuditLogService auditLogService,
+            CaseWorkerAssignmentService caseWorkerAssignmentService,
+            ObjectMapper objectMapper,
+            EmailService emailService,
+            @Lazy ApplicationService self) {
+
         this.companyRepository = companyRepository;
         this.applicationRepository = applicationRepository;
         this.scoringService = scoringService;
+        this.etaService = etaService;
         this.auditLogService = auditLogService;
         this.caseWorkerAssignmentService = caseWorkerAssignmentService;
         this.objectMapper = objectMapper;
@@ -66,30 +85,50 @@ public class ApplicationService {
     public Long submitApplication(
             String orgNumber,
             ApplicationRequest application) {
+
         Company company = getCompany(orgNumber)
                 .orElseThrow(CompanyNotFoundException::new);
 
-        ApplicationData data = ApplicationMapper.toApplicationData(application);
+        ApplicationData data =
+                ApplicationMapper.toApplicationData(application);
 
         String financialDataJson;
+
         try {
-            financialDataJson = objectMapper.writeValueAsString(data);
+            financialDataJson =
+                    objectMapper.writeValueAsString(data);
         } catch (Exception _) {
             financialDataJson = null;
         }
 
-        // TODO: Consider what should be the default status
+        // The application is received and queued for the automated scoring run
+        // that follows right after the transaction commits.
         Application app = new Application(
                 company,
                 application.requestedAmount(),
                 application.purpose());
+
+        app.setStatus(ApplicationStatus.SCORING_IN_PROGRESS);
         app.setFinancialData(financialDataJson);
+
+        app.setEstimatedResolutionAt(
+                etaService.estimateWithinHours(
+                        Instant.now(),
+                        automatedDecisionHours));
 
         app = applicationRepository.save(app);
 
         emailService.sendApplicationSubmitted(app);
 
-        auditLogService.append(app, new ApplicationCreated(orgNumber));
+        auditLogService.append(
+                app,
+                new ApplicationCreated(orgNumber));
+
+        auditLogService.append(
+                app,
+                new EtaSet(
+                        DateTimeFormatter.ISO_INSTANT.format(
+                                app.getEstimatedResolutionAt())));
 
         scheduleScoringAfterCommit(app.getId());
 
@@ -97,21 +136,26 @@ public class ApplicationService {
     }
 
     /**
-     * Runs the (asynchronous) scoring only after the surrounding transaction
-     * has committed. Starting it inside the transaction is racy: the scoring
-     * thread reads the application in its own transaction and could see nothing
-     * if the insert has not been committed yet, silently skipping the scoring
-     * for that application. When no transaction is active the scoring is
-     * scheduled immediately.
+     * Runs the asynchronous scoring only after the surrounding transaction
+     * has committed.
+     *
+     * Starting it inside the transaction is racy: the scoring thread reads
+     * the application in its own transaction and could see nothing if the
+     * insert has not been committed yet, silently skipping the scoring for
+     * that application.
+     *
+     * When no transaction is active the scoring is scheduled immediately.
      */
     private void scheduleScoringAfterCommit(Long applicationId) {
         if (TransactionSynchronizationManager.isSynchronizationActive()) {
-            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-                @Override
-                public void afterCommit() {
-                    self.runScoringAsync(applicationId);
-                }
-            });
+            TransactionSynchronizationManager.registerSynchronization(
+                    new TransactionSynchronization() {
+
+                        @Override
+                        public void afterCommit() {
+                            self.runScoringAsync(applicationId);
+                        }
+                    });
         } else {
             self.runScoringAsync(applicationId);
         }
@@ -121,7 +165,7 @@ public class ApplicationService {
     public void runScoringAsync(Long applicationId) {
         try {
             Thread.sleep(scoringDelayMs);
-        } catch (InterruptedException e) {
+        } catch (InterruptedException _) {
             Thread.currentThread().interrupt();
             return;
         }
@@ -130,55 +174,104 @@ public class ApplicationService {
     }
 
     /**
-     * Returns the applications visible to the caller. A case worker sees all
-     * applications; a company sees only its own. When {@code status} is
-     * supplied the result is narrowed to that status, otherwise case workers
-     * default to {@link ApplicationStatus#UNDER_REVIEW} and companies see
+     * Returns the applications visible to the caller.
+     *
+     * A case worker sees all applications; a company sees only its own.
+     * When status is supplied the result is narrowed to that status.
+     * Otherwise case workers default to UNDER_REVIEW and companies see
      * everything.
      */
     @Transactional(readOnly = true)
-    public @Nonnull List<ApplicationResponse> listApplications(UserPrincipal principal,
-            ApplicationStatus status) {
+    public @Nonnull PaginatedResponse<ApplicationResponse> listApplications(
+            UserPrincipal principal,
+            ApplicationStatus status,
+            Pageable pageable) {
+
         if (principal instanceof CaseWorkerPrincipal) {
-            ApplicationStatus effective = status != null ? status : ApplicationStatus.UNDER_REVIEW;
-            return applicationRepository.findByStatus(effective).stream()
-                    .map(ApplicationMapper::toResponse).toList();
+            ApplicationStatus effective =
+                    status != null
+                            ? status
+                            : ApplicationStatus.UNDER_REVIEW;
+
+            Page<Application> applications =
+                    applicationRepository.findByStatus(
+                            effective,
+                            pageable);
+
+            return PaginatedResponse.from(
+                    applications.map(ApplicationMapper::toResponse));
         }
 
-        String orgNumber = principal.asCompany().orgNumber();
+        String orgNumber =
+                principal.asCompany().orgNumber();
+
         Company company = getCompany(orgNumber)
                 .orElseThrow(CompanyNotFoundException::new);
+
+        Page<Application> applications;
+
         if (status != null) {
-            return applicationRepository.findByCompanyIdAndStatus(company.getId(), status).stream()
-                    .map(ApplicationMapper::toResponse).toList();
+            applications =
+                    applicationRepository.findByCompanyIdAndStatus(
+                            company.getId(),
+                            status,
+                            pageable);
+        } else {
+            applications =
+                    applicationRepository.findByCompanyId(
+                            company.getId(),
+                            pageable);
         }
-        return applicationRepository.findByCompanyId(company.getId()).stream()
-                .map(ApplicationMapper::toResponse).toList();
+
+        return PaginatedResponse.from(
+                applications.map(ApplicationMapper::toResponse));
     }
 
     /**
-     * Returns the details of a single application. A case worker may view any
-     * application; a company may only view its own (mirrors the legacy
-     * controller). For anything the caller is not allowed to see, or that does
-     * not exist, an {@link ApplicationNotFoundException} is thrown so that the
-     * existence of other applications is not leaked.
+     * Returns the details of a single application.
+     *
+     * A case worker may view any application; a company may only view its own.
+     * For anything the caller is not allowed to see, or that does not exist,
+     * an ApplicationNotFoundException is thrown so that the existence of
+     * other applications is not leaked.
      */
     @Transactional(readOnly = true)
-    public @Nonnull ApplicationDetailsResponse viewApplication(Long id, UserPrincipal principal) {
+    public @Nonnull ApplicationDetailsResponse viewApplication(
+            Long id,
+            UserPrincipal principal) {
+
         if (principal instanceof CaseWorkerPrincipal caseWorker) {
-            caseWorkerAssignmentService.ensureAssigned(id, caseWorker);
-            Application app = applicationRepository.findByIdWithDocuments(id)
-                    .orElseThrow(() -> new ApplicationNotFoundException(id));
-            return ApplicationMapper.toDetailsResponse(app, app.getFinancialData());
+            caseWorkerAssignmentService.ensureAssigned(
+                    id,
+                    caseWorker);
+
+            Application app =
+                    applicationRepository.findByIdWithDocuments(id)
+                            .orElseThrow(
+                                    () -> new ApplicationNotFoundException(id));
+
+            return ApplicationMapper.toDetailsResponse(
+                    app,
+                    app.getFinancialData());
         }
 
-        Application app = applicationRepository.findByIdWithDocuments(id)
-                .orElseThrow(() -> new ApplicationNotFoundException(id));
+        Application app =
+                applicationRepository.findByIdWithDocuments(id)
+                        .orElseThrow(
+                                () -> new ApplicationNotFoundException(id));
 
-        String orgNumber = principal.asCompany().orgNumber();
-        if (!app.getCompany().getOrgNumber().equals(orgNumber)) {
+        String orgNumber =
+                principal.asCompany().orgNumber();
+
+        if (!app.getCompany()
+                .getOrgNumber()
+                .equals(orgNumber)) {
+
             throw new ApplicationNotFoundException(id);
         }
-        return ApplicationMapper.toDetailsResponse(app);
+
+        return ApplicationMapper.toDetailsResponse(
+                app,
+                app.getFinancialData());
     }
 }

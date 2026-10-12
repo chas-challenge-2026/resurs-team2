@@ -1,12 +1,10 @@
-import type {
-  Application,
-  ApplicationStatus,
-} from "@/types/application";
+import type { Application, ApplicationStatus } from "@/types/application";
 import type { ApplicationDetails } from "@/types/applicationDetails";
 import type { ApplicationRequest } from "@/schemas/ApplicationRequest.schema";
 import type { AuditLog } from "@/types/auditLog";
 
 import { apiFetch } from "./apiFetch";
+import type { PaginatedResponse } from "@/types/PaginatedResponse.ts";
 
 export type Decision = "APPROVED" | "REJECTED";
 
@@ -16,10 +14,23 @@ export interface DecisionRequest {
 }
 
 export const applicationApi = {
-  async getAll(status?: ApplicationStatus): Promise<Application[]> {
-    const query = status ? `?status=${encodeURIComponent(status)}` : "";
+  async getAll(
+    status?: ApplicationStatus,
+    page = 0,
+    size = 20,
+  ): Promise<PaginatedResponse<Application>> {
+    const params = new URLSearchParams();
 
-    const response = await apiFetch(`/api/v1/applications${query}`);
+    if (status) {
+      params.set("status", status);
+    }
+
+    params.set("page", page.toString());
+    params.set("size", size.toString());
+
+    const response = await apiFetch(
+      `/api/v1/applications?${params.toString()}`,
+    );
 
     if (!response.ok) {
       throw new Error("Kunde inte hämta ansökningarna.");
@@ -47,9 +58,7 @@ export const applicationApi = {
   },
 
   async getAuditLog(id: number | string): Promise<AuditLog[]> {
-    const response = await apiFetch(
-      `/api/v1/applications/${id}/audit-log`,
-    );
+    const response = await apiFetch(`/api/v1/applications/${id}/audit-log`);
 
     if (response.status === 403) {
       throw new Error("Du har inte behörighet att visa händelseloggen.");

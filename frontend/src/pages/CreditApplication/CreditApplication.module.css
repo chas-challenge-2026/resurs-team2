@@ -33,7 +33,7 @@
 
   background-color: var(--color-white);
 
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--color-border-strong);
   border-radius: var(--radius-lg);
 
   box-shadow: var(--shadow-sm);
@@ -49,8 +49,8 @@
   min-height: 58px;
   padding: 12px var(--spacing-md);
 
-  color: var(--color-muted);
-  background-color: var(--color-white);
+  color: var(--color-text);
+  background-color: var(--color-background);
 
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-semibold);
@@ -72,10 +72,11 @@
 /* Current step */
 
 .stepItem.active {
-  color: var(--color-primary);
-  background-color: var(--color-primary-soft);
-
+  color: var(--color-text);
+  background-color: var(--color-background);
+  border-color: var(--color-white);
   font-weight: var(--font-weight-bold);
+  transform: translateY(-1px);
 }
 
 .stepItem.active::after {

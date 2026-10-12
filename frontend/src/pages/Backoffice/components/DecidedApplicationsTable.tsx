@@ -83,7 +83,7 @@ export const DecidedApplicationsTable = ({
                   <td className="backoffice-table-action">
                     <button
                       type="button"
-                      className="btn btn-default"
+                      className="DecisionButton"
                       onClick={() => navigate(`/backoffice/${app.id}`)}
                     >
                       Visa

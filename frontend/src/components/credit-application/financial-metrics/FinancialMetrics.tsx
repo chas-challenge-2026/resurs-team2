@@ -15,26 +15,29 @@ export function FinancialMetrics({
   onNext,
   onPrevious,
 }: FinancialMetricsProps) {
-  
   const [errors, setErrors] = useState<
     Partial<Record<keyof FinancialMetricsFormData, string>>
   >({});
 
-  // Handles changes to the financial metric fields.
-  const handleInputChange = (event: ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = (
+    event: ChangeEvent<HTMLInputElement>,
+  ) => {
     const { name, value } = event.target;
 
     onChange({
       ...data,
-      [name]: value === "" ? undefined : Number(value),
+      [name]:
+        value === "" ? undefined : Number(value),
     });
   };
 
-  // Prevents the default form submission and proceeds to the next step.
-  const handleSubmit = (event: SubmitEvent<HTMLFormElement>) => {
+  const handleSubmit = (
+    event: SubmitEvent<HTMLFormElement>,
+  ) => {
     event.preventDefault();
 
-    const result = financialMetricsSchema.safeParse(data);
+    const result =
+      financialMetricsSchema.safeParse(data);
 
     if (!result.success) {
       const fieldErrors: Partial<
@@ -45,8 +48,9 @@ export function FinancialMetrics({
         const fieldName = issue.path[0];
 
         if (typeof fieldName === "string") {
-          fieldErrors[fieldName as keyof FinancialMetricsFormData] =
-            issue.message;
+          fieldErrors[
+            fieldName as keyof FinancialMetricsFormData
+          ] = issue.message;
         }
       });
 
@@ -64,7 +68,8 @@ export function FinancialMetrics({
         <h2>Steg 2: Finansiella nyckeltal</h2>
 
         <p className={styles.mutedText}>
-          Hämta värdena från senaste årsredovisningen (belopp i SEK).
+          Hämta värdena från senaste årsredovisningen
+          (belopp i SEK).
         </p>
       </header>
 
@@ -72,13 +77,21 @@ export function FinancialMetrics({
         <div className={styles.row}>
           <div className={styles.column}>
             <div className={styles.formGroup}>
-              <label htmlFor="equity">Eget kapital (SEK)</label>
+              <label htmlFor="equity">
+                Eget kapital (SEK)
+              </label>
 
               <input
                 className={styles.formControl}
                 id="equity"
                 name="equity"
                 type="number"
+                aria-invalid={Boolean(errors.equity)}
+                aria-describedby={
+                  errors.equity
+                    ? "equity-error"
+                    : undefined
+                }
                 step="1"
                 placeholder="0"
                 value={data.equity ?? ""}
@@ -86,32 +99,59 @@ export function FinancialMetrics({
               />
 
               {errors.equity && (
-                <p className={styles.errorText}>{errors.equity}</p>
+                <p
+                  id="equity-error"
+                  className={styles.errorText}
+                  role="alert"
+                >
+                  {errors.equity}
+                </p>
               )}
 
-              <p className={styles.helpText}>Summa eget kapital</p>
+              <p className={styles.helpText}>
+                Summa eget kapital
+              </p>
             </div>
           </div>
 
           <div className={styles.column}>
             <div className={styles.formGroup}>
-              <label htmlFor="totalCapital">Totalt kapital (SEK)</label>
+              <label htmlFor="totalCapital">
+                Totalt kapital (SEK)
+              </label>
 
               <input
                 className={styles.formControl}
                 id="totalCapital"
                 name="totalCapital"
                 type="number"
+                aria-invalid={Boolean(
+                  errors.totalCapital,
+                )}
+                aria-describedby={
+                  errors.totalCapital
+                    ? "totalCapital-error"
+                    : undefined
+                }
                 step="1"
                 placeholder="0"
                 value={data.totalCapital ?? ""}
                 onChange={handleInputChange}
               />
+
               {errors.totalCapital && (
-                <p className={styles.errorText}>{errors.totalCapital}</p>
+                <p
+                  id="totalCapital-error"
+                  className={styles.errorText}
+                  role="alert"
+                >
+                  {errors.totalCapital}
+                </p>
               )}
 
-              <p className={styles.helpText}>Balansomslutning</p>
+              <p className={styles.helpText}>
+                Balansomslutning
+              </p>
             </div>
           </div>
         </div>
@@ -119,20 +159,37 @@ export function FinancialMetrics({
         <div className={styles.row}>
           <div className={styles.column}>
             <div className={styles.formGroup}>
-              <label htmlFor="currentAssets">Omsättningstillgångar (SEK)</label>
+              <label htmlFor="currentAssets">
+                Omsättningstillgångar (SEK)
+              </label>
 
               <input
                 className={styles.formControl}
                 id="currentAssets"
                 name="currentAssets"
                 type="number"
+                aria-invalid={Boolean(
+                  errors.currentAssets,
+                )}
+                aria-describedby={
+                  errors.currentAssets
+                    ? "currentAssets-error"
+                    : undefined
+                }
                 step="1"
                 placeholder="0"
                 value={data.currentAssets ?? ""}
                 onChange={handleInputChange}
               />
+
               {errors.currentAssets && (
-                <p className={styles.errorText}>{errors.currentAssets}</p>
+                <p
+                  id="currentAssets-error"
+                  className={styles.errorText}
+                  role="alert"
+                >
+                  {errors.currentAssets}
+                </p>
               )}
             </div>
           </div>
@@ -148,13 +205,28 @@ export function FinancialMetrics({
                 id="currentLiabilities"
                 name="currentLiabilities"
                 type="number"
+                aria-invalid={Boolean(
+                  errors.currentLiabilities,
+                )}
+                aria-describedby={
+                  errors.currentLiabilities
+                    ? "currentLiabilities-error"
+                    : undefined
+                }
                 step="1"
                 placeholder="0"
                 value={data.currentLiabilities ?? ""}
                 onChange={handleInputChange}
               />
+
               {errors.currentLiabilities && (
-                <p className={styles.errorText}>{errors.currentLiabilities}</p>
+                <p
+                  id="currentLiabilities-error"
+                  className={styles.errorText}
+                  role="alert"
+                >
+                  {errors.currentLiabilities}
+                </p>
               )}
             </div>
           </div>
@@ -163,33 +235,60 @@ export function FinancialMetrics({
         <div className={styles.row}>
           <div className={styles.column}>
             <div className={styles.formGroup}>
-              <label htmlFor="totalLiabilities">Totala skulder (SEK)</label>
+              <label htmlFor="totalLiabilities">
+                Totala skulder (SEK)
+              </label>
 
               <input
                 className={styles.formControl}
                 id="totalLiabilities"
                 name="totalLiabilities"
                 type="number"
+                aria-invalid={Boolean(
+                  errors.totalLiabilities,
+                )}
+                aria-describedby={
+                  errors.totalLiabilities
+                    ? "totalLiabilities-error"
+                    : undefined
+                }
                 step="1"
                 placeholder="0"
                 value={data.totalLiabilities ?? ""}
                 onChange={handleInputChange}
               />
+
               {errors.totalLiabilities && (
-                <p className={styles.errorText}>{errors.totalLiabilities}</p>
+                <p
+                  id="totalLiabilities-error"
+                  className={styles.errorText}
+                  role="alert"
+                >
+                  {errors.totalLiabilities}
+                </p>
               )}
             </div>
           </div>
 
           <div className={styles.column}>
             <div className={styles.formGroup}>
-              <label htmlFor="operatingIncome">Rörelseresultat (SEK)</label>
+              <label htmlFor="operatingIncome">
+                Rörelseresultat (SEK)
+              </label>
 
               <input
                 className={styles.formControl}
                 id="operatingIncome"
                 name="operatingIncome"
                 type="number"
+                aria-invalid={Boolean(
+                  errors.operatingIncome,
+                )}
+                aria-describedby={
+                  errors.operatingIncome
+                    ? "operatingIncome-error"
+                    : undefined
+                }
                 step="1"
                 placeholder="0"
                 value={data.operatingIncome ?? ""}
@@ -197,29 +296,52 @@ export function FinancialMetrics({
               />
 
               {errors.operatingIncome && (
-                <p className={styles.errorText}>{errors.operatingIncome}</p>
+                <p
+                  id="operatingIncome-error"
+                  className={styles.errorText}
+                  role="alert"
+                >
+                  {errors.operatingIncome}
+                </p>
               )}
 
-              <p className={styles.helpText}>EBIT</p>
+              <p className={styles.helpText}>
+                EBIT
+              </p>
             </div>
           </div>
         </div>
 
         <div className={styles.formGroup}>
-          <label htmlFor="netRevenue">Nettoomsättning (SEK)</label>
+          <label htmlFor="netRevenue">
+            Nettoomsättning (SEK)
+          </label>
 
           <input
             className={styles.formControl}
             id="netRevenue"
             name="netRevenue"
             type="number"
+            aria-invalid={Boolean(errors.netRevenue)}
+            aria-describedby={
+              errors.netRevenue
+                ? "netRevenue-error"
+                : undefined
+            }
             step="1"
             placeholder="0"
             value={data.netRevenue ?? ""}
             onChange={handleInputChange}
           />
+
           {errors.netRevenue && (
-            <p className={styles.errorText}>{errors.netRevenue}</p>
+            <p
+              id="netRevenue-error"
+              className={styles.errorText}
+              role="alert"
+            >
+              {errors.netRevenue}
+            </p>
           )}
         </div>
 
@@ -231,7 +353,10 @@ export function FinancialMetrics({
           ← Tillbaka
         </button>
 
-        <button type="submit" className={styles.primaryButton}>
+        <button
+          type="submit"
+          className={styles.primaryButton}
+        >
           Nästa →
         </button>
       </form>

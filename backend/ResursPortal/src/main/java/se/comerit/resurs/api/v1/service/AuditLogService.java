@@ -5,6 +5,7 @@ import java.util.List;
 import jakarta.annotation.Nonnull;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import se.comerit.resurs.audit.AuditEntry;
 import se.comerit.resurs.api.v1.dto.AuditLogResponse;
 import se.comerit.resurs.api.v1.dto.AuditSort;
@@ -25,30 +26,49 @@ public class AuditLogService {
     private final AuditLogRepository auditLogRepository;
     private final ApplicationRepository applicationRepository;
     private final ObjectMapper objectMapper;
+    private final AuditSigningService signer;
 
     public AuditLogService(AuditLogRepository auditLogRepository, ApplicationRepository applicationRepository,
-            ObjectMapper objectMapper) {
+            ObjectMapper objectMapper, AuditSigningService signer) {
         this.auditLogRepository = auditLogRepository;
         this.applicationRepository = applicationRepository;
         this.objectMapper = objectMapper;
+        this.signer = signer;
     }
 
+    /**
+     * Appends one signed entry to an application's audit chain.
+     *
+     * <p>The entry JSON is signed together with the predecessor's hash, so the stored
+     * hash and signature commit to both the content and the position of the entry in
+     * the chain. Altering an entry, or reordering it, breaks the chain at that point.
+     *
+     * <p>Concurrent appends to the same application are serialised, so each entry is
+     * assigned the next sequence number and chained to the entry before it. Appending to
+     * different applications is unaffected.
+     *
+     * <p>Runs in the caller's transaction when there is one, so an append is committed or
+     * rolled back together with the state change it records. Without an enclosing
+     * transaction this method commits on its own.
+     *
+     * @return the saved entry, carrying its assigned sequence number
+     * @throws org.springframework.dao.DataIntegrityViolationException if the chain's
+     *         uniqueness invariant has been violated by some other writer
+     */
     @Nonnull
+    @Transactional
     public AuditLog append(Application application, @Nonnull AuditEntry entry) {
-        long seq = auditLogRepository.getNextSequenceNumber(application) + 1;
-        String prevHash = auditLogRepository.findPreviousHash(application).orElse("");
+        applicationRepository.lockById(application.getId());
 
         String entryJson = toJson(entry);
-        String hash = computeHash(prevHash, entryJson);
+        long seq = auditLogRepository.getNextSequenceNumber(application) + 1;
+        // Empty means the application has no entries yet: sign a new chain from genesis
+        // rather than chaining from a zero-length "link".
+        byte[] prevHash = auditLogRepository.findPreviousHash(application).orElse(null);
 
-        AuditLog log = new AuditLog(application, seq, hash, prevHash, entryJson);
-        return auditLogRepository.save(log);
-    }
-
-    @Nonnull
-    private String computeHash(@Nonnull String previousHash, @Nonnull String entry) {
-        // TODO: Implement actual hash computation
-        return "";
+        AuditSigningService.SignedEntry signed = signer.signEntry(entryJson, prevHash);
+        return auditLogRepository.save(
+                new AuditLog(application, seq, signed.hash(), signed.signature(), entryJson));
     }
 
     @Nonnull

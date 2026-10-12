@@ -1,10 +1,14 @@
 package se.comerit.resurs.api.v1.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.nullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import java.util.Comparator;
+import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.security.crypto.argon2.Argon2PasswordEncoder;
@@ -24,7 +28,9 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import jakarta.servlet.http.Cookie;
 import se.comerit.resurs.entity.Application;
+import se.comerit.resurs.entity.AuditLog;
 import se.comerit.resurs.repository.ApplicationRepository;
+import se.comerit.resurs.repository.AuditLogRepository;
 import se.comerit.resurs.security.SessionCookie;
 
 /**
@@ -81,6 +87,9 @@ class ApplicationLifecycleIntegrationTest {
     private ApplicationRepository applicationRepository;
 
     @Autowired
+    private AuditLogRepository auditLogRepository;
+
+    @Autowired
     private CaseWorkerRepository caseWorkerRepository;
 
     @Autowired
@@ -127,7 +136,25 @@ class ApplicationLifecycleIntegrationTest {
                         .cookie(SessionCookie.access(companyToken))
                         .header("User-Agent", UA))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.application.status").value("UNDER_REVIEW"));
+                .andExpect(jsonPath("$.application.status").value("UNDER_REVIEW"))
+                .andExpect(jsonPath("$.application.estimatedResolutionAt").exists());
+
+        // The submit transaction wrote APPLICATION_CREATED then a valued
+        // ETA_SET synchronously. The asynchronous scoring appended SCORING_RUN
+        // and then refreshed the ETA to the manual-review SLA with another
+        // ETA_SET. This locks the per-submission trail.
+        List<AuditLog> trail = auditLogRepository.findAll().stream()
+                .sorted(Comparator.comparingLong(AuditLog::getSequenceNumber))
+                .toList();
+        assertThat(trail).hasSize(4);
+        assertThat(trail.get(0).getEntry()).contains("\"action\":\"APPLICATION_CREATED\"");
+        assertThat(trail.get(1).getEntry())
+                .contains("\"action\":\"ETA_SET\"")
+                .contains("\"estimatedResolutionAt\":");
+        assertThat(trail.get(2).getEntry()).contains("\"action\":\"SCORING_RUN\"");
+        assertThat(trail.get(3).getEntry())
+                .contains("\"action\":\"ETA_SET\"")
+                .contains("\"estimatedResolutionAt\":");
 
         mockMvc.perform(post("/api/v1/auth/logout")
                         .cookie(SessionCookie.access(companyToken))
@@ -150,7 +177,9 @@ class ApplicationLifecycleIntegrationTest {
                 .andExpect(jsonPath("$.id").value(applicationId))
                 .andExpect(jsonPath("$.status").value("APPROVED"))
                 .andExpect(jsonPath("$.decision").value("APPROVED"))
-                .andExpect(jsonPath("$.decisionReason").value("Godkänd efter manuell granskning"));
+                .andExpect(jsonPath("$.decisionReason").value("Godkänd efter manuell granskning"))
+                // A decided application no longer carries an ETA.
+                .andExpect(jsonPath("$.estimatedResolutionAt").value(nullValue()));
 
         mockMvc.perform(post("/api/v1/auth/logout")
                         .cookie(SessionCookie.access(caseWorkerToken))
@@ -169,13 +198,15 @@ class ApplicationLifecycleIntegrationTest {
                 .andExpect(jsonPath("$.application.id").value(applicationId))
                 .andExpect(jsonPath("$.application.status").value("APPROVED"))
                 .andExpect(jsonPath("$.application.decision").value("APPROVED"))
-                .andExpect(jsonPath("$.application.decisionReason").value("Godkänd efter manuell granskning"));
+                .andExpect(jsonPath("$.application.decisionReason").value("Godkänd efter manuell granskning"))
+                .andExpect(jsonPath("$.application.estimatedResolutionAt").value(nullValue()));
 
         // Persisted state agrees with what the API reported.
         Application persisted = applicationRepository.findById(applicationId).orElseThrow();
         assertThat(persisted.getStatus().name()).isEqualTo("APPROVED");
         assertThat(persisted.getDecision().name()).isEqualTo("APPROVED");
         assertThat(persisted.getDecisionReason()).isEqualTo("Godkänd efter manuell granskning");
+        assertThat(persisted.getEstimatedResolutionAt()).isNull();
     }
 
     private String loginCompany() throws Exception {

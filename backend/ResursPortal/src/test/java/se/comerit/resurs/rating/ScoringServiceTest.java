@@ -65,7 +65,7 @@ class ScoringServiceTest {
                         new SignalChecks(config),
                         new CombinationChecks(config)),
                 new DecisionEngine(config),
-                null, null, null, null);
+                null, null, null, null, null);
     }
 
     private Score run(ApplicationData data) {
@@ -198,6 +198,17 @@ class ScoringServiceTest {
             assertEquals("APPROVED", s.decision());
             assertEquals(0, s.flagCount());
         }
+
+        @Test
+        @DisplayName("Zero equity is rejected instead of treated as infinite debt ratio")
+        void zeroEquityIsRejected() {
+            CheckResult s = new DebtRatioCheck(ScoringTestData.config())
+                    .evaluate(mutate(healthy(), EQUITY, 0))
+                    .getFirst();
+            assertEquals(CheckStatus.REJECT, s.status());
+
+        }
+
     }
 
     // ================================================================

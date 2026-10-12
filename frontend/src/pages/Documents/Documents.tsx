@@ -2,7 +2,10 @@ import type { ChangeEvent } from "react";
 import { useRef, useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 
-import { documentUploadSchema, type DocumentType } from "../../schemas/Documents.schema";
+import {
+  documentUploadSchema,
+  type DocumentType,
+} from "../../schemas/Documents.schema";
 import type { ApplicationDocument } from "../../types/document";
 import { documentApi } from "../../api/documentApi";
 
@@ -114,15 +117,18 @@ export function Documents() {
     }
   };
 
-  const handleDownload = async (documentId: number, filename: string) => {
+  const handleDownload = async (documentId: string, filename: string) => {
     try {
       setError(null);
-      const blob = await documentApi.downloadDocument(documentId);
-      const url = URL.createObjectURL(blob);
 
+      const blob = await documentApi.downloadDocument(documentId);
+
+      const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
+
       link.href = url;
       link.download = filename;
+
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -132,28 +138,26 @@ export function Documents() {
       console.error("Kunde inte ladda ner dokument:", error);
       setError("Kunde inte ladda ner dokumentet.");
     }
-
   };
 
   const handleBack = () => {
     navigate("/application");
   };
 
-  const handleDelete = async (documentId: number) => {
-  try {
-    setError(null);
+  const handleDelete = async (documentId: string) => {
+    try {
+      setError(null);
 
-    await documentApi.deleteDocument(documentId);
+      await documentApi.deleteDocument(documentId);
 
-    setDocuments((currentDocuments) =>
-      currentDocuments.filter((document) => document.id !== documentId),
-    );
-  } catch (error) {
-    console.error("Kunde inte ta bort dokument:", error);
-
-    setError("Kunde inte ta bort dokumentet.");
-  }
-};
+      setDocuments((currentDocuments) =>
+        currentDocuments.filter((document) => document.uuid !== documentId),
+      );
+    } catch (error) {
+      console.error("Kunde inte ta bort dokument:", error);
+      setError("Kunde inte ta bort dokumentet.");
+    }
+  };
 
   return (
     <section className={styles.formSection}>
@@ -237,26 +241,35 @@ export function Documents() {
 
                   <tbody>
                     {documents.map((document) => (
-                      <tr key={document.id}>
+                      <tr key={document.uuid}>
                         <td>{document.filename}</td>
                         <td>{document.docType}</td>
                         <td>{document.uploadedAt}</td>
-
                         <td>
                           <button
                             type="button"
                             className={styles.secondaryButton}
-                            onClick={() => handleDownload(document.id, document.filename)}
+                            onClick={() =>
+                              handleDownload(document.uuid, document.filename)
+                            }
                           >
-                            ↓
+                            Ladda ner dokument
                           </button>
 
                           <button
-                          type="button"
-                          className={styles.secondaryButton}
-                          onClick={() => handleDelete(document.id)}
+                            type="button"
+                            className={styles.secondaryButton}
+                            onClick={() => {
+                              if (
+                                window.confirm(
+                                  `Vill du verkligen ta bort "${document.filename}"?`,
+                                )
+                              ) {
+                                handleDelete(document.uuid);
+                              }
+                            }}
                           >
-                            Ta bort
+                            Ta bort dokument
                           </button>
                         </td>
                       </tr>

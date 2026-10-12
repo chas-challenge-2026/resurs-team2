@@ -1,5 +1,5 @@
 export interface ApplicationDocument {
-  id: number;
+  uuid: string;
   applicationId: number;
   filename: string;
   docType: string;

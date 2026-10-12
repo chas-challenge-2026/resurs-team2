@@ -1,10 +1,13 @@
 package se.comerit.resurs.api.v1.service;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import se.comerit.resurs.api.v1.dto.DocumentDto;
+import se.comerit.resurs.audit.EtaSet;
 import se.comerit.resurs.entity.Application;
 import se.comerit.resurs.entity.ApplicationStatus;
 import se.comerit.resurs.entity.Document;
@@ -19,6 +22,8 @@ import se.comerit.resurs.security.CompanyPrincipal;
 import se.comerit.resurs.security.UserPrincipal;
 
 import java.io.IOException;
+import java.time.Instant;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.UUID;
 
@@ -31,13 +36,21 @@ public class DocumentService {
     private final ApplicationRepository applicationRepository;
     private final DocumentRepository documentRepository;
     private final EmailService emailService;
+    private final AuditLogService auditLogService;
+    private final EtaService etaService;
     private final FileStorageService fileStorageService;
 
+    @Value("${resurs.sla.review-business-days:2}")
+    private int reviewBusinessDays;
+
     public DocumentService(ApplicationRepository applicationRepository, DocumentRepository documentRepository,
-            EmailService emailService, FileStorageService fileStorageService) {
+            EmailService emailService, AuditLogService auditLogService, EtaService etaService,
+            FileStorageService fileStorageService) {
         this.applicationRepository = applicationRepository;
         this.documentRepository = documentRepository;
         this.emailService = emailService;
+        this.auditLogService = auditLogService;
+        this.etaService = etaService;
         this.fileStorageService = fileStorageService;
     }
 
@@ -51,6 +64,7 @@ public class DocumentService {
                 .toList();
     }
 
+    @Transactional 
     public DocumentDto uploadDocument(Long applicationId, String docType, MultipartFile file, UserPrincipal principal) {
         validateFile(file);
 
@@ -63,7 +77,7 @@ public class DocumentService {
             String storedFilename = fileStorageService.upload(document.getUuid(), getOriginalFilename(file),
                     file.getInputStream(), file.getSize());
             document.setFilename(storedFilename);
-        } catch (IOException e) {
+        } catch (IOException _) {
             throw new FileUploadException("Upload failed.");
         }
 
@@ -85,7 +99,7 @@ public class DocumentService {
         try {
             Resource resource = fileStorageService.download(document.getFilename());
             return new DocumentDownload(resource, document.getOriginalFilename());
-        } catch (IOException e) {
+        } catch (IOException _) {
             throw new DocumentNotFoundException(uuid);
         }
     }
@@ -118,22 +132,23 @@ public class DocumentService {
         return filename;
     }
 
-    private Document saveDocument(Application application, String storedFilename, String docType) {
-        Document document = new Document(application, storedFilename, docType);
-        return documentRepository.save(document);
-    }
-
     private void updateApplicationStatus(Application application, String docType) {
         if ("AnnualReview".equals(docType)
                 && application.getStatus() == ApplicationStatus.PENDING_DOCS) {
 
-            application.setStatus(
-                    ApplicationStatus.UNDER_REVIEW);
+            application.setStatus(ApplicationStatus.UNDER_REVIEW);
+            // A flagged application is handled manually: refresh the ETA to the
+            // manual-review SLA.
+            application.setEstimatedResolutionAt(
+                    etaService.estimateBusinessDays(Instant.now(), reviewBusinessDays));
+            auditLogService.append(application,
+                    new EtaSet(DateTimeFormatter.ISO_INSTANT.format(application.getEstimatedResolutionAt())));
 
             emailService.sendStatusUpdate(application);
         }
     }
 
+    @Transactional 
     public void deleteDocument(UUID documentId, UserPrincipal principal) {
         Document document = documentRepository
                 .findByUuid(documentId)
@@ -143,7 +158,7 @@ public class DocumentService {
 
         try {
             fileStorageService.delete(document.getFilename());
-        } catch (IOException e) {
+        } catch (IOException _) {
             throw new FileUploadException("Could not delete file.");
         }
 

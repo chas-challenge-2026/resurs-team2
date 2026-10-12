@@ -1,28 +1,13 @@
 import type { AuditLog } from "@/types/auditLog";
 
 import { Panel } from "@/components/Panel/Panel";
+import { formatDateTime } from "@/utils/dateUtils";
 
 import "./AuditLogPanel.css";
 
 interface AuditLogPanelProps {
   auditLogs: AuditLog[];
 }
-
-const formatDateTime = (value: string) => {
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    return value;
-  }
-
-  return new Intl.DateTimeFormat("sv-SE", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(date);
-};
 
 const formatAction = (action: unknown) => {
   switch (action) {

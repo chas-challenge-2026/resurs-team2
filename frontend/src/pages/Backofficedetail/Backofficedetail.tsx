@@ -30,12 +30,15 @@ export const Backofficedetail = () => {
     decisionLoading,
     error,
     handleDecision,
+    handleDocumentDeleted,
   } = useBackofficeApplication(id);
 
   if (loading) {
     return (
       <main className="backoffice-detail-page">
-        <p className="text-muted">Laddar ansökan...</p>
+        <p className="text-muted">
+          Laddar ansökan...
+        </p>
       </main>
     );
   }
@@ -44,14 +47,19 @@ export const Backofficedetail = () => {
     return (
       <main className="backoffice-detail-page">
         <div className="backoffice-detail-error">
-          <strong>Kunde inte hämta ansökan</strong>
+          <strong>
+            Kunde inte hämta ansökan
+          </strong>
+
           <p>{error}</p>
         </div>
 
         <button
           type="button"
           className="btn btn-default"
-          onClick={() => navigate("/backoffice")}
+          onClick={() =>
+            navigate("/backoffice")
+          }
         >
           Tillbaka till handläggarkön
         </button>
@@ -62,20 +70,23 @@ export const Backofficedetail = () => {
   if (!application) {
     return (
       <main className="backoffice-detail-page">
-        <p className="text-muted">Ansökan hittades inte.</p>
+        <p className="text-muted">
+          Ansökan hittades inte.
+        </p>
       </main>
     );
   }
 
   if (!financialMetrics) {
-  return (
-    <main className="backoffice-detail-page">
-      <p className="text-muted">
-        Kunde inte hämta ekonomiska nyckeltal.
-      </p>
-    </main>
-  );
-}
+    return (
+      <main className="backoffice-detail-page">
+        <p className="text-muted">
+          Kunde inte hämta ekonomiska
+          nyckeltal.
+        </p>
+      </main>
+    );
+  }
 
   return (
     <main className="backoffice-detail-page">
@@ -84,23 +95,33 @@ export const Backofficedetail = () => {
           <button
             type="button"
             className="backoffice-back-link"
-            onClick={() => navigate("/backoffice")}
+            onClick={() =>
+              navigate("/backoffice")
+            }
           >
             ← Handläggarkö
           </button>
 
           <div className="backoffice-detail-title-row">
-            <h1>Ansökan #{application.id}</h1>
+            <h1>
+              Ansökan #{application.id}
+            </h1>
 
             <span
-              className={`label ${getStatusBadgeClass(application.status)}`}
+              className={`label ${getStatusBadgeClass(
+                application.status,
+              )}`}
             >
-              {formatStatus(application.status)}
+              {formatStatus(
+                application.status,
+              )}
             </span>
           </div>
 
           <p className="backoffice-detail-subtitle">
-            {application.companyName} · {application.orgNumber}
+            {application.companyName}
+            {" · "}
+            {application.orgNumber}
           </p>
         </div>
       </header>
@@ -118,22 +139,36 @@ export const Backofficedetail = () => {
             workerName={workerName}
           />
 
-          <CreditPanel application={application} financialMetrics={financialMetrics} />
-          
+          <CreditPanel
+            application={application}
+            financialMetrics={
+              financialMetrics
+            }
+          />
 
-          <ScoringPanel scoringResult={application.scoringResult} />
+          <ScoringPanel
+            scoringResult={
+              application.scoringResult
+            }
+          />
         </div>
 
         <div className="backoffice-detail-column">
           <DecisionPanel
             application={application}
-            decisionLoading={decisionLoading}
-            onDecision={handleDecision}
+            decisionLoading={
+              decisionLoading
+            }
+            onDecision={
+              handleDecision
+            }
           />
 
-          <DocumentsPanel documents={documents} />
+          <DocumentsPanel documents={documents} onDocumentDeleted={handleDocumentDeleted} />
 
-          <AuditLogPanel auditLogs={auditLogs} />
+          <AuditLogPanel
+            auditLogs={auditLogs}
+          />
         </div>
       </div>
     </main>

@@ -227,6 +227,11 @@
             "name": "resurs.jna.key.path",
             "type": "java.lang.String",
             "description": "Path to the 64-byte crypto key file ([32 AES-256 bytes][32 HMAC-SHA256 bytes]) passed to resurs_crypto_init. Loads from the RESURS_CRYPTO_KEY_PATH environment variable. If unset (or blank), the native library is not initialised and PII encryption silently falls back to non-encrypting storage — set it in production."
+        },
+        {
+            "name": "resurs.audit.key.path",
+            "type": "java.lang.String",
+            "description": "Path to the Ed25519 private key (PEM) passed to resurs_audit_init, used to sign the audit log's hash chain. Loads from the RESURS_AUDIT_KEY_PATH environment variable. If unset (or blank), the native audit library is not initialised and chains are signed with DummyAuditSigningService, whose signatures prove nothing — set it in production."
         }
     ]
 }

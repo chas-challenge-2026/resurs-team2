@@ -21,6 +21,13 @@ public interface AuditLogRepository extends JpaRepository<AuditLog, UUID> {
 
     Optional<AuditLog> findTopByApplicationOrderBySequenceNumberDesc(Application app);
 
+    /**
+     * Chain hash of the most recent entry for an application, as raw 32 bytes, or empty if
+     * the application has no entries yet.
+     *
+     * <p>Callers that sign a new entry must pass {@code null}, not an empty or zero-filled
+     * array, when this is empty, to start a new chain.
+     */
     @Query("SELECT a.hash FROM AuditLog a WHERE a.application = :app ORDER BY a.sequenceNumber DESC LIMIT 1")
-    Optional<String> findPreviousHash(@Param("app") Application app);
+    Optional<byte[]> findPreviousHash(@Param("app") Application app);
 }

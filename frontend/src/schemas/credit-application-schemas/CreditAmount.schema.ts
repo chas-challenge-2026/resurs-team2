@@ -11,7 +11,7 @@ export const creditAmountSchema = z.object({
     .string({error: "Ange syftet med krediten.",})
     .trim()
     .min(10, "Beskriv syftet med minst 10 tecken.")
-    .max(1000, "Syftet får vara högst 1000 tecken."),
+    .max(500, "Syftet får vara högst 500 tecken."),
 });
 
 export type CreditAmountData = z.infer<typeof creditAmountSchema>;

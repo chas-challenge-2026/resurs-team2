@@ -114,9 +114,10 @@
 }
 
 .hero-button:focus-visible {
-  outline: none;
+  outline: 3px solid var(--color-focus-ring);
+  outline-offset: 3px;
 
-  box-shadow: 0 0 0 3px rgba(252, 230, 130, 0.4);
+  box-shadow: none;
 }
 
 .hero-button:active {

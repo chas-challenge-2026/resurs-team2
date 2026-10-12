@@ -9,29 +9,60 @@ import type { AuditLog } from "@/types/auditLog";
 import type { ApplicationDocument } from "@/types/document";
 import type { FinancialMetricsData } from "@/schemas/credit-application-schemas/FinancialMetrics.schema";
 
-export const useBackofficeApplication = (id: string | undefined) => {
-  const [application, setApplication] = useState<Application | null>(null);
-  const [documents, setDocuments] = useState<ApplicationDocument[]>([]);
-  const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
-  const [workerName, setWorkerName] = useState<string>("");
-  const [loading, setLoading] = useState<boolean>(true);
-  const [decisionLoading, setDecisionLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
-  const [financialMetrics, setFinancialMetrics] = useState<FinancialMetricsData | null>(null);
+export const useBackofficeApplication = (
+  id: string | undefined,
+) => {
+  const [application, setApplication] =
+    useState<Application | null>(null);
 
-  const loadApplication = async (applicationId: string) => {
-    const details = await applicationApi.getById(applicationId);
-    const auditLogs = await applicationApi.getAuditLog(applicationId);
-    let financialMetrics: FinancialMetricsData ;
+  const [documents, setDocuments] =
+    useState<ApplicationDocument[]>([]);
 
-    try {
-      financialMetrics = JSON.parse(details.financialData);
-    } catch {
-      throw new Error("Kunde inte hämta finansiella uppgifter.");
+  const [auditLogs, setAuditLogs] =
+    useState<AuditLog[]>([]);
+
+  const [workerName, setWorkerName] =
+    useState<string | null>(null);
+
+  const [loading, setLoading] =
+    useState<boolean>(true);
+
+  const [decisionLoading, setDecisionLoading] =
+    useState<boolean>(false);
+
+  const [error, setError] =
+    useState<string | null>(null);
+
+  const [financialMetrics, setFinancialMetrics] =
+    useState<FinancialMetricsData | null>(null);
+
+  const loadApplication = async (
+    applicationId: string,
+  ) => {
+    const details =
+      await applicationApi.getById(applicationId);
+
+    const auditLogs =
+      await applicationApi.getAuditLog(applicationId);
+
+    let parsedFinancialMetrics:
+      | FinancialMetricsData
+      | null = null;
+
+    if (details.financialData) {
+      try {
+        parsedFinancialMetrics = JSON.parse(
+          details.financialData,
+        ) as FinancialMetricsData;
+      } catch {
+        throw new Error(
+          "Kunde inte läsa finansiella uppgifter.",
+        );
+      }
     }
 
     setApplication(details.application);
-    setFinancialMetrics(financialMetrics);
+    setFinancialMetrics(parsedFinancialMetrics);
     setDocuments(details.documents);
     setAuditLogs(auditLogs);
     setWorkerName(details.workerName);
@@ -54,7 +85,9 @@ export const useBackofficeApplication = (id: string | undefined) => {
         if (err instanceof Error) {
           setError(err.message);
         } else {
-          setError("Kunde inte hämta ansökan.");
+          setError(
+            "Kunde inte hämta ansökan.",
+          );
         }
       } finally {
         setLoading(false);
@@ -64,7 +97,10 @@ export const useBackofficeApplication = (id: string | undefined) => {
     load();
   }, [id]);
 
-  const handleDecision = async (decision: Decision, comment: string) => {
+  const handleDecision = async (
+    decision: Decision,
+    comment: string,
+  ) => {
     if (!application || !id) {
       return;
     }
@@ -73,22 +109,35 @@ export const useBackofficeApplication = (id: string | undefined) => {
       setDecisionLoading(true);
       setError(null);
 
-      await applicationApi.decide(application.id, {
-        decision,
-        comment: comment.trim(),
-      });
+      await applicationApi.decide(
+        application.id,
+        {
+          decision,
+          comment: comment.trim(),
+        },
+      );
 
       await loadApplication(id);
     } catch (err: unknown) {
       if (err instanceof Error) {
         setError(err.message);
       } else {
-        setError("Kunde inte registrera beslutet.");
+        setError(
+          "Kunde inte registrera beslutet.",
+        );
       }
     } finally {
       setDecisionLoading(false);
     }
   };
+
+  const handleDocumentDeleted = (documentId: string) => {
+  setDocuments((currentDocuments) =>
+    currentDocuments.filter(
+      (document) => document.uuid !== documentId,
+    ),
+  );
+};
 
   return {
     application,
@@ -100,5 +149,6 @@ export const useBackofficeApplication = (id: string | undefined) => {
     decisionLoading,
     error,
     handleDecision,
+    handleDocumentDeleted,
   };
 };

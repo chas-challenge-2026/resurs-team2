@@ -143,8 +143,12 @@ class ApplicationControllerIntegrationTest {
             assertThat(app.getPurpose()).isEqualTo("Rörelsekapital");
             assertThat(app.getRequestedAmount()).isEqualByComparingTo("300000");
 
-            // Audit log table must contain both expected entries, created before scoring.
-            assertThat(auditLogRepository.findAll()).hasSize(2);
+            // Audit log table carries the full submit+score trail: the submit
+            // transaction wrote APPLICATION_CREATED and a valued ETA_SET
+            // synchronously; the async scoring appended SCORING_RUN and then a
+            // final ETA_SET reflecting its outcome (manual-review refresh or
+            // decision clear).
+            assertThat(auditLogRepository.findAll()).hasSize(4);
             List<String> entries = auditLogRepository.findAll().stream()
                     .sorted((a, b) -> Long.compare(a.getSequenceNumber(), b.getSequenceNumber()))
                     .map(AuditLog::getEntry)
@@ -152,7 +156,11 @@ class ApplicationControllerIntegrationTest {
             assertThat(entries.get(0))
                     .contains("\"action\":\"APPLICATION_CREATED\"")
                     .contains("\"orgNumber\":\"556000-1234\"");
-            assertThat(entries.get(1)).contains("\"action\":\"SCORING_RUN\"");
+            assertThat(entries.get(1))
+                    .contains("\"action\":\"ETA_SET\"")
+                    .contains("\"estimatedResolutionAt\":");
+            assertThat(entries.get(2)).contains("\"action\":\"SCORING_RUN\"");
+            assertThat(entries.get(3)).contains("\"action\":\"ETA_SET\"");
 
             // A decision/reason should be produced by scoring.
             assertThat(app.getDecisionReason()).isNotBlank();
@@ -160,10 +168,17 @@ class ApplicationControllerIntegrationTest {
 
         private void awaitScoringComplete() throws InterruptedException {
             for (int i = 0; i < 50; i++) {
-                boolean scoringRun = auditLogRepository.findAll().stream()
+                List<String> entries = auditLogRepository.findAll().stream()
                         .map(AuditLog::getEntry)
-                        .anyMatch(entry -> entry.contains("SCORING_RUN"));
-                if (scoringRun) {
+                        .toList();
+                boolean scoringRun = entries.stream().anyMatch(entry -> entry.contains("SCORING_RUN"));
+                // The async run writes SCORING_RUN and its outcome ETA_SET as
+                // separate repository transactions; wait for both so the trail
+                // assertions never race the second commit.
+                boolean outcomeEtaSet = entries.stream()
+                        .filter(entry -> entry.contains("\"action\":\"ETA_SET\""))
+                        .count() >= 2;
+                if (scoringRun && outcomeEtaSet) {
                     return;
                 }
                 Thread.sleep(200);
@@ -230,6 +245,10 @@ class ApplicationControllerIntegrationTest {
                     .content(requestJsonWithAmount(50000)))
                     .andExpect(status().isOk());
 
+            // Wait for the async scoring so no in-flight thread races the next
+            // test's table cleanup with a late SCORING_RUN audit insert.
+            awaitScoringComplete();
+
             assertThat(applicationRepository.findAll()).hasSize(1);
         }
 
@@ -247,6 +266,10 @@ class ApplicationControllerIntegrationTest {
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(requestJsonWithAmount(10000000)))
                     .andExpect(status().isOk());
+
+            // Wait for the async scoring so no in-flight thread races the next
+            // test's table cleanup with a late SCORING_RUN audit insert.
+            awaitScoringComplete();
 
             assertThat(applicationRepository.findAll()).hasSize(1);
         }
@@ -371,11 +394,11 @@ class ApplicationControllerIntegrationTest {
                 "INSERT INTO companies (id, org_number, org_number_index, company_name, authorized_signatory) VALUES (770, '556000-1234', X'dedd7d2467a47aac7cc703665899fded7d8013ddecbbbf69e0ff366fd4812ed7', 'Malmö Fastigheter AB', 'Test Person')",
                 "INSERT INTO applications (id, company_id, requested_amount, purpose, status, financial_data) VALUES (770, 770, 300000.00, 'Rörelsekapital', 'UNDER_REVIEW', '" + FINANCIAL_DATA + "')"
         })
-        void companyCannotSeeFinancialData() throws Exception {
+        void companyCanSeeFinancialDataOnOwnApplication() throws Exception {
             mockMvc.perform(get("/api/v1/applications/770"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.application.id").value(770))
-                    .andExpect(jsonPath("$.financialData").doesNotExist());
+                    .andExpect(jsonPath("$.financialData").value(FINANCIAL_DATA));
         }
 
         @Test
@@ -498,11 +521,17 @@ class ApplicationControllerIntegrationTest {
         void caseWorkerSeesOnlyUnderReviewApplications() throws Exception {
             mockMvc.perform(get("/api/v1/applications"))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.length()").value(2))
-                    .andExpect(jsonPath("$[0].id").value(810))
-                    .andExpect(jsonPath("$[1].id").value(811))
-                    .andExpect(jsonPath("$[0].status").value("UNDER_REVIEW"))
-                    .andExpect(jsonPath("$[1].status").value("UNDER_REVIEW"));
+                    .andExpect(jsonPath("$.content.length()").value(2))
+                    .andExpect(jsonPath("$.content[0].id").value(810))
+                    .andExpect(jsonPath("$.content[1].id").value(811))
+                    .andExpect(jsonPath("$.content[0].status").value("UNDER_REVIEW"))
+                    .andExpect(jsonPath("$.content[1].status").value("UNDER_REVIEW"))
+                    .andExpect(jsonPath("$.page").value(0))
+                    .andExpect(jsonPath("$.size").value(20))
+                    .andExpect(jsonPath("$.totalElements").value(2))
+                    .andExpect(jsonPath("$.totalPages").value(1))
+                    .andExpect(jsonPath("$.first").value(true))
+                    .andExpect(jsonPath("$.last").value(true));
         }
 
         @Test
@@ -519,7 +548,12 @@ class ApplicationControllerIntegrationTest {
         void caseWorkerWithNoPendingApplicationsSeesEmptyList() throws Exception {
             mockMvc.perform(get("/api/v1/applications"))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.length()").value(0));
+                    .andExpect(jsonPath("$.content.length()").value(0))
+                    .andExpect(jsonPath("$.totalElements").value(0))
+                    .andExpect(jsonPath("$.totalPages").value(0))
+                    .andExpect(jsonPath("$.page").value(0))
+                    .andExpect(jsonPath("$.size").value(20));
+
         }
 
         @Test
@@ -538,9 +572,11 @@ class ApplicationControllerIntegrationTest {
         void companySeesOnlyItsOwnApplications() throws Exception {
             mockMvc.perform(get("/api/v1/applications"))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.length()").value(2))
+                    .andExpect(jsonPath("$.content.length()").value(2))
                     .andExpect(jsonPath("$[*].orgNumber").value(org.hamcrest.Matchers.everyItem(
-                            org.hamcrest.Matchers.is(COMPANY_ORG))));
+                            org.hamcrest.Matchers.is(COMPANY_ORG))))
+                    .andExpect(jsonPath("$.totalElements").value(2))
+                    .andExpect(jsonPath("$.totalPages").value(1));
         }
 
         @Test
@@ -558,9 +594,11 @@ class ApplicationControllerIntegrationTest {
         void companySeesAllOwnApplicationsRegardlessOfStatus() throws Exception {
             mockMvc.perform(get("/api/v1/applications"))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.length()").value(3))
-                    .andExpect(jsonPath("$[*].status").value(
-                            org.hamcrest.Matchers.hasItems("UNDER_REVIEW", "APPROVED", "REJECTED")));
+                    .andExpect(jsonPath("$.content.length()").value(3))
+                    .andExpect(jsonPath("$.content[*].status").value(
+                            org.hamcrest.Matchers.hasItems("UNDER_REVIEW", "APPROVED", "REJECTED")))
+                    .andExpect(jsonPath("$.totalElements").value(3))
+                    .andExpect(jsonPath("$.totalPages").value(1));
         }
 
         @Test
@@ -577,7 +615,7 @@ class ApplicationControllerIntegrationTest {
         void companyWithNoApplicationsSeesEmptyList() throws Exception {
             mockMvc.perform(get("/api/v1/applications"))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.length()").value(0));
+                    .andExpect(jsonPath("$.content.length()").value(0));
         }
 
         @Test
@@ -595,9 +633,11 @@ class ApplicationControllerIntegrationTest {
         void caseWorkerCanFilterByStatus() throws Exception {
             mockMvc.perform(get("/api/v1/applications").param("status", "APPROVED"))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.length()").value(1))
-                    .andExpect(jsonPath("$[0].id").value(911))
-                    .andExpect(jsonPath("$[0].status").value("APPROVED"));
+                    .andExpect(jsonPath("$.content.length()").value(1))
+                    .andExpect(jsonPath("$.content[0].id").value(911))
+                    .andExpect(jsonPath("$.content[0].status").value("APPROVED"))
+                    .andExpect(jsonPath("$.totalElements").value(1))
+                    .andExpect(jsonPath("$.totalPages").value(1));
         }
 
         @Test
@@ -614,8 +654,10 @@ class ApplicationControllerIntegrationTest {
         void caseWorkerFilterUnderReviewMatchesDefault() throws Exception {
             mockMvc.perform(get("/api/v1/applications").param("status", "UNDER_REVIEW"))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.length()").value(1))
-                    .andExpect(jsonPath("$[0].status").value("UNDER_REVIEW"));
+                    .andExpect(jsonPath("$.content.length()").value(1))
+                    .andExpect(jsonPath("$.content[0].status").value("UNDER_REVIEW"))
+                    .andExpect(jsonPath("$.totalElements").value(1))
+                    .andExpect(jsonPath("$.totalPages").value(1));
         }
 
         @Test
@@ -633,9 +675,11 @@ class ApplicationControllerIntegrationTest {
         void companyCanFilterByStatus() throws Exception {
             mockMvc.perform(get("/api/v1/applications").param("status", "APPROVED"))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.length()").value(1))
-                    .andExpect(jsonPath("$[0].id").value(951))
-                    .andExpect(jsonPath("$[0].status").value("APPROVED"));
+                    .andExpect(jsonPath("$.content.length()").value(1))
+                    .andExpect(jsonPath("$.content[0].id").value(951))
+                    .andExpect(jsonPath("$.content[0].status").value("APPROVED"))
+                    .andExpect(jsonPath("$.totalElements").value(1))
+                    .andExpect(jsonPath("$.totalPages").value(1));
         }
 
         @Test
@@ -653,9 +697,9 @@ class ApplicationControllerIntegrationTest {
         void companyFilterDoesNotLeakOtherCompaniesApplications() throws Exception {
             mockMvc.perform(get("/api/v1/applications").param("status", "UNDER_REVIEW"))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.length()").value(1))
-                    .andExpect(jsonPath("$[0].id").value(970))
-                    .andExpect(jsonPath("$[0].orgNumber").value(COMPANY_ORG));
+                    .andExpect(jsonPath("$.content.length()").value(1))
+                    .andExpect(jsonPath("$.content[0].id").value(970))
+                    .andExpect(jsonPath("$.content[0].orgNumber").value(COMPANY_ORG));
         }
     }
 }

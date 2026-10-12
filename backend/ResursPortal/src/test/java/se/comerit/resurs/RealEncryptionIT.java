@@ -233,7 +233,10 @@ class RealEncryptionIT {
                 new Application(company, new BigDecimal("250000.00"), "Rörelsekapital"));
 
         String plaintext = "{\"action\":\"APPLICATION_CREATED\",\"orgNumber\":\"556000-7777\"}";
-        AuditLog log = auditLogRepository.save(new AuditLog(application, 1L, "", "", plaintext));
+        // Hash and signature are irrelevant to this test; only `entry` is asserted on.
+        // Zero-length values satisfy the NOT NULL columns and are never verified.
+        AuditLog log = auditLogRepository.save(
+                new AuditLog(application, 1L, new byte[0], new byte[0], plaintext));
 
         String stored = jdbcTemplate.queryForObject(
                 "SELECT entry FROM audit_log WHERE application_id = ? AND sequence_number = ?",

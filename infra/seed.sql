@@ -20,11 +20,12 @@ CREATE TABLE applications (
     case_worker_id INT REFERENCES case_workers(id),
     requested_amount VARCHAR(512),
     purpose TEXT,
-    status VARCHAR(30) DEFAULT 'PENDING_DOCS', -- PENDING_DOCS, UNDER_REVIEW, APPROVED, REJECTED
+    status VARCHAR(30) DEFAULT 'PENDING_DOCS', -- PENDING_DOCS, SCORING_IN_PROGRESS, UNDER_REVIEW, APPROVED, REJECTED
     decision VARCHAR(20),
     decision_reason TEXT,
     scoring_result TEXT,
     financial_data TEXT,
+    estimated_resolution_at TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -44,10 +45,11 @@ CREATE TABLE audit_log (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     application_id INT NOT NULL REFERENCES applications(id),
     sequence_number BIGINT NOT NULL,
-    hash VARCHAR(512) NOT NULL,
-    previous_hash VARCHAR(512) NOT NULL,
+    hash BYTEA NOT NULL,
+    signature BYTEA NOT NULL,
     entry TEXT NOT NULL,
-    timestamp TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+    timestamp TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    CONSTRAINT uq_audit_log_application_sequence UNIQUE (application_id, sequence_number)
 );
 
 -- NOTE: companies, applications and case workers contain PII. Production seeds

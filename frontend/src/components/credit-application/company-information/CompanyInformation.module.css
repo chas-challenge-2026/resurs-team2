@@ -4,7 +4,7 @@
   margin-bottom: var(--spacing-lg);
   padding: var(--spacing-xl);
 
-  background-color: var(--color-white);
+  background-color: var(--color-background);
 
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
@@ -97,12 +97,7 @@
   border-color: var(--color-input-hover-border);
 }
 
-.formControl:focus {
-  outline: none;
 
-  border-color: var(--color-input-focus-border);
-  box-shadow: var(--shadow-input-focus);
-}
 
 .formControl::placeholder {
   color: var(--color-muted);
@@ -154,10 +149,7 @@
   transform: translateY(-1px);
 }
 
-.primaryButton:focus-visible {
-  outline: none;
-  box-shadow: var(--shadow-input-focus);
-}
+
 
 .primaryButton:active:not(:disabled) {
   transform: translateY(0);

@@ -43,6 +43,11 @@ public record ApplicationResponse(
             nullable = true)
     @Nullable
     String scoringResult,
+    @Schema(description = "Estimated time when a decision is expected",
+            example = "2026-09-26T10:00:00Z",
+            nullable = true)
+    @Nullable
+    Instant estimatedResolutionAt,
     @Schema(description = "Timestamp when the application was created")
     @Nonnull
     Instant createdAt,

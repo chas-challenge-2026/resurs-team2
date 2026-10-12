@@ -1,9 +1,11 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import "./Navbar.css";
+import { useTheme } from "@/context/darkmode/useTheme";
 
 export const Navbar: React.FC = () => {
   const { user, isLoggedIn, logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
 
   const navigate = useNavigate();
 
@@ -33,6 +35,16 @@ export const Navbar: React.FC = () => {
             <Link to="/" className="nav-tab active-pill">
               Företagsbanken
             </Link>
+            <button
+              type="button"
+              className="darkmode-button"
+              onClick={toggleTheme}
+              aria-label={
+                theme === "dark" ? "Byt till ljust tema" : "Byt till mörkt tema"
+              }
+            >
+              {theme === "dark" ? "Dark" : "Light"}
+            </button>
           </div>
 
           <div className="top-nav-center">
@@ -61,6 +73,7 @@ export const Navbar: React.FC = () => {
               <Link to="/login" className="login-link">
                 Logga in
               </Link>
+              
             )}
           </div>
         </div>
@@ -77,7 +90,7 @@ export const Navbar: React.FC = () => {
           <ul className="navbar-nav">
             {isLoggedIn && user?.role === "COMPANY" && (
               <>
-              <li>
+                <li>
                   <Link to="/dashboard">Startsida</Link>
                 </li>
                 <li>
