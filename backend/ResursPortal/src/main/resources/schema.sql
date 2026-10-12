@@ -51,3 +51,20 @@ CREATE TABLE audit_log (
     timestamp TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT uq_audit_log_application_sequence UNIQUE (application_id, sequence_number)
 );
+
+-- Function to block any modifications (UPDATE, DELETE) to the audit_log table
+CREATE FUNCTION block_modification()
+RETURNS TRIGGER AS $$
+BEGIN
+    RAISE EXCEPTION '% is append-only: % is not allowed', TG_TABLE_NAME, TG_OP;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER block_modification_t
+BEFORE UPDATE OR DELETE ON audit_log
+FOR EACH ROW EXECUTE FUNCTION block_modification();
+
+-- TRUNCATE does not fire row-level triggers, so it is blocked separately.
+CREATE TRIGGER block_truncate_t
+BEFORE TRUNCATE ON audit_log
+FOR EACH STATEMENT EXECUTE FUNCTION block_modification();
