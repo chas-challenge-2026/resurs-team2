@@ -12,6 +12,15 @@ endif()
 
 find_package(OpenSSL REQUIRED)
 
+# AddressSanitizer + UndefinedBehaviorSanitizer for every target (use `make asan`).
+# -fno-sanitize-recover makes a UBSan finding abort, so the test fails instead of
+# just printing a warning.
+option(RESURS_SANITIZE "Build with ASAN + UBSan" OFF)
+if(RESURS_SANITIZE)
+    add_compile_options(-fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer)
+    add_link_options(-fsanitize=address,undefined)
+endif()
+
 # gcov instrumentation for `make coverage`. Use a separate build dir: the
 # instrumented .so is slower and writes .gcda files next to its objects.
 option(RESURS_COVERAGE "Build native code with gcov coverage instrumentation" OFF)

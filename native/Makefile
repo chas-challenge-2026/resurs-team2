@@ -4,8 +4,9 @@
 # NOTE: recipe lines below must be indented with a TAB, not spaces.
 
 BUILD_DIR := build
+ASAN_BUILD_DIR := $(BUILD_DIR)/asan
 
-.PHONY: all build test test-v clean rebuild demo-crypto demo-audit
+.PHONY: all build test test-v clean rebuild demo-crypto demo-audit asan
 
 all: build
 
@@ -43,6 +44,13 @@ coverage:
 		--exclude-throw-branches --exclude-unreachable-branches \
 		--txt --html-details $(COVERAGE_DIR)/report/index.html --print-summary
 	@echo "HTML report: $(COVERAGE_DIR)/report/index.html"
+
+# Separate Debug build with ASAN + UBSan, then run all tests in it.
+# Lives inside build/, so it is git-ignored and removed by clean.
+asan:
+	cmake -S . -B $(ASAN_BUILD_DIR) -DCMAKE_BUILD_TYPE=Debug -DRESURS_SANITIZE=ON
+	cmake --build $(ASAN_BUILD_DIR)
+	ctest --test-dir $(ASAN_BUILD_DIR) --output-on-failure
 
 clean:
 	rm -rf $(BUILD_DIR)

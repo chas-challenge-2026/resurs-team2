@@ -5,8 +5,12 @@
 #include <string>
 
 #include "aes_gcm_cipher.hpp"   // for resurs::Key
+#include "secure_buffer.hpp"
 
 namespace resurs{
+    // A key copy from KeyManager, wiped when it goes out of scope.
+    using SecretKey = SecretArray<kKeyLen>;
+
     class KeyManager{
     public:
 
@@ -22,10 +26,10 @@ namespace resurs{
     void loadFromBytes (const Key& aesKey, const Key& lookupKey);
 
     // AES-256 key. Throws std::runtime_error if no key has been loaded.
-    Key key() const;
+    SecretKey key() const;
 
     // HMAC lookup key (blind index). Throws std::runtime_error if not loaded.
-    Key lookupKey() const;
+    SecretKey lookupKey() const;
 
     // Returns true once the keys have been loaded (loadFromFile / loadFromBytes),
     // false before the first load and after cleanse(). Thread-safe.
