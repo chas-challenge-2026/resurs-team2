@@ -1,6 +1,7 @@
 #include "audit_key_manager.hpp"
 #include "hash_chain.hpp"
 #include "signer.hpp"
+#include "test_util.h"
 
 #include <cstdio>
 #include <cstring>
@@ -16,17 +17,6 @@
 
 namespace
 {
-
-    int g_failures = 0;
-
-    void check(bool ok, const char *name)
-    {
-        std::printf("%s %s\n", ok ? "[PASS]" : "[FAIL]", name);
-        if (!ok)
-        {
-            ++g_failures;
-        }
-    }
 
     // True if fn() throws std::runtime_error (and nothing else).
     template <typename Fn>
@@ -130,43 +120,45 @@ namespace
         std::filesystem::path path_;
     };
 
-} // namespace
-
-int main()
-{
-    using resurs::audit::chainHash;
-    using resurs::audit::Hash;
-    using resurs::audit::kGenesisHash;
-
-    // --- known-answer test: SHA-256 of 32 zero bytes, no entry data ---
-    // reference: `head -c 32 /dev/zero | sha256sum`
-    const Hash expected_genesis = {
-        0x66, 0x68, 0x7a, 0xad, 0xf8, 0x62, 0xbd, 0x77,
-        0x6c, 0x8f, 0xc1, 0x8b, 0x8e, 0x9f, 0x8e, 0x20,
-        0x08, 0x97, 0x14, 0x85, 0x6e, 0xe2, 0x33, 0xb3,
-        0x90, 0x2a, 0x59, 0x1d, 0x0d, 0x5f, 0x29, 0x25,
-    };
-    const Hash genesis_hash = chainHash(kGenesisHash, "");
-    check(genesis_hash == expected_genesis,
-          "chainHash(genesis, \"\") matches known SHA-256 answer");
-
-    // --- determinism: same input -> same hash ---
-    const Hash h1 = chainHash(kGenesisHash, "entry-a");
-    const Hash h2 = chainHash(kGenesisHash, "entry-a");
-    check(h1 == h2, "chainHash is deterministic for the same input");
-
-    // --- sensitivity to entryJson: different entry -> different hash ---
-    const Hash h3 = chainHash(kGenesisHash, "entry-b");
-    check(h1 != h3, "chainHash differs for different entryJson");
-
-    // --- sensitivity to prev: different predecessor -> different hash ---
-    Hash other_prev = kGenesisHash;
-    other_prev[0] ^= 0x01;
-    const Hash h4 = chainHash(other_prev, "entry-a");
-    check(h1 != h4, "chainHash differs for a different prev hash");
-
-    // --- signer: sign / verify / rawPublicKey ---
+    // chainHash: known answer, determinism, sensitivity to entry and prev.
+    void test_chain_hash()
     {
+        using resurs::audit::chainHash;
+        using resurs::audit::Hash;
+        using resurs::audit::kGenesisHash;
+
+        // --- known-answer test: SHA-256 of 32 zero bytes, no entry data ---
+        // reference: `head -c 32 /dev/zero | sha256sum`
+        const Hash expected_genesis = {
+            0x66, 0x68, 0x7a, 0xad, 0xf8, 0x62, 0xbd, 0x77,
+            0x6c, 0x8f, 0xc1, 0x8b, 0x8e, 0x9f, 0x8e, 0x20,
+            0x08, 0x97, 0x14, 0x85, 0x6e, 0xe2, 0x33, 0xb3,
+            0x90, 0x2a, 0x59, 0x1d, 0x0d, 0x5f, 0x29, 0x25,
+        };
+        const Hash genesis_hash = chainHash(kGenesisHash, "");
+        check(genesis_hash == expected_genesis,
+              "chainHash(genesis, \"\") matches known SHA-256 answer");
+
+        // --- determinism: same input -> same hash ---
+        const Hash h1 = chainHash(kGenesisHash, "entry-a");
+        const Hash h2 = chainHash(kGenesisHash, "entry-a");
+        check(h1 == h2, "chainHash is deterministic for the same input");
+
+        // --- sensitivity to entryJson: different entry -> different hash ---
+        const Hash h3 = chainHash(kGenesisHash, "entry-b");
+        check(h1 != h3, "chainHash differs for different entryJson");
+
+        // --- sensitivity to prev: different predecessor -> different hash ---
+        Hash other_prev = kGenesisHash;
+        other_prev[0] ^= 0x01;
+        const Hash h4 = chainHash(other_prev, "entry-a");
+        check(h1 != h4, "chainHash differs for a different prev hash");
+    }
+
+    // sign / verify / rawPublicKey
+    void test_signer()
+    {
+        using resurs::audit::Hash;
         using resurs::audit::PublicKey;
         using resurs::audit::rawPublicKey;
         using resurs::audit::sign;
@@ -208,14 +200,12 @@ int main()
               "verify fails for the wrong public key");
     }
 
-    // --- AuditKeyManager ---
+    // AuditKeyManager state: before load, loadFromPKey seam, cleanse.
+    void test_key_manager_state()
     {
         using resurs::audit::AuditKeyManager;
         using resurs::audit::PublicKey;
         using resurs::audit::rawPublicKey;
-        using resurs::audit::sign;
-        using resurs::audit::Signature;
-        using resurs::audit::verify;
 
         auto &km = AuditKeyManager::instance();
         km.cleanse(); // start from a clean, known state regardless of test order
@@ -245,6 +235,19 @@ int main()
         check(throws_runtime_error([&]
                                    { (void)km.privateKey(); }),
               "AuditKeyManager privateKey() after cleanse throws");
+    }
+
+    // AuditKeyManager::loadFromFile: missing file, garbage, valid PEM.
+    void test_key_manager_load_file()
+    {
+        using resurs::audit::AuditKeyManager;
+        using resurs::audit::Hash;
+        using resurs::audit::sign;
+        using resurs::audit::Signature;
+        using resurs::audit::verify;
+
+        auto &km = AuditKeyManager::instance();
+        km.cleanse(); // start from a clean, known state regardless of test order
 
         check(throws_runtime_error([&]
                                    { km.loadFromFile("/nonexistent/resurs-audit.key"); }),
@@ -286,6 +289,14 @@ int main()
         check(!km.isLoaded(), "AuditKeyManager isLoaded() false after double cleanse");
     }
 
-    std::printf("\n%d failure(s)\n", g_failures);
-    return g_failures == 0 ? 0 : 1;
+} // namespace
+
+int main()
+{
+    test_chain_hash();
+    test_signer();
+    test_key_manager_state();
+    test_key_manager_load_file();
+
+    return test_summary();
 }
