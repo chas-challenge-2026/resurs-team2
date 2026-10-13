@@ -9,6 +9,8 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -24,9 +26,10 @@ import org.testcontainers.utility.MountableFile;
  * Verifies that {@code audit_log} really is append-only in PostgreSQL.
  *
  * <p>The guard is a {@code plpgsql} trigger ({@code block_modification()} in
- * {@code src/main/resources/schema.sql}), which H2's {@code MODE=PostgreSQL}
+ * {@code src/main/resources/schema-postgres.sql}), which H2's {@code MODE=PostgreSQL}
  * cannot emulate - so this test runs against a real PostgreSQL started with
- * Testcontainers and applies the production schema.sql verbatim. That is also
+ * Testcontainers and applies the production schema verbatim ({@code schema.sql}
+ * for the tables plus {@code schema-postgres.sql} for the guard). That is also
  * why nothing here is done through a Spring context: the point is the schema,
  * not the application.</p>
  *
@@ -133,16 +136,22 @@ class BlockModificationTriggerIT {
         }
     }
 
-    /** Applies the production schema.sql verbatim via psql inside the container. */
+    /** Applies the production schema files verbatim via psql inside the container. */
     private static void applySchema() throws Exception {
-        Path schema = schemaPath();
-        POSTGRES.copyFileToContainer(MountableFile.forHostPath(schema), "/tmp/schema.sql");
+        List<String> command = new ArrayList<>(List.of("psql", "-v", "ON_ERROR_STOP=1",
+                "-U", POSTGRES.getUsername(), "-d", POSTGRES.getDatabaseName()));
+        for (String schemaFile : List.of("schema.sql", "schema-postgres.sql")) {
+            Path schema = schemaPath(schemaFile);
+            String containerPath = "/tmp/" + schemaFile;
+            POSTGRES.copyFileToContainer(MountableFile.forHostPath(schema), containerPath);
+            command.add("-f");
+            command.add(containerPath);
+        }
 
-        ExecResult result = POSTGRES.execInContainer("psql", "-v", "ON_ERROR_STOP=1",
-                "-U", POSTGRES.getUsername(), "-d", POSTGRES.getDatabaseName(), "-f", "/tmp/schema.sql");
+        ExecResult result = POSTGRES.execInContainer(command.toArray(String[]::new));
 
         assertThat(result.getExitCode())
-                .as("applying schema.sql failed:%n%s%n%s", result.getStdout(), result.getStderr())
+                .as("applying the production schema failed:%n%s%n%s", result.getStdout(), result.getStderr())
                 .isZero();
     }
 
@@ -172,17 +181,17 @@ class BlockModificationTriggerIT {
         }
     }
 
-    private static Path schemaPath() {
+    private static Path schemaPath(String fileName) {
         // Surefire runs with the module directory as working dir; fall back to repo-root relative.
         Path[] candidates = {
-                Path.of("src/main/resources/schema.sql"),
-                Path.of("backend/ResursPortal/src/main/resources/schema.sql"),
+                Path.of("src/main/resources", fileName),
+                Path.of("backend/ResursPortal/src/main/resources", fileName),
         };
         for (Path candidate : candidates) {
             if (Files.exists(candidate)) {
                 return candidate;
             }
         }
-        throw new IllegalStateException("Cannot locate production schema.sql (tried the above paths)");
+        throw new IllegalStateException("Cannot locate " + fileName + " (tried the above paths)");
     }
 }
