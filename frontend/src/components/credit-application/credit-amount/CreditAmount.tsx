@@ -16,38 +16,42 @@ export function CreditAmount({
   onNext,
   onPrevious,
 }: CreditAmountProps) {
-  const [purposeError, setPurposeError] = useState<string | null>(null);
-  const [amountError, setAmountError] = useState<string | null>(null);
+  const [purposeError, setPurposeError] =
+    useState<string | null>(null);
+
+  const [amountError, setAmountError] =
+    useState<string | null>(null);
 
   const MIN_PURPOSE_LENGTH = 10;
   const MAX_PURPOSE_LENGTH = 500;
   const MIN_AMOUNT = 50000;
   const MAX_AMOUNT = 10000000;
 
-  // *Handles changes to the requested credit amount.*
- const handleAmountChange = (
-  event: ChangeEvent<HTMLInputElement>,
-) => {
-  const { value } = event.target;
+  const handleAmountChange = (
+    event: ChangeEvent<HTMLInputElement>,
+  ) => {
+    const { value } = event.target;
 
-  const amount = value === "" ? 0 : Number(value);
+    const amount =
+      value === "" ? 0 : Number(value);
 
-  onChange({
-    ...data,
-    requestedAmount: amount,
-  });
+    onChange({
+      ...data,
+      requestedAmount: amount,
+    });
 
-  if (
-    amountError &&
-    amount >= MIN_AMOUNT &&
-    amount <= MAX_AMOUNT
-  ) {
-    setAmountError(null);
-  }
-};
+    if (
+      amountError &&
+      amount >= MIN_AMOUNT &&
+      amount <= MAX_AMOUNT
+    ) {
+      setAmountError(null);
+    }
+  };
 
-  // Handles changes to the credit purpose.
-  const handlePurposeChange = (event: ChangeEvent<HTMLTextAreaElement>) => {
+  const handlePurposeChange = (
+    event: ChangeEvent<HTMLTextAreaElement>,
+  ) => {
     const value = event.target.value;
 
     onChange({
@@ -55,47 +59,53 @@ export function CreditAmount({
       purpose: value,
     });
 
-    if (purposeError && value.trim().length >= MIN_PURPOSE_LENGTH) {
+    if (
+      purposeError &&
+      value.trim().length >= MIN_PURPOSE_LENGTH
+    ) {
       setPurposeError(null);
     }
   };
 
-  // Prevents the default form submission and proceeds to the confirmation step.
   const handleSubmit = (
-  event: SubmitEvent<HTMLFormElement>,
-) => {
-  event.preventDefault();
+    event: SubmitEvent<HTMLFormElement>,
+  ) => {
+    event.preventDefault();
 
-  let hasError = false;
+    let hasError = false;
 
-  if (
-    data.requestedAmount < MIN_AMOUNT ||
-    data.requestedAmount > MAX_AMOUNT
-  ) {
-    setAmountError(
-      `Kreditbeloppet måste vara mellan ${MIN_AMOUNT.toLocaleString("sv-SE")} SEK och ${MAX_AMOUNT.toLocaleString("sv-SE")} SEK.`,
-    );
+    if (
+      data.requestedAmount < MIN_AMOUNT ||
+      data.requestedAmount > MAX_AMOUNT
+    ) {
+      setAmountError(
+        `Kreditbeloppet måste vara mellan ${MIN_AMOUNT.toLocaleString(
+          "sv-SE",
+        )} SEK och ${MAX_AMOUNT.toLocaleString(
+          "sv-SE",
+        )} SEK.`,
+      );
 
-    hasError = true;
-  }
+      hasError = true;
+    }
 
-  if (
-    data.purpose.trim().length <
-    MIN_PURPOSE_LENGTH
-  ) {
-    setPurposeError(
-      `Beskrivningen måste innehålla minst ${MIN_PURPOSE_LENGTH} tecken.`,
-    );
+    if (
+      data.purpose.trim().length <
+      MIN_PURPOSE_LENGTH
+    ) {
+      setPurposeError(
+        `Beskrivningen måste innehålla minst ${MIN_PURPOSE_LENGTH} tecken.`,
+      );
 
-    hasError = true;
-  }
+      hasError = true;
+    }
 
-  if (hasError) {
-    return;
-  }
+    if (hasError) {
+      return;
+    }
 
-  onNext();
-};
+    onNext();
+  };
 
   return (
     <section className={styles.formSection}>
@@ -105,38 +115,66 @@ export function CreditAmount({
 
       <form onSubmit={handleSubmit}>
         <div className={styles.formGroup}>
-          <label htmlFor="requestedAmount">Önskat kreditbelopp (SEK)</label>
+          <label htmlFor="requestedAmount">
+            Önskat kreditbelopp (SEK)
+          </label>
 
           <input
             className={styles.formControl}
             id="requestedAmount"
+            aria-invalid={Boolean(amountError)}
+            aria-describedby={
+              amountError
+                ? "requestedAmount-help requestedAmount-error"
+                : "requestedAmount-help"
+            }
             name="requestedAmount"
             type="number"
             step="1000"
             min="50000"
             max="10000000"
             placeholder="500000"
-            value={data.requestedAmount === 0 ? "" : data.requestedAmount}
+            value={
+              data.requestedAmount === 0
+                ? ""
+                : data.requestedAmount
+            }
             onChange={handleAmountChange}
           />
 
-          <p className={styles.helpText}>
-            Minsta belopp: 50 000 kr. Maxbelopp: 10 000 000 kr.
+          <p
+            id="requestedAmount-help"
+            className={styles.helpText}
+          >
+            Minsta belopp: 50 000 kr. Maxbelopp:
+            10 000 000 kr.
           </p>
 
-        {amountError && (
-          <p className={styles.errorText}>
-            {amountError}
-          </p>
-)}
+          {amountError && (
+            <p
+              id="requestedAmount-error"
+              className={styles.errorText}
+              role="alert"
+            >
+              {amountError}
+            </p>
+          )}
         </div>
 
         <div className={styles.formGroup}>
-          <label htmlFor="purpose">Syfte med krediten</label>
+          <label htmlFor="purpose">
+            Syfte med krediten
+          </label>
 
           <textarea
             className={styles.formControl}
             id="purpose"
+            aria-invalid={Boolean(purposeError)}
+            aria-describedby={
+              purposeError
+                ? "purpose-help purpose-error"
+                : "purpose-help"
+            }
             name="purpose"
             rows={4}
             minLength={MIN_PURPOSE_LENGTH}
@@ -145,19 +183,37 @@ export function CreditAmount({
             value={data.purpose}
             onChange={handlePurposeChange}
           />
-          <div className={styles.purposeInfo}>
-  <span>
-    {data.purpose.trim().length < MIN_PURPOSE_LENGTH
-      ? `Minst ${MIN_PURPOSE_LENGTH} tecken (${MIN_PURPOSE_LENGTH - data.purpose.trim().length} kvar)`
-      : "Minimilängd uppnådd"}
-  </span>
 
-  <span>
-    {data.purpose.length} / {MAX_PURPOSE_LENGTH} tecken
-  </span>
-</div>
+          <div
+            id="purpose-help"
+            className={styles.purposeInfo}
+            aria-live="polite"
+          >
+            <span>
+              {data.purpose.trim().length <
+              MIN_PURPOSE_LENGTH
+                ? `Minst ${MIN_PURPOSE_LENGTH} tecken (${
+                    MIN_PURPOSE_LENGTH -
+                    data.purpose.trim().length
+                  } kvar)`
+                : "Minimilängd uppnådd"}
+            </span>
 
-          {purposeError && <p className={styles.errorText}>{purposeError}</p>}
+            <span>
+              {data.purpose.length} /{" "}
+              {MAX_PURPOSE_LENGTH} tecken
+            </span>
+          </div>
+
+          {purposeError && (
+            <p
+              id="purpose-error"
+              className={styles.errorText}
+              role="alert"
+            >
+              {purposeError}
+            </p>
+          )}
         </div>
 
         <div className={styles.buttonGroup}>
@@ -169,7 +225,10 @@ export function CreditAmount({
             ← Tillbaka
           </button>
 
-          <button type="submit" className={styles.primaryButton}>
+          <button
+            type="submit"
+            className={styles.primaryButton}
+          >
             Granska ansökan →
           </button>
         </div>

@@ -17,7 +17,9 @@ import se.comerit.resurs.api.v1.dto.ApplicationRequest;
 import se.comerit.resurs.api.v1.dto.ApplicationResponse;
 import se.comerit.resurs.api.v1.dto.PaginatedResponse;
 import se.comerit.resurs.api.v1.mapper.ApplicationMapper;
+import se.comerit.resurs.api.v1.service.BankIdSigningService.BankIdSignature;
 import se.comerit.resurs.audit.ApplicationCreated;
+import se.comerit.resurs.audit.ApplicationSigned;
 import se.comerit.resurs.audit.EtaSet;
 import se.comerit.resurs.entity.Application;
 import se.comerit.resurs.entity.ApplicationStatus;
@@ -42,6 +44,7 @@ public class ApplicationService {
     private final CompanyRepository companyRepository;
     private final ApplicationRepository applicationRepository;
     private final ScoringService scoringService;
+    private final BankIdSigningService bankIdSigningService;
     private final EtaService etaService;
     private final AuditLogService auditLogService;
     private final CaseWorkerAssignmentService caseWorkerAssignmentService;
@@ -59,6 +62,7 @@ public class ApplicationService {
             CompanyRepository companyRepository,
             ApplicationRepository applicationRepository,
             ScoringService scoringService,
+            BankIdSigningService bankIdSigningService,
             EtaService etaService,
             AuditLogService auditLogService,
             CaseWorkerAssignmentService caseWorkerAssignmentService,
@@ -69,6 +73,7 @@ public class ApplicationService {
         this.companyRepository = companyRepository;
         this.applicationRepository = applicationRepository;
         this.scoringService = scoringService;
+        this.bankIdSigningService = bankIdSigningService;
         this.etaService = etaService;
         this.auditLogService = auditLogService;
         this.caseWorkerAssignmentService = caseWorkerAssignmentService;
@@ -101,6 +106,17 @@ public class ApplicationService {
             financialDataJson = null;
         }
 
+        // Sign before anything is written, so a declined or timed-out order leaves
+        // no application row, no email and no audit entry behind: the signature
+        // gates the submission rather than following it.
+        //
+        // Serialisation is not expected to fail. If it did the application would
+        // still be submitted carrying no financial data, so what gets signed is
+        // the empty payload rather than a null.
+        BankIdSignature signature = bankIdSigningService.sign(
+                orgNumber,
+                financialDataJson != null ? financialDataJson : "");
+
         // The application is received and queued for the automated scoring run
         // that follows right after the transaction commits.
         Application app = new Application(
@@ -110,6 +126,8 @@ public class ApplicationService {
 
         app.setStatus(ApplicationStatus.SCORING_IN_PROGRESS);
         app.setFinancialData(financialDataJson);
+        app.setBankidSignature(signature.signature());
+        app.setBankidSignedAt(signature.signedAt());
 
         app.setEstimatedResolutionAt(
                 etaService.estimateWithinHours(
@@ -119,6 +137,17 @@ public class ApplicationService {
         app = applicationRepository.save(app);
 
         emailService.sendApplicationSubmitted(app);
+
+        // Signed first, because signing is what happened first: the record shows a
+        // signature that already existed when the application was created, which
+        // is the order they actually occurred in and the property the case asks
+        // for -- signed before submitted, not after.
+        auditLogService.append(
+                app,
+                new ApplicationSigned(
+                        orgNumber,
+                        signature.signedBy(),
+                        signature.orderRef()));
 
         auditLogService.append(
                 app,

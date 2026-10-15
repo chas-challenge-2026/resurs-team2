@@ -7,5 +7,7 @@ public enum Decision {
     @Schema(description = "Application approved")
     APPROVED,
     @Schema(description = "Application rejected")
-    REJECTED
+    REJECTED,
+    @Schema(description = "Application needs additional documents")
+    DOCUMENTS_NEEDED
 }

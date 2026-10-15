@@ -1,5 +1,6 @@
 export type ApplicationStatus =
   | "PENDING_DOCS"
+  | "SCORING_IN_PROGRESS"
   | "UNDER_REVIEW"
   | "APPROVED"
   | "REJECTED";

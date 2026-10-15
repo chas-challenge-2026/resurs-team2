@@ -11,6 +11,7 @@ import se.comerit.resurs.api.v1.dto.ApplicationResponse;
 import se.comerit.resurs.api.v1.mapper.ApplicationMapper;
 import se.comerit.resurs.entity.Application;
 import se.comerit.resurs.entity.ApplicationStatus;
+import se.comerit.resurs.entity.Decision;
 import se.comerit.resurs.exception.ApplicationAlreadyDecidedException;
 import se.comerit.resurs.exception.ApplicationNotFoundException;
 import se.comerit.resurs.repository.ApplicationRepository;
@@ -46,8 +47,14 @@ public class DecisionService {
         caseWorkerAssignmentService.assignIfUnassigned(application, caseWorker);
 
         application.setStatus(ApplicationMapper.toStatus(request.decision()));
-        application.setDecision(request.decision());
         application.setDecisionReason(request.comment());
+
+        // Don't close if it is an amendment
+        if (request.decision() != Decision.DOCUMENTS_NEEDED) {
+
+            application.setDecision(request.decision());
+        }
+
         // A decided application is no longer pending: its ETA is cleared.
         application.setEstimatedResolutionAt(null);
 
@@ -57,7 +64,14 @@ public class DecisionService {
 
         Application saved = repository.save(application);
 
-        emailService.sendDecision(saved);
+        switch (request.decision()) {
+            case APPROVED, REJECTED:
+                emailService.sendDecision(saved);
+                break;
+            case DOCUMENTS_NEEDED:
+                emailService.sendAdditionalInformationNeeded(saved);
+                break;
+        }
 
         return ApplicationMapper.toResponse(saved);
     }

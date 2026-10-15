@@ -1,5 +1,6 @@
 import { apiFetch } from "./apiFetch";
 import type { ApplicationDocument } from "../types/document";
+import type { DocumentType } from "../schemas/Documents.schema";
 
 export const documentApi = {
   async getAllDocuments(
@@ -17,52 +18,50 @@ export const documentApi = {
   },
 
   async uploadDocument(
-  applicationId: number | string,
-  docType: string,
-  file: File,
-): Promise<ApplicationDocument> {
-  const formData = new FormData();
+    applicationId: number | string,
+    docType: DocumentType,
+    file: File,
+  ): Promise<ApplicationDocument> {
+    const formData = new FormData();
 
-  formData.append("id", String(applicationId));
-  formData.append("docType", docType);
-  formData.append("file", file);
+    formData.append("file", file);
 
-  const response = await apiFetch(
-    `/api/v1/applications/${applicationId}/documents`,
-    {
-      method: "POST",
-      body: formData,
-    },
-  );
-
-  if (!response.ok) {
-    const errorText = await response.text();
-
-    throw new Error(
-      `Kunde inte ladda upp dokumentet. Status: ${response.status}. ${errorText}`,
+    const response = await apiFetch(
+      `/api/v1/applications/${applicationId}/documents?docType=${encodeURIComponent(docType)}`,
+      {
+        method: "POST",
+        body: formData,
+      },
     );
-  }
 
-  return response.json();
-},
+    if (!response.ok) {
+      const errorText = await response.text();
+
+      throw new Error(
+        `Kunde inte ladda upp dokumentet. Status: ${response.status}. ${errorText}`,
+      );
+    }
+
+    return response.json();
+  },
 
   downloadDocument: async (uuid: string): Promise<Blob> => {
-  const response = await apiFetch(`/api/v1/documents/${uuid}`);
+    const response = await apiFetch(`/api/v1/documents/${uuid}`);
 
-  if (!response.ok) {
-    throw new Error("Kunde inte ladda ner dokumentet.");
-  }
+    if (!response.ok) {
+      throw new Error("Kunde inte ladda ner dokumentet.");
+    }
 
-  return response.blob();
-},
+    return response.blob();
+  },
 
   deleteDocument: async (uuid: string): Promise<void> => {
-  const response = await apiFetch(`/api/v1/documents/${uuid}`, {
-    method: "DELETE",
-  });
+    const response = await apiFetch(`/api/v1/documents/${uuid}`, {
+      method: "DELETE",
+    });
 
-  if (!response.ok) {
-    throw new Error("Kunde inte ta bort dokumentet.");
+    if (!response.ok) {
+      throw new Error("Kunde inte ta bort dokumentet.");
     }
   }
 }

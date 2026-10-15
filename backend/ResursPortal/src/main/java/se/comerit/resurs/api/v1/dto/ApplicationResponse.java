@@ -53,7 +53,10 @@ public record ApplicationResponse(
     Instant createdAt,
     @Schema(description = "Timestamp when the application was last updated")
     @Nonnull
-    Instant updatedAt
+    Instant updatedAt,
+    @Schema(description = "Timestamp when the application is estimated to be reviewed")
+    @Nullable
+    Instant eta
 ) {
 
 }

@@ -25,37 +25,9 @@ set_target_properties(resurs_audit PROPERTIES
     VISIBILITY_INLINES_HIDDEN ON
 )
 
-add_executable(audit_sandbox_test
-    tests/audit_sandbox_test.cpp
-    hash_chain.cpp
-    signer.cpp
-    audit_key_manager.cpp
-)
-target_include_directories(audit_sandbox_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-target_link_libraries(audit_sandbox_test PRIVATE OpenSSL::Crypto)
-add_test(NAME audit_sandbox_test COMMAND audit_sandbox_test)
-
-# --- Local ABI test (links against libresurs_audit.so) ---
-
-add_executable(audit_abi_test tests/audit_abi_test.c)
-
-target_link_libraries(audit_abi_test PRIVATE resurs_audit)
-add_test(NAME audit_abi_test COMMAND audit_abi_test)
-
 # --- Narrated demo (not a test - run manually to see the flow) ---
 
 add_executable(audit_demo audit_demo.c)
 target_link_libraries(audit_demo PRIVATE resurs_audit)
 
-# --- Stress/benchmark harness (not a ctest - run manually, Release build) ---
-
-add_executable(audit_stress_test
-    tests/audit_stress_test.cpp
-    resurs_audit.cpp
-    hash_chain.cpp
-    signer.cpp
-    audit_key_manager.cpp
-)
-target_include_directories(audit_stress_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-target_link_libraries(audit_stress_test PRIVATE OpenSSL::Crypto)
-
+add_subdirectory(tests)

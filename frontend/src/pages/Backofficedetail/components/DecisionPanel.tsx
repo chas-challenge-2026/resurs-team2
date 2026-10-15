@@ -20,7 +20,19 @@ export const DecisionPanel: React.FC<DecisionPanelProps> = ({
     application.status === "APPROVED" || application.status === "REJECTED";
 
   const handleDecision = async (decision: Decision) => {
-    const actionText = decision === "APPROVED" ? "Godkänn" : "Avslå";
+
+    let actionText: string;
+    switch (decision) {
+      case "APPROVED":
+        actionText = "Godkänn";
+        break;
+      case "REJECTED":
+        actionText = "Avslå";
+        break;
+      case "DOCUMENTS_NEEDED":
+        actionText = "Kräver dokument";
+        break;
+    };
 
     const confirmed = window.confirm(
       `${actionText} ansökan #${application.id}?`,
@@ -77,6 +89,16 @@ export const DecisionPanel: React.FC<DecisionPanelProps> = ({
               onClick={() => handleDecision("APPROVED")}
             >
               {decisionLoading ? "Sparar..." : "Godkänn"}
+            </button>
+
+            <button
+              type="button"
+              // TODO: Change to a warning button once we have a warning button style
+              className="btn btn-warning"
+              disabled={decisionLoading}
+              onClick={() => handleDecision("DOCUMENTS_NEEDED")}
+            >
+              {decisionLoading ? "Sparar..." : "Kräver dokument"}
             </button>
 
             <button

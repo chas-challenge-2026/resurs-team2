@@ -7,7 +7,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import se.comerit.resurs.api.v1.dto.DocumentDto;
+import se.comerit.resurs.audit.DocumentUploaded;
 import se.comerit.resurs.audit.EtaSet;
+import se.comerit.resurs.audit.StatusChanged;
 import se.comerit.resurs.entity.Application;
 import se.comerit.resurs.entity.ApplicationStatus;
 import se.comerit.resurs.entity.Document;
@@ -30,8 +32,11 @@ import java.util.UUID;
 @Service
 public class DocumentService {
 
-    /** Return type pairing the file content with the user-facing original filename. */
-    public record DocumentDownload(org.springframework.core.io.Resource resource, String originalFilename) {}
+    /**
+     * Return type pairing the file content with the user-facing original filename.
+     */
+    public record DocumentDownload(org.springframework.core.io.Resource resource, String originalFilename) {
+    }
 
     private final ApplicationRepository applicationRepository;
     private final DocumentRepository documentRepository;
@@ -64,7 +69,7 @@ public class DocumentService {
                 .toList();
     }
 
-    @Transactional 
+    @Transactional
     public DocumentDto uploadDocument(Long applicationId, String docType, MultipartFile file, UserPrincipal principal) {
         validateFile(file);
 
@@ -80,10 +85,11 @@ public class DocumentService {
         } catch (IOException _) {
             throw new FileUploadException("Upload failed.");
         }
+        auditLogService.append(application, new DocumentUploaded(document.getFilename()));
 
         document = documentRepository.save(document);
 
-        updateApplicationStatus(application, docType);
+        updateApplicationStatus(application);
         applicationRepository.save(application);
 
         return DocumentDto.from(document);
@@ -132,10 +138,11 @@ public class DocumentService {
         return filename;
     }
 
-    private void updateApplicationStatus(Application application, String docType) {
-        if ("AnnualReview".equals(docType)
-                && application.getStatus() == ApplicationStatus.PENDING_DOCS) {
+    private void updateApplicationStatus(Application application) {
+        if (application.getStatus() == ApplicationStatus.PENDING_DOCS) {
 
+            auditLogService.append(application,
+                    new StatusChanged(application.getStatus(), ApplicationStatus.UNDER_REVIEW));
             application.setStatus(ApplicationStatus.UNDER_REVIEW);
             // A flagged application is handled manually: refresh the ETA to the
             // manual-review SLA.
@@ -148,7 +155,7 @@ public class DocumentService {
         }
     }
 
-    @Transactional 
+    @Transactional
     public void deleteDocument(UUID documentId, UserPrincipal principal) {
         Document document = documentRepository
                 .findByUuid(documentId)

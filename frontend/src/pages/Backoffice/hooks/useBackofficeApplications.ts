@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 
-import type { Application } from "@/types/application";
 import { applicationApi } from "@/api/applicationApi";
+import type { Application } from "@/types/application";
 
 export const useBackofficeApplications = () => {
   const [reviewApps, setReviewApps] = useState<Application[]>([]);
@@ -15,20 +15,23 @@ export const useBackofficeApplications = () => {
         setLoading(true);
         setError(null);
 
-        const response = await applicationApi.getAll();
-        const applications = response.content;
+        const [reviewResponse, approvedResponse, rejectedResponse] =
+          await Promise.all([
+            applicationApi.getAll("UNDER_REVIEW"),
+            applicationApi.getAll("APPROVED"),
+            applicationApi.getAll("REJECTED"),
+          ]);
 
-        const review = applications.filter(
-          (app) => app.status === "UNDER_REVIEW",
-        );
+        const review = reviewResponse.content;
 
-        const decided = applications
-          .filter(
-            (app) => app.status === "APPROVED" || app.status === "REJECTED",
-          )
+        const decided = [
+          ...approvedResponse.content,
+          ...rejectedResponse.content,
+        ]
           .sort(
             (a, b) =>
-              new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+              new Date(b.updatedAt).getTime() -
+              new Date(a.updatedAt).getTime(),
           )
           .slice(0, 20);
 
@@ -48,5 +51,10 @@ export const useBackofficeApplications = () => {
     loadApplications();
   }, []);
 
-  return { reviewApps, decidedApps, loading, error };
+  return {
+    reviewApps,
+    decidedApps,
+    loading,
+    error,
+  };
 };

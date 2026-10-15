@@ -2,10 +2,8 @@ import { useNavigate } from "react-router-dom";
 
 import type { Application } from "@/types/application";
 
-import {
-  formatCurrency,
-  formatDateTime,
-} from "../utils/backofficeFormatters";
+import { formatCurrency } from "../utils/backofficeFormatters";
+import { formatDateTimeShort } from "@/utils/dateUtils";
 
 interface ReviewApplicationsTableProps {
   applications: Application[];
@@ -89,7 +87,7 @@ export const ReviewApplicationsTable = ({
                   </td>
 
                   <td className="backoffice-date">
-                    {formatDateTime(
+                    {formatDateTimeShort(
                       app.createdAt,
                     )}
                   </td>
