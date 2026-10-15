@@ -237,6 +237,24 @@
             "name": "resurs.audit.public-key.path",
             "type": "java.lang.String",
             "description": "Path to the Ed25519 public key (PEM PUBLIC KEY, SubjectPublicKeyInfo) that audit hash chains are verified against. Loads from the RESURS_AUDIT_PUBKEY_PATH environment variable. If unset (or blank), chain verification is unavailable; if set but unreadable or not an Ed25519 key, startup fails."
+        },
+        {
+            "name": "resurs.audit.verify.threads",
+            "type": "java.lang.Integer",
+            "description": "Threads in the audit chain verification pool, which is private to AuditChainVerifier. 0 means one per available processor, since verification is CPU-bound Ed25519 work.",
+            "defaultValue": 0
+        },
+        {
+            "name": "resurs.audit.verify.batch-size",
+            "type": "java.lang.Integer",
+            "description": "Number of applications whose audit chains are read in one query and verified as one task.",
+            "defaultValue": 500
+        },
+        {
+            "name": "resurs.audit.verify.db-reads",
+            "type": "java.lang.Integer",
+            "description": "How many verification batches may read from the database at the same time. Each read holds one connection while it loads and decrypts entries; signature checks run afterwards without one. Keep it well below the connection pool size so request handling is not starved.",
+            "defaultValue": 2
         }
     ]
 }
