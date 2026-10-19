@@ -48,6 +48,11 @@ export const ApplicationDetailsPanel = ({
           <dt>Senast uppdaterad</dt>
           <dd>{formatDateTime(application.updatedAt)}</dd>
         </div>
+
+        <div className="status-detail-row">
+          <dt>Uppskattad handläggningstid</dt>
+          <dd>{formatDateTime(application.estimatedResolutionAt).slice(0, 10)}</dd>
+        </div>
       </dl>
     </Panel>
   );

@@ -1,115 +1,28 @@
 import { MetricTooltip } from "@/components/metricTooltips/MetricTooltips";
 import { Panel } from "@/components/Panel/Panel";
 import type { FinancialData } from "@/types/applicationDetails";
+import {
+  getScoringItemsWithRequirements,
+  getMetricTooltip,
+} from "../utils/scoringUtils";
 
 interface ScoringResultPanelProps {
   scoringResult: string | null;
-  financialData: FinancialData | null;
+  financialData: FinancialData | string | null;
 }
 
-interface ScoreItem {
-  key: string;
-  label: string;
-  value: string;
-  flagged: boolean;
-}
-
-const labels: Record<string, string> = {
-  soliditet: "Soliditet",
-  likviditetsgrad: "Likviditetsgrad",
-  skuldsättningsgrad: "Skuldsättningsgrad",
-};
-
-const formatNumber = (value: number) =>
-  new Intl.NumberFormat("sv-SE", {
-    maximumFractionDigits: 2,
-  }).format(value);
-
-const parseScoringResult = (
-  scoringResult: string,
-): ScoreItem[] => {
-  const [, values = scoringResult] =
-    scoringResult.split(":");
-
-  return values.split(",").map((item) => {
-    const match = item
-      .trim()
-      .match(/^(.+?)=(.+?) \((OK|FLAGGED)\)$/);
-
-    if (!match) {
-      return {
-        key: item.trim(),
-        label: item.trim(),
-        value: "",
-        flagged: false,
-      };
-    }
-
-    const [, key, value, status] = match;
-
-    return {
-      key,
-      label: labels[key] ?? key,
-      value: value.replace(".", ","),
-      flagged: status === "FLAGGED",
-    };
-  });
-};
-
-const getMetricTooltip = (
-  key: string,
-  financialData: FinancialData,
-) => {
-  switch (key) {
-    case "soliditet":
-      return {
-        description:
-          "Visar hur stor del av företagets kapital som finansieras med eget kapital.",
-        formula: "Eget kapital / Totalt kapital",
-        calculation: `${formatNumber(
-          financialData.equity,
-        )} / ${formatNumber(
-          financialData.totalCapital,
-        )} = ${formatNumber(
-          financialData.equity /
-            financialData.totalCapital,
-        )}`,
-      };
-
-    case "likviditetsgrad":
-      return {
-        description:
-          "Visar företagets förmåga att täcka sina kortfristiga skulder.",
-        formula:
-          "Omsättningstillgångar / Kortfristiga skulder",
-        calculation: `${formatNumber(
-          financialData.currentAssets,
-        )} / ${formatNumber(
-          financialData.currentLiabilities,
-        )} = ${formatNumber(
-          financialData.currentAssets /
-            financialData.currentLiabilities,
-        )}`,
-      };
-
-    case "skuldsättningsgrad":
-      return {
-        description:
-          "Visar förhållandet mellan företagets skulder och eget kapital.",
-        formula: "Totala skulder / Eget kapital",
-        calculation: `${formatNumber(
-          financialData.totalLiabilities,
-        )} / ${formatNumber(
-          financialData.equity,
-        )} = ${formatNumber(
-          financialData.totalLiabilities /
-            financialData.equity,
-        )}`,
-      };
-
-    default:
+const toFinancialData = (
+  value: FinancialData | string | null
+): FinancialData | null => {
+  if (!value) return null;
+  if (typeof value === "string") {
+    try {
+      return JSON.parse(value) as FinancialData;
+    } catch {
       return null;
+    }
   }
+  return value;
 };
 
 export const ScoringResultPanel = ({
@@ -118,96 +31,94 @@ export const ScoringResultPanel = ({
 }: ScoringResultPanelProps) => {
   if (!scoringResult) {
     return (
-      <Panel
-        title="Scoringresultat"
-        className="status-scoring-panel"
-      >
-        <p className="text-muted">
-          Ingen scoring tillgänglig.
-        </p>
+      <Panel title="Scoringresultat" className="status-scoring-panel">
+        <p className="text-muted">Ingen scoring tillgänglig.</p>
       </Panel>
     );
   }
 
-  const scores =
-    parseScoringResult(scoringResult);
-
-  const flagged = scores.some(
-    (score) => score.flagged,
+  const parsedFinancialData = toFinancialData(financialData);
+  const scores = getScoringItemsWithRequirements(
+    scoringResult,
+    parsedFinancialData
   );
+  const flagged = scores.length > 0;
 
   return (
-    <Panel
-      title="Scoringresultat"
-      className="status-scoring-panel"
-    >
+    <Panel title="Scoringresultat" className="status-scoring-panel">
       <div className="status-scoring">
         <div className="status-scoring-summary">
           <span>Bedömning</span>
-
-          <strong
-            className={
-              flagged
-                ? "is-flagged"
-                : "is-approved"
-            }
-          >
-            {flagged
-              ? "Kräver granskning"
-              : "Godkänd"}
+          <strong className={flagged ? "is-flagged" : "is-approved"}>
+            {flagged ? "Kräver granskning" : "Godkänd"}
           </strong>
         </div>
 
-        <dl className="status-scoring-list">
-          {scores.map((score) => {
-            const tooltip = financialData
-              ? getMetricTooltip(
-                  score.key,
-                  financialData,
-                )
-              : null;
+        {scores.length === 0 ? (
+          <p className="text-muted" style={{ marginTop: "1rem" }}>
+            Alla nyckeltal uppfyller kraven utan anmärkning.
+          </p>
+        ) : (
+          <dl className="status-scoring-list">
+            {scores.map((score) => {
+              const tooltip = parsedFinancialData
+                ? getMetricTooltip(score.key, parsedFinancialData)
+                : null;
 
-            return (
-              <div
-                className="status-scoring-row"
-                key={score.key}
-              >
-                <dt>
-                  {tooltip ? (
-                    <MetricTooltip
-                      label={score.label}
-                      description={
-                        tooltip.description
-                      }
-                      formula={tooltip.formula}
-                      calculation={
-                        tooltip.calculation
-                      }
-                    />
-                  ) : (
-                    score.label
-                  )}
-                </dt>
+              return (
+                <div className="status-scoring-row" key={score.key}>
+                  <dt>
+                    {tooltip ? (
+                      <MetricTooltip
+                        label={score.label}
+                        description={tooltip.description}
+                        formula={tooltip.formula}
+                        calculation={tooltip.calculation}
+                      />
+                    ) : (
+                      score.label
+                    )}
+                  </dt>
 
-                <dd>
-                  <span>{score.value}</span>
+                  <dd>
+                    <div className="status-scoring-value-wrapper">
+                      {score.requirementText && (
+                        <span
+                          className="status-requirement-text text-muted"
+                          style={{
+                            fontSize: "0.85rem",
+                            display: "block",
+                            marginBottom: "0.25rem",
+                          }}
+                        >
+                          {score.requirementText}
+                        </span>
+                      )}
+                    </div>
+                  </dd>
+                </div>
+              );
+            })}
+          </dl>
+        )}
 
-                  <span
-                    className={`status-scoring-status ${
-                      score.flagged
-                        ? "is-flagged"
-                        : "is-approved"
-                    }`}
-                  >
-                    {score.flagged
-                      ? "Granska"
-                      : "OK"}
-                  </span>
-                </dd>
-              </div>
-            );
-          })}
-        </dl>
+        {flagged && (
+          <div
+            className="status-review-message"
+            style={{
+              marginTop: "1.25rem",
+              padding: "0.75rem",
+              backgroundColor: "rgba(255, 193, 7, 0.1)",
+              borderRadius: "6px",
+              borderLeft: "3px solid #ffc107",
+            }}
+          >
+            <p style={{ fontSize: "0.9rem", margin: 0, color: "inherit" }}>
+              Din ansökan har vidarebefordrats till en handläggare för en
+              manuell granskning.
+            </p>
+          </div>
+        )}
       </div>
     </Panel>
   );
