@@ -14,28 +14,14 @@ const labels: Record<string, string> = {
   branschfaktor: "Branschfaktor",
 };
 
+const FLAGGED = new Set(["FLAG", "FLAGGED"]);
 
-const getFlaggedLabels = (scoringResult: string): string[] => {
-  const [, values = scoringResult] = scoringResult.split(":");
-
-  return values
-    .split(",")
-    .map((item) => item.trim())
-    .flatMap((item) => {
-      const match = item.match(
-        /^(.+?)=(.+?)(?:\s+\((OK|FLAG|FLAGGED|SKIP)\))?$/i,
-      );
-      if (!match) return [];
-
-      const [, key, raw, parenStatus] = match;
-      const status = (parenStatus ?? raw).trim().toUpperCase();
-
-      if (status !== "FLAG" && status !== "FLAGGED") return [];
-
-      const normalizedKey = key.toLowerCase().trim();
-      return [labels[normalizedKey] ?? key.trim()];
-    });
-};
+const getFlaggedLabels = (ScoringResult: string): string[] =>
+  ScoringResult
+  .split(",")
+  .map((item) => item.split("="))
+  .filter(([, status =""]) => FLAGGED.has(status.trim().toUpperCase()))
+  .map(([key]) => labels[key.trim().toLowerCase()] ?? key.trim());
 
 export const ScoringPanel = ({ scoringResult }: ScoringPanelProps) => {
   if (!scoringResult) {
@@ -73,4 +59,3 @@ export const ScoringPanel = ({ scoringResult }: ScoringPanelProps) => {
     </Panel>
   );
 };
-  
