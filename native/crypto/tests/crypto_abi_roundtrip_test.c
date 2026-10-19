@@ -25,8 +25,8 @@ static void test_round_trip(void)
           "encrypt -> OK");
     check(ct_len == RESURS_KEY_VERSION_LEN + plain_len + RESURS_TAG_LEN,
           "ciphertext length == version + plaintext + tag");
-    check(ct[0] == RESURS_KEY_VERSION_CURRENT,
-          "first byte == current key version");
+    check(ct[0] == resurs_crypto_active_version(),
+          "first byte == active key version");
 
     char out[64];
     size_t out_len = sizeof out;
@@ -36,7 +36,7 @@ static void test_round_trip(void)
           "decrypt round-trip matches the original");
 }
 
-/* Wrong version byte: rejected before OpenSSL. */
+/* Version byte not in the key ring: rejected before OpenSSL. */
 static void test_bad_version_byte(void)
 {
     unsigned char ct[64];

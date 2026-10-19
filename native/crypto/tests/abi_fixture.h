@@ -13,34 +13,113 @@
 
 #include "resurs_crypto.h"
 
+#include <errno.h>
+#include <fcntl.h>
 #include <stddef.h>
 #include <stdio.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
-/* Writes n bytes to path. Returns 0 on success, -1 on failure. */
+/* Writes n bytes to path with mode 0600 (key files that group/others can write
+ * are rejected, so the result must not depend on the caller's umask).
+ * open() with 0600 means a new file never has wider rights, not even briefly;
+ * fchmod() also fixes the mode of a file that already existed (O_TRUNC keeps it).
+ * Returns 0 on success, -1 on failure. */
 static inline int write_file(const char *path, const unsigned char *data, size_t n)
 {
-    FILE *f = fopen(path, "wb");
-    if (!f)
+    int fd = open(path, O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, 0600);
+    if (fd < 0)
     {
         return -1;
     }
-    size_t w = fwrite(data, 1, n, f);
-    if (fclose(f) != 0)
+    int ok = fchmod(fd, 0600) == 0;
+    size_t done = 0;
+    while (ok && done < n)
     {
-        return -1;
+        ssize_t w = write(fd, data + done, n - done);
+        if (w < 0 && errno == EINTR)
+        {
+            continue;
+        }
+        ok = w > 0;
+        if (ok)
+        {
+            done += (size_t)w;
+        }
     }
-    return (w == n) ? 0 : -1;
+    if (close(fd) != 0)
+    {
+        ok = 0;
+    }
+    return ok ? 0 : -1;
 }
 
-/* Key file: 64 raw bytes = 32 AES + 32 HMAC lookup. Deterministic for the test. */
-#define ABI_KEY_FILE_LEN 64
+/* Key ring file (see resurs_crypto.h): 7-byte header + 33 bytes per version. */
+#define ABI_RING_HEADER_LEN 7
+#define ABI_RING_ENTRY_LEN (1 + RESURS_KEY_LEN)
+#define ABI_RING_LEN(count) (ABI_RING_HEADER_LEN + (count) * ABI_RING_ENTRY_LEN)
+#define ABI_RING_MAX_VERSIONS 8 /* enough for the tests, keeps buffers on the stack */
 
-static inline void fill_test_key(unsigned char key[ABI_KEY_FILE_LEN])
+/* Deterministic AES test key for a version; a different seed gives different bytes. */
+static inline void fill_test_ring_key(unsigned char key[RESURS_KEY_LEN],
+                                      unsigned char version, unsigned char seed)
 {
-    for (int i = 0; i < ABI_KEY_FILE_LEN; i++)
+    for (int i = 0; i < RESURS_KEY_LEN; i++)
     {
-        key[i] = (unsigned char)(i + 1);
+        key[i] = (unsigned char)(version * 31 + seed * 7 + i);
     }
+}
+
+/* Builds a key ring image holding `versions` (keys from fill_test_ring_key)
+ * into buf, which must hold ABI_RING_LEN(count) bytes; count must not exceed
+ * ABI_RING_MAX_VERSIONS. Does not validate: tests may build rings the module
+ * must reject. Returns the image length. */
+static inline size_t build_test_ring(unsigned char *buf, unsigned char active,
+                                     const unsigned char *versions, size_t count,
+                                     unsigned char seed)
+{
+    buf[0] = 'R';
+    buf[1] = 'S';
+    buf[2] = 'K';
+    buf[3] = 'R';
+    buf[4] = 1; /* format */
+    buf[5] = active;
+    buf[6] = (unsigned char)count;
+    for (size_t i = 0; i < count; i++)
+    {
+        unsigned char *entry = buf + ABI_RING_HEADER_LEN + i * ABI_RING_ENTRY_LEN;
+        entry[0] = versions[i];
+        fill_test_ring_key(entry + 1, versions[i], seed);
+    }
+    return ABI_RING_LEN(count);
+}
+
+/* build_test_ring + write to path. Returns 0 on success, -1 on failure. */
+static inline int write_test_ring(const char *path, unsigned char active,
+                                  const unsigned char *versions, size_t count,
+                                  unsigned char seed)
+{
+    unsigned char buf[ABI_RING_LEN(ABI_RING_MAX_VERSIONS)];
+    if (count > ABI_RING_MAX_VERSIONS)
+    {
+        return -1;
+    }
+    return write_file(path, buf, build_test_ring(buf, active, versions, count, seed));
+}
+
+/* Deterministic 32-byte HMAC lookup key: 0x80, 0x81, ... */
+static inline void fill_test_lookup_key(unsigned char key[RESURS_KEY_LEN])
+{
+    for (int i = 0; i < RESURS_KEY_LEN; i++)
+    {
+        key[i] = (unsigned char)(0x80 + i);
+    }
+}
+
+/* The lookup key file that goes with a key ring path: "<ring_path>.lookup". */
+static inline void abi_lookup_path(const char *ring_path, char *out, size_t out_len)
+{
+    snprintf(out, out_len, "%s.lookup", ring_path);
 }
 
 /* Fixed test nonce 1..12. Test-only: never reuse a nonce for real data. */
@@ -68,35 +147,45 @@ static inline int abi_encrypt_sample(const unsigned char nonce[RESURS_NONCE_LEN]
     return rc;
 }
 
-/* Writes the deterministic 64-byte key (bytes 1..64) to key_path and calls
- * resurs_crypto_init. On failure prints "FATAL: ..." to stderr and returns
- * non-zero. */
+/* Writes a key ring with version 1 only (active 1) to key_path, the
+ * deterministic lookup key to "<key_path>.lookup", and calls resurs_crypto_init.
+ * On failure prints "FATAL: ..." to stderr and returns non-zero. */
 static inline int abi_setup(const char *key_path)
 {
-    unsigned char key64[ABI_KEY_FILE_LEN];
-    fill_test_key(key64);
+    char lookup_path[256];
+    abi_lookup_path(key_path, lookup_path, sizeof lookup_path);
 
-    if (write_file(key_path, key64, sizeof key64) != 0)
+    const unsigned char v1[] = {1};
+    unsigned char lookup[RESURS_KEY_LEN];
+    fill_test_lookup_key(lookup);
+
+    if (write_test_ring(key_path, 1, v1, 1, 0) != 0 ||
+        write_file(lookup_path, lookup, sizeof lookup) != 0)
     {
-        fprintf(stderr, "FATAL: cannot write key file %s\n", key_path);
+        fprintf(stderr, "FATAL: cannot write key files %s / %s\n", key_path, lookup_path);
         return 1;
     }
 
-    int rc = resurs_crypto_init(key_path);
+    int rc = resurs_crypto_init(key_path, lookup_path);
     if (rc != RESURS_OK)
     {
         fprintf(stderr, "FATAL: resurs_crypto_init(%s) failed with code %d\n", key_path, rc);
         remove(key_path);
+        remove(lookup_path);
         return 1;
     }
     return 0;
 }
 
-/* resurs_crypto_shutdown() + remove(key_path). */
+/* resurs_crypto_shutdown() + remove both key files. */
 static inline void abi_teardown(const char *key_path)
 {
+    char lookup_path[256];
+    abi_lookup_path(key_path, lookup_path, sizeof lookup_path);
+
     resurs_crypto_shutdown();
     remove(key_path);
+    remove(lookup_path);
 }
 
 #endif /* RESURS_ABI_FIXTURE_H */

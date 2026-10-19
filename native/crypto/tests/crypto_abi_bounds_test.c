@@ -73,7 +73,7 @@ static void test_ciphertext_over_raw_max(void)
     if (blob)
     {
         memset(blob, 0, over);
-        blob[0] = RESURS_KEY_VERSION_CURRENT;
+        blob[0] = (unsigned char)resurs_crypto_active_version();
         char *pt = malloc(over);
         size_t n = over;
         check(pt != NULL, "allocated plaintext buffer");

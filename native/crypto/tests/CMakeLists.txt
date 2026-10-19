@@ -6,6 +6,8 @@ set(CRYPTO_SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/..)
 add_executable(crypto_sandbox_test
     crypto_sandbox_test.cpp
     ${CRYPTO_SRC_DIR}/key_manager.cpp
+    ${CRYPTO_SRC_DIR}/key_ring.cpp
+    ${CRYPTO_SRC_DIR}/secret_file.cpp
     ${CRYPTO_SRC_DIR}/aes_gcm_cipher.cpp
     ${CRYPTO_SRC_DIR}/hmac_sha256.cpp
 )
@@ -15,10 +17,11 @@ target_include_directories(crypto_sandbox_test PRIVATE ${CRYPTO_SRC_DIR})
 
 target_link_libraries(crypto_sandbox_test PRIVATE OpenSSL::Crypto)
 
-# Absolute path to the committed 64-byte key file, so crypto_sandbox_test can also run
-# the crypto suite against the real generated key (skipped if the file is absent).
+# Absolute paths to the generated key files (git-ignored), so crypto_sandbox_test can
+# also run the crypto suite against the real keys (skipped if the files are absent).
 target_compile_definitions(crypto_sandbox_test PRIVATE
-    RESURS_REAL_KEY_FILE="${CMAKE_CURRENT_SOURCE_DIR}/../../../infra/secrets/resurs-crypto.key"
+    RESURS_REAL_KEY_RING_FILE="${CMAKE_CURRENT_SOURCE_DIR}/../../../infra/secrets/resurs-crypto.keyring"
+    RESURS_REAL_LOOKUP_KEY_FILE="${CMAKE_CURRENT_SOURCE_DIR}/../../../infra/secrets/resurs-lookup.key"
 )
 
 add_test(NAME crypto_sandbox_test COMMAND crypto_sandbox_test)
@@ -40,11 +43,13 @@ set_tests_properties(crypto_keyring_test PROPERTIES TIMEOUT 30)
 # One executable per area, so ctest reports each separately. Each uses its own
 # key file, so they are safe to run in parallel (ctest -j).
 
-set(CRYPTO_ABI_TESTS init roundtrip buffers raw bounds hmac)
+set(CRYPTO_ABI_TESTS init roundtrip buffers raw bounds hmac rotation)
 
 foreach(name IN LISTS CRYPTO_ABI_TESTS)
     set(target crypto_abi_${name}_test)
     add_executable(${target} ${target}.c)
     target_link_libraries(${target} PRIVATE resurs_crypto)
     add_test(NAME ${target} COMMAND ${target})
+    set_tests_properties(${target} PROPERTIES TIMEOUT 30)
 endforeach()
+

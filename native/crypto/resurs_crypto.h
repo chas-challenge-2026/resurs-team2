@@ -18,7 +18,9 @@
 #define RESURS_TAG_LEN 16            // GCM tag, full 128-bit
 #define RESURS_HMAC_LEN 32           // HMAC-SHA256 blind-index output
 #define RESURS_KEY_VERSION_LEN 1     // key version prefix size 1 byte
-#define RESURS_KEY_VERSION_CURRENT 1 // current key version for encryption
+// The version byte is the AES key version the data was encrypted with (1..255).
+// Encrypt stamps the key ring's active version; decrypt picks the key by it.
+// See resurs_crypto_active_version() / resurs_crypto_reload().
 
 // Largest plaintext resurs_encrypt_pii (the NUL-terminated string API) will encrypt.
 // ~40x the largest PII column (VARCHAR(200)), with headroom for TEXT
@@ -35,30 +37,77 @@
 // already guarantees no upload can exceed.
 #define RESURS_MAX_RAW_LEN 10485760 // 10 MiB
 
-// Key file layout: [ AES-256 key : 32 ][ HMAC lookup key : 32 ] — exactly 64 raw bytes.
+// Two key files:
+//
+// AES key ring (all fields single bytes):
+//   [ magic "RSKR" : 4 ][ format = 1 : 1 ][ active : 1 ][ count : 1 ]
+//   then `count` entries of [ version : 1 ][ AES-256 key : 32 ]
+//   size exactly 7 + 33 * count (count 1..255); versions 1..255, unique,
+//   any order; `active` must be one of them.
+//
+// HMAC lookup key: exactly 32 raw bytes. Not versioned, never reloaded.
+//
+// Both must be regular files (a symlink to one is fine) that group and others
+// cannot write; anything else is RESURS_ERR_KEY_IO.
 
 enum
 {
     RESURS_OK = 0,
-    RESURS_ERR_NOT_INIT = -1,     // encrypt/decrypt called before successful init
+    RESURS_ERR_NOT_INIT = -1,     // called before successful init (or after shutdown)
     RESURS_ERR_AUTH = -2,         // decrypt: GCM tag mismatch
-    RESURS_ERR_KEY_IO = -3,       // init: key file missing / not 32 bytes
+    RESURS_ERR_KEY_IO = -3,       // init/reload: key file missing or invalid
     RESURS_ERR_BUFFER_SMALL = -4, // output buffer too small
     RESURS_ERR_INVALID_ARG = -5,  // NULL where not allowed, etc.
     RESURS_ERR_INTERNAL = -6,     // unexpected OpenSSL error
-    RESURS_ERR_KEY_VERSION = -7,  // wrong key version for decryption
+    RESURS_ERR_KEY_VERSION = -7,  // decrypt: key version not in the loaded key ring
+    RESURS_ERR_KEY_REJECTED = -8, // init/reload: valid keys that may not replace the loaded ones
 };
 
 #ifdef __cplusplus
 extern "C"
 {
 #endif
-    // Load the 64-byte key file (32 AES + 32 HMAC lookup) from key_file_path.
-    // Call once at startup.
-    // Returns RESURS_OK, RESURS_ERR_KEY_IO, RESURS_ERR_INVALID_ARG, RESURS_ERR_INTERNAL
-    RESURS_API int resurs_crypto_init(const char *key_file_path);
+    // Load the AES key ring and the HMAC lookup key (layouts above).
+    // Call at startup. Calling it again while keys are loaded is allowed only for
+    // compatible keys - the same lookup key, and a ring that passes the
+    // resurs_crypto_reload rules - otherwise RESURS_ERR_KEY_REJECTED. After
+    // resurs_crypto_shutdown any keys may be loaded. Use resurs_crypto_reload
+    // for rotation.
+    // On any error the previously loaded keys (if any) stay in use.
+    // Returns RESURS_OK, RESURS_ERR_KEY_IO, RESURS_ERR_KEY_REJECTED,
+    //         RESURS_ERR_INVALID_ARG, RESURS_ERR_INTERNAL
+    RESURS_API int resurs_crypto_init(const char *key_ring_path, const char *lookup_key_path);
 
-    // Encrypt one PII string and prepend key-version byte
+    // Hot key rotation: load a new AES key ring while the module is in use.
+    // The lookup key is not touched. In-flight calls finish with the key they took.
+    // The new ring is rejected (RESURS_ERR_KEY_REJECTED) if
+    //   - a version present in both rings has different key bytes, or
+    //   - it does not hold the currently active version.
+    // Adding versions, changing the active one, and dropping inactive ones are allowed.
+    // Changing the active version back to an older one is allowed too (rollback).
+    // A compromised version must therefore be removed from the ring (after its
+    // data is re-encrypted) - that also makes rolling back to it impossible.
+    // Dropping a version makes its ciphertexts undecryptable (RESURS_ERR_KEY_VERSION) -
+    // only do it once no stored data uses that version.
+    // On any error the current ring stays in use.
+    //
+    // Several processes sharing one database must rotate in two phases, or a
+    // process that does not know the new version yet fails to decrypt data
+    // written by one that does:
+    //   1. reload every process with a ring that holds the new version, with the
+    //      active version unchanged; wait until all succeeded;
+    //   2. reload every process with the same ring, now with the new version active.
+    // Retiring a version is the same in reverse: first switch the active version
+    // away from it everywhere, then drop it everywhere.
+    // Returns RESURS_OK, RESURS_ERR_NOT_INIT, RESURS_ERR_INVALID_ARG, RESURS_ERR_KEY_IO,
+    //         RESURS_ERR_KEY_REJECTED, RESURS_ERR_INTERNAL
+    RESURS_API int resurs_crypto_reload(const char *key_ring_path);
+
+    // The version new ciphertexts are stamped with (1..255),
+    // or RESURS_ERR_NOT_INIT (negative) if no keys are loaded.
+    RESURS_API int resurs_crypto_active_version(void);
+
+    // Encrypt one PII string under the active key and prepend its version byte
     // Returns RESURS_OK, RESURS_ERR_NOT_INIT, RESURS_ERR_INVALID_ARG,
     //         RESURS_ERR_BUFFER_SMALL, RESURS_ERR_INTERNAL
     // plaintext: NUL-terminated; strlen(plaintext) must not exceed RESURS_MAX_PLAINTEXT_LEN
@@ -84,7 +133,9 @@ extern "C"
                                           const unsigned char *nonce, size_t nonce_len,
                                           unsigned char *ciphertext_out, size_t *ciphertext_len);
 
-    // Verify version byte + GCM tag and return plaintext
+    // Pick the key by the version byte (RESURS_ERR_KEY_VERSION if the loaded ring
+    // does not hold it, checked before the buffer size), verify the GCM tag and
+    // return plaintext
     // Returns RESURS_OK, RESURS_ERR_NOT_INIT, RESURS_ERR_INVALID_ARG, RESURS_ERR_KEY_VERSION,
     //         RESURS_ERR_BUFFER_SMALL, RESURS_ERR_AUTH, RESURS_ERR_INTERNAL
     // ciphertext_len must be in
@@ -120,7 +171,7 @@ extern "C"
 
     // wipes the keys from memory (OPENSSL_cleanse)
     // safe to call multiple times and before init
-    // after it, encrypt/decrypt/hmac return RESURS_ERR_NOT_INIT
+    // after it, encrypt/decrypt/hmac/reload/active_version return RESURS_ERR_NOT_INIT
     RESURS_API void resurs_crypto_shutdown(void);
 
 #ifdef __cplusplus

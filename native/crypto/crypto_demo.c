@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h> /* umask */
 
 static void print_hex(const char *label, const unsigned char *data, size_t len)
 {
@@ -42,6 +43,16 @@ static void random_bytes(unsigned char *buf, size_t n)
     fclose(f);
 }
 
+static void write_or_die(const char *path, const unsigned char *data, size_t n)
+{
+    FILE *f = fopen(path, "wb");
+    if (!f || fwrite(data, 1, n, f) != n || fclose(f) != 0)
+    {
+        fprintf(stderr, "FATAL: cannot write %s\n", path);
+        exit(1);
+    }
+}
+
 /* Two-step buffer contract, the way the Java side calls the ABI: ask for the
  * required size with (NULL, 0), allocate exactly that, then encrypt. */
 static unsigned char *encrypt_alloc(const char *plain, const unsigned char *nonce, size_t *ct_len)
@@ -65,23 +76,31 @@ static unsigned char *encrypt_alloc(const char *plain, const unsigned char *nonc
 
 int main(void)
 {
-    const char *key_path = "demo_crypto.key";
+    const char *ring_path = "demo_crypto.keyring";
+    const char *lookup_path = "demo_crypto.lookup";
 
-    printf("=== 1. Provisioning a 64-byte key file (like infra/Makefile's keys-crypto) ===\n");
-    char cmd[256];
-    snprintf(cmd, sizeof cmd, "umask 077 && openssl rand 64 > %s", key_path);
-    printf("  $ %s\n", cmd);
-    if (system(cmd) != 0)
-    {
-        fprintf(stderr, "FATAL: openssl rand failed\n");
-        return 1;
-    }
-    printf("layout: [ AES-256 key : 32 ][ HMAC lookup key : 32 ] - two independent keys,\n"
-           "so the blind index never reuses the encryption key.\n\n");
+    /* Key files are created 0600, like infra/Makefile does with umask 077.
+     * The module also rejects key files that group/others can write. */
+    umask(077);
 
-    printf("=== 2. resurs_crypto_init: loading the key once per process ===\n");
-    must(resurs_crypto_init(key_path), "resurs_crypto_init");
-    printf("key loaded.\n\n");
+    printf("=== 1. Provisioning the two key files ===\n");
+    /* Key ring with one version: header "RSKR", format 1, active 1, count 1,
+     * then [ version 1 ][ 32 random AES key bytes ]. */
+    unsigned char ring[7 + 1 + RESURS_KEY_LEN] = {'R', 'S', 'K', 'R', 1, 1, 1, 1};
+    random_bytes(ring + 8, RESURS_KEY_LEN);
+    unsigned char lookup[RESURS_KEY_LEN];
+    random_bytes(lookup, sizeof lookup);
+
+    write_or_die(ring_path, ring, sizeof ring);
+    write_or_die(lookup_path, lookup, sizeof lookup);
+    print_hex("key ring header", ring, 7);
+    printf("key ring: versioned AES-256 keys; new data uses the active version, old data\n"
+           "is decrypted with the version stamped on it - that is what makes rotation work.\n"
+           "lookup key: 32 bytes for the blind index, a separate file that rotation never touches.\n\n");
+
+    printf("=== 2. resurs_crypto_init: loading the keys once per process ===\n");
+    must(resurs_crypto_init(ring_path, lookup_path), "resurs_crypto_init");
+    printf("keys loaded, active key version = %d.\n\n", resurs_crypto_active_version());
 
     const char *plain = "556000-1234";
     unsigned char nonce[RESURS_NONCE_LEN];
@@ -180,6 +199,7 @@ int main(void)
            resurs_encrypt_pii(plain, nonce, RESURS_NONCE_LEN, NULL, &q));
 
     free(ct);
-    remove(key_path);
+    remove(ring_path);
+    remove(lookup_path);
     return 0;
 }

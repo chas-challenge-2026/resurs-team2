@@ -40,9 +40,9 @@ namespace
 extern "C"
 {
 
-    int resurs_crypto_init(const char *key_file_path)
+    int resurs_crypto_init(const char *key_ring_path, const char *lookup_key_path)
     {
-        if (key_file_path == nullptr)
+        if (key_ring_path == nullptr || lookup_key_path == nullptr)
         {
             return RESURS_ERR_INVALID_ARG;
         }
@@ -50,14 +50,68 @@ extern "C"
         // no C++ exception may cross the extern "C" boundary — map each to an error code
         try
         {
-            resurs::KeyManager::instance().loadFromFile(key_file_path);
+            resurs::KeyManager::instance().loadFromFiles(key_ring_path, lookup_key_path);
             return RESURS_OK;
+        }
+        catch (const resurs::KeyRingRejected &)
+        {
+            return RESURS_ERR_KEY_REJECTED;
         }
         catch (const std::runtime_error &)
         {
             return RESURS_ERR_KEY_IO;
         }
         catch (...) // catch everything else
+        {
+            return RESURS_ERR_INTERNAL;
+        }
+    }
+
+    int resurs_crypto_reload(const char *key_ring_path)
+    {
+        if (!resurs::KeyManager::instance().isLoaded())
+        {
+            return RESURS_ERR_NOT_INIT;
+        }
+        if (key_ring_path == nullptr)
+        {
+            return RESURS_ERR_INVALID_ARG;
+        }
+
+        try
+        {
+            resurs::KeyManager::instance().reloadFromFile(key_ring_path);
+            return RESURS_OK;
+        }
+        catch (const resurs::KeyNotLoaded &) // shutdown raced with this reload
+        {
+            return RESURS_ERR_NOT_INIT;
+        }
+        catch (const resurs::KeyRingRejected &)
+        {
+            return RESURS_ERR_KEY_REJECTED;
+        }
+        catch (const std::runtime_error &)
+        {
+            return RESURS_ERR_KEY_IO;
+        }
+        catch (...)
+        {
+            return RESURS_ERR_INTERNAL;
+        }
+    }
+
+    int resurs_crypto_active_version(void)
+    {
+        try
+        {
+            return resurs::KeyManager::instance().activeVersion();
+        }
+        catch (const resurs::KeyNotLoaded &)
+        {
+            return RESURS_ERR_NOT_INIT;
+        }
+        catch (...)
         {
             return RESURS_ERR_INTERNAL;
         }
@@ -99,10 +153,12 @@ extern "C"
             resurs::Nonce nonce_arr{};
             std::memcpy(nonce_arr.data(), nonce, resurs::kNonceLen);
 
-            const resurs::SecretKey key = resurs::KeyManager::instance().key();
+            // Version and key come from one locked read, so a concurrent reload
+            // cannot stamp one version's byte on data encrypted with another key.
+            const resurs::ActiveKey active = resurs::KeyManager::instance().activeKey();
 
             auto body = resurs::AesGcmCipher::encrypt(
-                std::string_view{reinterpret_cast<const char *>(data), data_len}, key.bytes(), nonce_arr);
+                std::string_view{reinterpret_cast<const char *>(data), data_len}, active.key.bytes(), nonce_arr);
 
             // Defensive: the cipher output must fit the capacity we just checked.
             if (RESURS_KEY_VERSION_LEN + body.size() > *ciphertext_len)
@@ -110,11 +166,15 @@ extern "C"
                 return RESURS_ERR_INTERNAL;
             }
 
-            ciphertext_out[0] = RESURS_KEY_VERSION_CURRENT;
+            ciphertext_out[0] = active.version;
             std::memcpy(ciphertext_out + 1, body.data(), body.size());
             *ciphertext_len = RESURS_KEY_VERSION_LEN + body.size();
 
             return RESURS_OK;
+        }
+        catch (const resurs::KeyNotLoaded &) // shutdown raced with this call
+        {
+            return RESURS_ERR_NOT_INIT;
         }
         catch (...)
         {
@@ -174,27 +234,23 @@ extern "C"
         {
             return RESURS_ERR_INVALID_ARG;
         }
-        // Reject an unknown key version before touching OpenSSL.
-        if (ciphertext[0] != RESURS_KEY_VERSION_CURRENT)
-        {
-            return RESURS_ERR_KEY_VERSION;
-        }
-
-        // GCM plaintext length equals the ciphertext-body length exactly.
-        const size_t required =
-            ciphertext_len - RESURS_KEY_VERSION_LEN - RESURS_TAG_LEN;
-        const int cap = check_out_capacity(plaintext_out, plaintext_len, required);
-        if (cap != RESURS_OK)
-        {
-            return cap;
-        }
-
         try
         {
+            // Pick the key by the version byte. An unknown version is rejected
+            // here, before the buffer check and before touching OpenSSL.
+            const resurs::SecretKey key = resurs::KeyManager::instance().key(ciphertext[0]);
+
+            // GCM plaintext length equals the ciphertext-body length exactly.
+            const size_t required =
+                ciphertext_len - RESURS_KEY_VERSION_LEN - RESURS_TAG_LEN;
+            const int cap = check_out_capacity(plaintext_out, plaintext_len, required);
+            if (cap != RESURS_OK)
+            {
+                return cap;
+            }
+
             resurs::Nonce nonce_arr{};
             std::memcpy(nonce_arr.data(), nonce, resurs::kNonceLen);
-
-            const resurs::SecretKey key = resurs::KeyManager::instance().key();
 
             // Drop the version byte; [body][tag] is what AesGcmCipher expects.
             std::vector<std::uint8_t> input(ciphertext + RESURS_KEY_VERSION_LEN,
@@ -212,6 +268,14 @@ extern "C"
             *plaintext_len = plain.size();
 
             return RESURS_OK;
+        }
+        catch (const resurs::UnknownKeyVersion &)
+        {
+            return RESURS_ERR_KEY_VERSION;
+        }
+        catch (const resurs::KeyNotLoaded &) // shutdown raced with this call
+        {
+            return RESURS_ERR_NOT_INIT;
         }
         catch (const resurs::AuthError &)
         {
@@ -258,6 +322,10 @@ extern "C"
             *hmac_len = RESURS_HMAC_LEN;
 
             return RESURS_OK;
+        }
+        catch (const resurs::KeyNotLoaded &) // shutdown raced with this call
+        {
+            return RESURS_ERR_NOT_INIT;
         }
         catch (...)
         {
