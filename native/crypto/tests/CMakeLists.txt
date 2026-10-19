@@ -23,6 +23,19 @@ target_compile_definitions(crypto_sandbox_test PRIVATE
 
 add_test(NAME crypto_sandbox_test COMMAND crypto_sandbox_test)
 
+# --- KeyRing unit test (key ring file parsing + hot-reload rules) ---
+add_executable(crypto_keyring_test
+    crypto_keyring_test.cpp
+    ${CRYPTO_SRC_DIR}/key_ring.cpp
+    ${CRYPTO_SRC_DIR}/secret_file.cpp
+)
+target_include_directories(crypto_keyring_test PRIVATE ${CRYPTO_SRC_DIR})
+target_link_libraries(crypto_keyring_test PRIVATE OpenSSL::Crypto)
+target_compile_options(crypto_keyring_test PRIVATE -Wall -Wextra -Wpedantic)
+add_test(NAME crypto_keyring_test COMMAND crypto_keyring_test)
+# The FIFO check would hang on a regression; fail fast instead of ctest's 1500 s default.
+set_tests_properties(crypto_keyring_test PROPERTIES TIMEOUT 30)
+
 # --- Local ABI tests (link against libresurs_crypto.so) ---
 # One executable per area, so ctest reports each separately. Each uses its own
 # key file, so they are safe to run in parallel (ctest -j).

@@ -4,6 +4,8 @@ add_library(resurs_crypto SHARED
     aes_gcm_cipher.cpp
     hmac_sha256.cpp
     key_manager.cpp
+    key_ring.cpp
+    secret_file.cpp
 )
 
 target_include_directories(resurs_crypto
