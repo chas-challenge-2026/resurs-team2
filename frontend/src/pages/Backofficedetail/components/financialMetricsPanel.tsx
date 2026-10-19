@@ -27,7 +27,7 @@ export const FinancialMetricsPanel: React.FC<
               <input
                 className={styles.formControl}
                 id="equity"
-                type="number"
+                type="text"
                 value={financialMetrics.equity}
                 readOnly
               />
@@ -47,7 +47,7 @@ export const FinancialMetricsPanel: React.FC<
               <input
                 className={styles.formControl}
                 id="totalCapital"
-                type="number"
+                type="text"
                 value={financialMetrics.totalCapital}
                 readOnly
               />
@@ -69,7 +69,7 @@ export const FinancialMetricsPanel: React.FC<
               <input
                 className={styles.formControl}
                 id="currentAssets"
-                type="number"
+                type="text"
                 value={financialMetrics.currentAssets}
                 readOnly
               />
@@ -85,7 +85,7 @@ export const FinancialMetricsPanel: React.FC<
               <input
                 className={styles.formControl}
                 id="currentLiabilities"
-                type="number"
+                type="text"
                 value={financialMetrics.currentLiabilities}
                 readOnly
               />
@@ -103,7 +103,7 @@ export const FinancialMetricsPanel: React.FC<
               <input
                 className={styles.formControl}
                 id="totalLiabilities"
-                type="number"
+                type="text"
                 value={financialMetrics.totalLiabilities}
                 readOnly
               />
@@ -119,7 +119,7 @@ export const FinancialMetricsPanel: React.FC<
               <input
                 className={styles.formControl}
                 id="operatingIncome"
-                type="number"
+                type="text"
                 value={financialMetrics.operatingIncome}
                 readOnly
               />
@@ -137,7 +137,7 @@ export const FinancialMetricsPanel: React.FC<
           <input
             className={styles.formControl}
             id="netRevenue"
-            type="number"
+            type="text"
             value={financialMetrics.netRevenue}
             readOnly
           />

@@ -4,94 +4,58 @@ interface ScoringPanelProps {
   scoringResult?: string | null;
 }
 
-interface ScoreItem {
-  key: string;
-  label: string;
-  value: string;
-  flagged: boolean;
-}
-
 const labels: Record<string, string> = {
   soliditet: "Soliditet",
   likviditetsgrad: "Likviditetsgrad",
   skuldsättningsgrad: "Skuldsättningsgrad",
+  rörelsemarginal: "Rörelsemarginal",
+  kassaflödeskvot: "Kassaflödeskvot",
+  räntetäckningsgrad: "Räntetäckningsgrad",
+  branschfaktor: "Branschfaktor",
 };
 
-const parseScoringResult = (
-  scoringResult: string,
-): ScoreItem[] => {
-  const [, values = scoringResult] =
-    scoringResult.split(":");
+const FLAGGED = new Set(["FLAG", "FLAGGED"]);
 
-  return values.split(",").map((item) => {
-    const match = item
-      .trim()
-      .match(/^(.+?)=(.+?) \((OK|FLAGGED)\)$/);
+const getFlaggedLabels = (ScoringResult: string): string[] =>
+  ScoringResult
+  .split(",")
+  .map((item) => item.split("="))
+  .filter(([, status =""]) => FLAGGED.has(status.trim().toUpperCase()))
+  .map(([key]) => labels[key.trim().toLowerCase()] ?? key.trim());
 
-    if (!match) {
-      return {
-        key: item.trim(),
-        label: item.trim(),
-        value: "",
-        flagged: false,
-      };
-    }
-
-    const [, key, value, status] = match;
-
-    return {
-      key,
-      label: labels[key] ?? key,
-      value: value.replace(".", ","),
-      flagged: status === "FLAGGED",
-    };
-  });
-};
-
-export const ScoringPanel = ({
-  scoringResult,
-}: ScoringPanelProps) => {
+export const ScoringPanel = ({ scoringResult }: ScoringPanelProps) => {
   if (!scoringResult) {
     return (
       <Panel title="Scoringresultat">
-        <p className="text-muted">
-          Ingen scoring tillgänglig.
-        </p>
+        <p className="text-muted">Ingen scoring tillgänglig.</p>
       </Panel>
     );
   }
 
-  const scores =
-    parseScoringResult(scoringResult);
+  const flagged = getFlaggedLabels(scoringResult);
+
+  if (flagged.length === 0) {
+    return (
+      <Panel title="Scoringresultat">
+        <p className="text-muted">Inga varningsflaggor. Alla nyckeltal är godkända.</p>
+      </Panel>
+    );
+  }
 
   return (
-    <Panel title="Scoringresultat">
+    <Panel title={`Behöver granskning`}>
       <dl className="status-scoring-list">
-        {scores.map((score) => (
-          <div
-            className="status-scoring-row"
-            key={score.key}
-          >
-            <dt>{score.label}</dt>
-
+        {flagged.map((label) => (
+          <div className="status-scoring-row" key={label}>
+            <dt>{label}</dt>
             <dd>
-              <span>{score.value}</span>
-
-              <span
-                className={`status-scoring-status ${
-                  score.flagged
-                    ? "is-flagged"
-                    : "is-approved"
-                }`}
-              >
-                {score.flagged
-                  ? "Granska"
-                  : "OK"}
-              </span>
+              <span className="status-scoring-status is-flagged">Granska</span>
             </dd>
           </div>
         ))}
       </dl>
+
+      
     </Panel>
   );
 };
