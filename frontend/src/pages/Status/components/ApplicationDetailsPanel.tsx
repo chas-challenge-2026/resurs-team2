@@ -51,7 +51,11 @@ export const ApplicationDetailsPanel = ({
 
         <div className="status-detail-row">
           <dt>Uppskattad handläggningstid</dt>
-          <dd>{formatDateTime(application.estimatedResolutionAt).slice(0, 10)}</dd>
+          <dd>
+            {application.estimatedResolutionAt
+              ? formatDateTime(application.estimatedResolutionAt).slice(0, 10)
+              : "-"}
+          </dd>
         </div>
       </dl>
     </Panel>
