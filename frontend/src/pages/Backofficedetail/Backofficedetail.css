@@ -306,6 +306,37 @@
     0;
 }
 
+.decision-reason-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+
+  padding: 10px 12px;
+
+  color: var(--color-text);
+  
+
+  border-bottom: 1px solid var(--color-border);
+}
+
+.decision-reason-label {
+  flex: 0 0 auto;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.decision-reason-text {
+  min-width: 0;
+  line-height: 1.5;
+}
+.decision-reason-item-reject .decision-reason-label {
+  color: var(--color-danger-text);
+}
+
+.decision-reason-item-warning .decision-reason-label {
+  color: var(--color-warning-text);
+}
+
 /* Responsive */
 
 @media (max-width: 1000px) {

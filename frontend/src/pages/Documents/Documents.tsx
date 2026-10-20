@@ -8,6 +8,7 @@ import {
 } from "../../schemas/Documents.schema";
 import type { ApplicationDocument } from "../../types/document";
 import { documentApi } from "../../api/documentApi";
+import { formatDateTimeShort } from "@/utils/dateUtils";
 
 import styles from "./Documents.module.css";
 
@@ -244,7 +245,7 @@ export function Documents() {
                       <tr key={document.uuid}>
                         <td>{document.filename}</td>
                         <td>{document.docType}</td>
-                        <td>{document.uploadedAt}</td>
+                        <td>{formatDateTimeShort(document.uploadedAt)}</td>
                         <td>
                           <button
                             type="button"

@@ -8,6 +8,7 @@ import { StatusHeader } from "./components/StatusHeader";
 import { useApplicationDetails } from "./hooks/useApplicationDetails";
 import { formatWorker } from "./utils/statusFormatters";
 import { ScoringResultPanel } from "./components/ScoringResultPanel";
+import { RejectedApplicationPanel } from "./components/RejectedApplicationPanel";
 
 import "./Status.css";
 
@@ -46,11 +47,18 @@ export const Status = () => {
     <main className="status-page">
       <StatusHeader application={application} />
 
+      {application.decision === "REJECTED" && (
+        <RejectedApplicationPanel
+        decisionReason={application.decisionReason}
+        />
+      )}
+
       <div className="status-layout">
         <aside className="status-side-column">
           <ScoringResultPanel
             scoringResult={application.scoringResult}
             financialData={financialData}
+            status={application.status}
           />
 
           <Panel title="Handläggare">

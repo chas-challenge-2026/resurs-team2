@@ -42,27 +42,6 @@ export const StatusHeader = ({
       <p className="status-subtitle">
         {application.companyName}
       </p>
-
-      {application.decision && (
-        <div
-          className={`status-decision ${
-            application.decision === "APPROVED"
-              ? "status-decision-success"
-              : "status-decision-danger"
-          }`}
-        >
-          <strong>
-            {application.decision === "APPROVED"
-              ? "Ansökan godkänd"
-              : "Ansökan avslagen"}
-          </strong>
-
-          <p>
-            {application.decisionReason ||
-              "Ingen motivering angiven."}
-          </p>
-        </div>
-      )}
     </header>
   );
 };
