@@ -1,11 +1,7 @@
 import { useNavigate } from "react-router-dom";
-
 import type { Application } from "@/types/application";
-
-import {
-  formatCurrency,
-  formatStatus,
-} from "../utils/backofficeFormatters";
+import { formatCurrency, formatStatus } from "../utils/backofficeFormatters";
+import { parseRejectionReason } from "@/utils/rejectionReasonFormatter";
 
 interface DecidedApplicationsTableProps {
   applications: Application[];
@@ -77,7 +73,30 @@ export const DecidedApplicationsTable = ({
                   <td>{app.decision || "-"}</td>
 
                   <td className="backoffice-reason">
-                    {app.decisionReason || "-"}
+                    {app.decisionReason ? (
+                      <ul className="backoffice-reason-list">
+                        {parseRejectionReason(app.decisionReason).map(
+                          (reason, index) => (
+                            <li
+                              key={`${reason.type}-${index}`}
+                              className={`backoffice-reason-item backoffice-reason-item-${reason.type.toLowerCase()}`}
+                            >
+                              <span className="backoffice-reason-label">
+                                {reason.type === "REJECT"
+                                  ? "Avslag:"
+                                  : "Varning:"}
+                              </span>
+
+                              <span className="backoffice-reason-text">
+                                {reason.text}
+                              </span>
+                            </li>
+                          ),
+                        )}
+                      </ul>
+                    ) : (
+                      "-"
+                    )}
                   </td>
 
                   <td className="backoffice-table-action">
