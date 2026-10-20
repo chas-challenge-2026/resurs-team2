@@ -16,12 +16,14 @@ import { BankIdSignature } from "../../components/credit-application/bankid-sign
 import { ApplicationRequestSchema } from "../../schemas/ApplicationRequest.schema";
 import { applicationApi } from "../../api/applicationApi";
 import { companyApi } from "../../api/companyApi";
+import { demoData } from "./demoData";
 
 export function CreditApplication() {
   const [currentStep, setCurrentStep] = useState(1);
   const navigate = useNavigate();
   const [loadingCompany, setLoadingCompany] = useState(true);
   const [companyError, setCompanyError] = useState<string | null>(null);
+  const [fetchingData, setFetchingData] = useState(false);
 
   const [companyInformation, setCompanyInformation] =
     useState<CompanyInformationData>({
@@ -68,6 +70,17 @@ export function CreditApplication() {
   // Function that show which step you are on
   const handleStepChange = (step: number) => {
     setCurrentStep(step);
+  };
+
+  // Fyller i nyckeltalen med demodata. Hämtningen är mockad, men simulerar
+  // ett anrop så att det ser ut som en riktig hämtning i demon.
+  const fetchFromBolagsverket = async () => {
+    setFetchingData(true);
+
+    await new Promise((resolve) => setTimeout(resolve, 800));
+
+    setFinancialMetrics(demoData.financialMetrics);
+    setFetchingData(false);
   };
 
   // Validates step 1 before the user proceeds.
@@ -222,12 +235,22 @@ export function CreditApplication() {
       )}
 
       {currentStep === 2 && (
-        <FinancialMetrics
-          data={financialMetrics}
-          onChange={setFinancialMetrics}
-          onNext={handleFinancialMetricsNext}
-          onPrevious={() => handleStepChange(1)}
-        />
+        <>
+          <button
+            type="button"
+            onClick={fetchFromBolagsverket}
+            disabled={fetchingData}
+          >
+            {fetchingData ? "Hämtar..." : "Hämta data från Bolagsverket"}
+          </button>
+
+          <FinancialMetrics
+            data={financialMetrics}
+            onChange={setFinancialMetrics}
+            onNext={handleFinancialMetricsNext}
+            onPrevious={() => handleStepChange(1)}
+          />
+        </>
       )}
 
       {currentStep === 3 && (
