@@ -4,8 +4,7 @@ export const creditAmountSchema = z.object({
   requestedAmount: z
     .number({error: "Ange önskat kreditbelopp.",})
     .min(50_000, "Kreditbeloppet måste vara minst 50 000 kr.")
-    .max(10_000_000, "Kreditbeloppet får vara högst 10 000 000 kr.")
-    .multipleOf(1_000, "Kreditbeloppet måste anges i hela tusental."),
+    .max(10_000_000, "Kreditbeloppet får vara högst 10 000 000 kr."),
 
   purpose: z
     .string({error: "Ange syftet med krediten.",})
