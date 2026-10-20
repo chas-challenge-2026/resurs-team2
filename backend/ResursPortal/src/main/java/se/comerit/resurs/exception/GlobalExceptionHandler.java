@@ -42,7 +42,9 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
     @ExceptionHandler(CompanyNotFoundException.class)
     public ResponseEntity<ProblemDetail> handleCompanyNotFound(CompanyNotFoundException e) {
-        log.info("Company not found: {}", e.getMessage());
+        // The exception deliberately carries no identifying information, so
+        // this line can never leak PII (e.g. an organisation number).
+        log.info("Company not found");
         ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(
                 HttpStatus.BAD_REQUEST, "Unable to process the application");
         problemDetail.setTitle("Bad Request");
@@ -62,13 +64,13 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     @ExceptionHandler(ConstraintViolationException.class)
     public ResponseEntity<ProblemDetail> handleConstraintViolation(ConstraintViolationException e) {
         ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(
-                HttpStatus.BAD_REQUEST, e.getMessage());
+                HttpStatus.BAD_REQUEST, "Request validation failed");
         problemDetail.setTitle("Constraint Violation");
         problemDetail.setType(PROBLEM_TYPE_DEFAULT);
         return ResponseEntity.badRequest().body(problemDetail);
     }
 
-    @ExceptionHandler({AccessDeniedException.class, AuthorizationDeniedException.class})
+    @ExceptionHandler({ AccessDeniedException.class, AuthorizationDeniedException.class })
     public ResponseEntity<ProblemDetail> handleAccessDenied(Exception e) {
         ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(
                 HttpStatus.FORBIDDEN, "Forbidden");
@@ -86,14 +88,28 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         problemDetail.setType(PROBLEM_TYPE_DEFAULT);
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(problemDetail);
     }
+  
+    @ExceptionHandler(BankIdSigningException.class)
+    public ResponseEntity<ProblemDetail> handleBankIdSigning(BankIdSigningException e) {
+        // The signing step failed while the session itself is valid, so this is a
+        // 403 and not a 401: logging the caller out would not make the next attempt
+        // succeed. The message is fixed by the exception and names no organisation.
+        log.info("BankID signing failed: {}", e.getMessage());
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(
+                HttpStatus.FORBIDDEN, e.getMessage());
+        problemDetail.setTitle("BankID Signing Failed");
+        problemDetail.setType(PROBLEM_TYPE_DEFAULT);
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(problemDetail);
+    }
+
     @ExceptionHandler(DocumentNotFoundException.class)
     public ResponseEntity<ProblemDetail> handleDocumentNotFound(DocumentNotFoundException e) {
         ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(
                 HttpStatus.NOT_FOUND, e.getMessage());
         problemDetail.setTitle("Document Not Found");
         problemDetail.setType(PROBLEM_TYPE_DEFAULT);
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(problemDetail); }
-
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(problemDetail);
+    }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ProblemDetail> handleGeneralError(Exception e) {

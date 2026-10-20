@@ -1,10 +1,4 @@
-import React from "react";
-
-import {
-  Navigate,
-  Route,
-  Routes,
-} from "react-router-dom";
+import { Navigate, Route, Routes } from "react-router-dom";
 
 import { StartPage } from "../pages/Startpage/StartPage";
 import { Login } from "../pages/Login/Login";
@@ -21,20 +15,11 @@ import { ProtectedRoute } from "../components/ProtectedRoute/ProtectedRoute";
 export const AppRoutes: React.FC = () => {
   return (
     <Routes>
-      <Route
-        path="/"
-        element={<StartPage />}
-      />
+      <Route path="/" element={<StartPage />} />
 
-      <Route
-        path="/foretagsbanken"
-        element={<StartPage />}
-      />
+      <Route path="/foretagsbanken" element={<StartPage />} />
 
-      <Route
-        path="/login"
-        element={<Login />}
-      />
+      <Route path="/login" element={<Login />} />
 
       <Route
         path="/application"
@@ -117,15 +102,7 @@ export const AppRoutes: React.FC = () => {
         }
       />
 
-      <Route
-        path="*"
-        element={
-          <Navigate
-            to="/"
-            replace
-          />
-        }
-      />
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 };

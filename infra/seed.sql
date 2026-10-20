@@ -1,48 +1,75 @@
 CREATE TABLE companies (
     id SERIAL PRIMARY KEY,
-    org_number VARCHAR(20) UNIQUE,
-    company_name VARCHAR(200),
-    authorized_signatory VARCHAR(100)
+    org_number VARCHAR(512),
+    org_number_index BYTEA UNIQUE,
+    company_name VARCHAR(512),
+    authorized_signatory VARCHAR(512)
 );
 
 CREATE TABLE case_workers (
     id SERIAL PRIMARY KEY,
-    name VARCHAR(100),
-    email VARCHAR(100) UNIQUE,
+    name VARCHAR(512),
+    email VARCHAR(512),
+    email_index BYTEA UNIQUE,
     password VARCHAR(255)
 );
 
 CREATE TABLE applications (
     id SERIAL PRIMARY KEY,
     company_id INT REFERENCES companies(id),
-    requested_amount DECIMAL(15,2),
+    case_worker_id INT REFERENCES case_workers(id),
+    requested_amount VARCHAR(512),
     purpose TEXT,
-    status VARCHAR(30) DEFAULT 'PENDING_DOCS', -- PENDING_DOCS, UNDER_REVIEW, APPROVED, REJECTED
+    status VARCHAR(30) DEFAULT 'PENDING_DOCS', -- PENDING_DOCS, SCORING_IN_PROGRESS, UNDER_REVIEW, APPROVED, REJECTED
     decision VARCHAR(20),
     decision_reason TEXT,
     scoring_result TEXT,
-    audit_log TEXT DEFAULT '[]',  -- JSON blob, no separate table
-    created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW()
+    financial_data TEXT,
+    estimated_resolution_at TIMESTAMP WITH TIME ZONE,
+    bankid_signature TEXT,
+    bankid_signed_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 CREATE TABLE documents (
-    id SERIAL PRIMARY KEY,
+    uuid uuid PRIMARY KEY,
     application_id INT REFERENCES applications(id),
-    filename VARCHAR(255),
+    filename VARCHAR(512),
+    original_filename VARCHAR(512),
     doc_type VARCHAR(50),
-    uploaded_at TIMESTAMP DEFAULT NOW()
+    uploaded_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Seed: two companies (matching BankID mock org numbers)
-INSERT INTO companies (org_number, company_name, authorized_signatory) VALUES
-('556000-1234', 'Malmö Fastigheter AB', 'Anders Karlsson'),
-('556000-5678', 'Göteborg Handel AB', 'Maria Svensson');
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- Case worker (password = "password123")
-INSERT INTO case_workers (name, email, password) VALUES
-('Karin Handläggare', 'karin@resurs.se', '$argon2id$v=19$m=65536,t=3,p=1$DMdWvwusPFNcQXgjaqLWkA$8wxxrvV1aOBqi+Do+xG9dgVHou2N5Impq4ou3AidxS4');
+CREATE TABLE audit_log (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    application_id INT NOT NULL REFERENCES applications(id),
+    sequence_number BIGINT NOT NULL,
+    hash BYTEA NOT NULL,
+    signature BYTEA NOT NULL,
+    entry TEXT NOT NULL,
+    timestamp TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    CONSTRAINT uq_audit_log_application_sequence UNIQUE (application_id, sequence_number)
+);
 
--- Pre-existing application in REVIEW
-INSERT INTO applications (company_id, requested_amount, purpose, status, decision, scoring_result, audit_log) VALUES
-(1, 500000.00, 'Expansion av verksamheten', 'UNDER_REVIEW', null, 'FLAGGED: soliditet=0.28 (OK), likviditetsgrad=0.95 (FLAGGED), skuldsättningsgrad=2.1 (OK)', '[{"ts":"2026-01-15T10:00:00","action":"APPLICATION_CREATED"},{"ts":"2026-01-15T10:00:01","action":"SCORING_RUN","result":"REVIEW"}]');
+-- NOTE: companies, applications and case workers contain PII. Production seeds
+-- them (encrypted) via PiiInitializer at application startup, not here.
+
+-- Function to block any modifications (UPDATE, DELETE) to the audit_log table
+CREATE FUNCTION block_modification()
+RETURNS TRIGGER AS $$
+BEGIN
+    RAISE EXCEPTION '% is append-only: % is not allowed', TG_TABLE_NAME, TG_OP;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER block_modification_t
+BEFORE UPDATE OR DELETE ON audit_log
+FOR EACH ROW EXECUTE FUNCTION block_modification();
+
+-- TRUNCATE does not fire row-level triggers, so it is blocked separately.
+CREATE TRIGGER block_truncate_t
+BEFORE TRUNCATE ON audit_log
+FOR EACH STATEMENT EXECUTE FUNCTION block_modification();

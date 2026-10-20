@@ -8,15 +8,13 @@ interface PanelProps {
   className?: string;
 }
 
-export const Panel = ({
+export function Panel({
   title,
   children,
   className = "",
-}: PanelProps) => {
+}: PanelProps) {
   return (
-    <div
-      className={`panel ${className}`.trim()}
-    >
+    <section className={`panel ${className}`.trim()}>
       <div className="panel-heading">
         {title}
       </div>
@@ -24,6 +22,8 @@ export const Panel = ({
       <div className="panel-body">
         {children}
       </div>
-    </div>
+    </section>
   );
-};
+}
+
+export default Panel;

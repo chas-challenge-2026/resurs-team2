@@ -1,10 +1,9 @@
-import React from "react";
 import type { Application } from "../../../types/application";
 import { Panel } from "../../../components/Panel/Panel";
 
 interface CompanyPanelProps {
   application: Application;
-  workerName: string;
+  workerName: string | null;
 }
 
 export const CompanyPanel: React.FC<CompanyPanelProps> = ({

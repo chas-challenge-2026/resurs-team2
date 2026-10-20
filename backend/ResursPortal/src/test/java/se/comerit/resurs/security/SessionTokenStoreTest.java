@@ -4,6 +4,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.time.Duration;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.Test;
 
@@ -288,6 +294,89 @@ class SessionTokenStoreTest {
         assertThat(store.rotate(original.refreshToken(), FP)).isPresent();
         // Second use of the same refresh token is rejected (replay/theft detection).
         assertThat(store.rotate(original.refreshToken(), FP)).isEmpty();
+    }
+
+    @Test
+    void rotateIsSingleUseUnderConcurrentReplay() throws Exception {
+        // The single-use guarantee must hold even when many clients race to
+        // replay the same stolen refresh token. rotate() reads the session map
+        // and removes it only afterwards (non-atomic), so overlapping
+        // presentations can ALL succeed and mint separate token pairs. A pool
+        // of threads re-running simultaneous presentations across several
+        // rounds makes that interleaving observable.
+        int threads = 32;
+        int rounds = 20;
+        ExecutorService pool = Executors.newFixedThreadPool(threads);
+        CyclicBarrier go = new CyclicBarrier(threads);
+        AtomicInteger maxSuccesses = new AtomicInteger(0);
+
+        for (int round = 0; round < rounds && maxSuccesses.get() <= 1; round++) {
+            SessionTokenStore store = store(true, 10_000, 60_000);
+            AuthTokens original = store.issue(company, FP);
+            AtomicInteger successes = new AtomicInteger();
+            CountDownLatch done = new CountDownLatch(threads);
+
+            for (int i = 0; i < threads; i++) {
+                pool.submit(() -> {
+                    try {
+                        go.await(5, TimeUnit.SECONDS); // release all presentations together
+                        if (store.rotate(original.refreshToken(), FP).isPresent()) {
+                            successes.incrementAndGet();
+                        }
+                    } catch (Exception ignored) {
+                        // an interrupted/aborted thread simply does not rotate
+                    } finally {
+                        done.countDown();
+                    }
+                });
+            }
+            assertThat(done.await(10, TimeUnit.SECONDS))
+                    .as("every concurrent rotation must finish within the deadline")
+                    .isTrue();
+            maxSuccesses.accumulateAndGet(successes.get(), Math::max);
+        }
+        pool.shutdownNow();
+
+        assertThat(maxSuccesses.get())
+                .as("at most one concurrent rotation may succeed per round; the rest are replays")
+                .isEqualTo(1);
+    }
+
+    @Test
+    void rotateRetainsSpentRefreshHashForForensics() {
+        SessionTokenStore store = store(true, 10_000, 60_000);
+
+        AuthTokens original = store.issue(company, FP);
+        store.rotate(original.refreshToken(), FP).orElseThrow();
+
+        // The spent hash is evicted from the active map (replay would fail)…
+        assertThat(store.sessionsByRefresh.containsKey(store.hash(original.refreshToken())))
+                .as("spent refresh token must no longer be accepted as active")
+                .isFalse();
+        // …but retained in the evidence log for theft/replay forensics.
+        assertThat(store.usedTokens.containsKey(store.hash(original.refreshToken())))
+                .as("spent refresh hash must be retained for forensic inspection")
+                .isTrue();
+    }
+
+    @Test
+    void rotationDoesNotResetTheAbsoluteExpirationCap() {
+        // Idle is long, so only the absolute 200ms cap (from the ORIGINAL login) matters.
+        SessionTokenStore store = store(true, 10_000, 200);
+
+        AuthTokens original = store.issue(company, FP);
+        clock.advance(Duration.ofMillis(100)); // t=100ms — well inside the 200ms absolute window
+
+        AuthTokens rotated = store.rotate(original.refreshToken(), FP).orElseThrow();
+
+        // The absolute cap must keep bounding the whole session lifetime from the
+        // original login. At t=250ms the rotated pair must already be expired, but
+        // rotation currently starts a brand-new session (fresh loginTime), so the
+        // cap restarts and the rotated tokens stay valid.
+        clock.advance(Duration.ofMillis(150)); // t=250ms — past the original 200ms cap
+
+        assertThat(store.validateAccess(rotated.accessToken(), FP)).isEmpty();
+        assertThat(store.rotate(rotated.refreshToken(), FP)).isEmpty();
     }
 
     @Test

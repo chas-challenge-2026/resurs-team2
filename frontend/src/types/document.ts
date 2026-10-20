@@ -1,7 +1,9 @@
+import type { DocumentType } from "@/schemas/Documents.schema";
+
 export interface ApplicationDocument {
-  id: number;
+  uuid: string;
   applicationId: number;
   filename: string;
-  docType: string;
+  docType: DocumentType;
   uploadedAt: string;
 }

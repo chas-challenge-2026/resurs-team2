@@ -51,9 +51,9 @@ Filen sparas i /tmp/uploads/ men innehållet läses aldrig. Scoring baseras enba
 
 ## Driftsproblem
 
-### 9. Filer i /tmp
-Uppladdade PDF-filer sparas i `/tmp/uploads/`. Rensas vid container-omstart.
-Användare kan se dokument i DB men inte ladda ner dem efter omstart.
+### 9. Filer i /tmp (åtgärdat)
+Uppladdade PDF-filer sparades tidigare i `/tmp/uploads/` och rensades vid container-omstart.
+Åtgärdat: filer lagras nu via `FileStorageService` (local disk under `/app/uploads` med Docker-volym, eller S3).
 
 ### 10. Ingen pagination
 `BackofficeController.java` hämtar ALLA UNDER_REVIEW-ansökningar utan LIMIT.

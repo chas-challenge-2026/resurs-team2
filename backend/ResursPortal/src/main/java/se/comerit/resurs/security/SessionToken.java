@@ -16,7 +16,6 @@ public class SessionToken {
     final UserPrincipal principal;
     final Instant loginTime;
     Instant expiresAt;
-    boolean revoked;
 
     public SessionToken(String accessTokenHash, String refreshTokenHash, String fingerprint,
             UserPrincipal principal, Instant loginTime, Instant expiresAt) {

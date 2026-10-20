@@ -1,53 +1,63 @@
-import React from "react";
-import type { Application } from "../../../types/application";
-import { Panel } from "../../../components/Panel/Panel";
-import { formatCurrency, formatDateTime } from "../utils/statusFormatters";
+import type { Application } from "@/types/application";
+import { formatDateTime } from "@/utils/dateUtils";
+import { Panel } from "@/components/Panel/Panel";
 
 interface ApplicationDetailsPanelProps {
   application: Application;
 }
 
-export const ApplicationDetailsPanel: React.FC<
-  ApplicationDetailsPanelProps
-> = ({ application }) => {
+const formatCurrency = (value: number) =>
+  new Intl.NumberFormat("sv-SE", {
+    style: "currency",
+    currency: "SEK",
+    maximumFractionDigits: 0,
+  }).format(value);
+
+export const ApplicationDetailsPanel = ({
+  application,
+}: ApplicationDetailsPanelProps) => {
   return (
     <Panel title="Ansökningsdetaljer">
-      <p>
-        <strong>Företag:</strong>
-        <br />
+      <dl className="status-detail-list">
+        <div className="status-detail-row">
+          <dt>Företag</dt>
+          <dd>{application.companyName}</dd>
+        </div>
 
-        {application.companyName}
-      </p>
+        <div className="status-detail-row">
+          <dt>Org.nummer</dt>
+          <dd>{application.orgNumber}</dd>
+        </div>
 
-      <p>
-        <strong>Org.nummer:</strong>
-        <br />
-        {application.orgNumber}
-      </p>
+        <div className="status-detail-row">
+          <dt>Kreditbelopp</dt>
+          <dd>{formatCurrency(application.requestedAmount)}</dd>
+        </div>
 
-      <p>
-        <strong>Kreditbelopp:</strong>
-        <br />
-        {formatCurrency(application.requestedAmount)}
-      </p>
+        <div className="status-detail-row">
+          <dt>Syfte</dt>
+          <dd>{application.purpose || "-"}</dd>
+        </div>
 
-      <p>
-        <strong>Syfte:</strong>
-        <br />
-        {application.purpose}
-      </p>
+        <div className="status-detail-row">
+          <dt>Inlämnad</dt>
+          <dd>{formatDateTime(application.createdAt)}</dd>
+        </div>
 
-      <p>
-        <strong>Inlämnad:</strong>
-        <br />
-        {formatDateTime(application.createdAt)}
-      </p>
+        <div className="status-detail-row">
+          <dt>Senast uppdaterad</dt>
+          <dd>{formatDateTime(application.updatedAt)}</dd>
+        </div>
 
-      <p>
-        <strong>Senast uppdaterad:</strong>
-        <br />
-        {formatDateTime(application.updatedAt)}
-      </p>
+        <div className="status-detail-row">
+          <dt>Uppskattad handläggningstid</dt>
+          <dd>
+            {application.estimatedResolutionAt
+              ? formatDateTime(application.estimatedResolutionAt).slice(0, 10)
+              : "-"}
+          </dd>
+        </div>
+      </dl>
     </Panel>
   );
 };

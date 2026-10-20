@@ -1,44 +1,85 @@
 package se.comerit.resurs.api.v1.service;
 
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import jakarta.annotation.Nonnull;
 
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Lazy;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
-import jakarta.annotation.Nonnull;
 import se.comerit.resurs.api.v1.dto.ApplicationDetailsResponse;
 import se.comerit.resurs.api.v1.dto.ApplicationRequest;
 import se.comerit.resurs.api.v1.dto.ApplicationResponse;
+import se.comerit.resurs.api.v1.dto.PaginatedResponse;
 import se.comerit.resurs.api.v1.mapper.ApplicationMapper;
+import se.comerit.resurs.api.v1.service.BankIdSigningService.BankIdSignature;
+import se.comerit.resurs.audit.ApplicationCreated;
+import se.comerit.resurs.audit.ApplicationSigned;
+import se.comerit.resurs.audit.EtaSet;
 import se.comerit.resurs.entity.Application;
 import se.comerit.resurs.entity.ApplicationStatus;
 import se.comerit.resurs.entity.Company;
 import se.comerit.resurs.exception.ApplicationNotFoundException;
 import se.comerit.resurs.exception.CompanyNotFoundException;
 import se.comerit.resurs.rating.ApplicationData;
-import se.comerit.resurs.rating.Score;
-import se.comerit.resurs.rating.ScoringResult;
 import se.comerit.resurs.repository.ApplicationRepository;
 import se.comerit.resurs.repository.CompanyRepository;
 import se.comerit.resurs.security.CaseWorkerPrincipal;
 import se.comerit.resurs.security.UserPrincipal;
 
+import tools.jackson.databind.ObjectMapper;
+
+import java.time.Instant;
+import java.time.format.DateTimeFormatter;
+import java.util.Optional;
+
 @Service
 public class ApplicationService {
+
     private final CompanyRepository companyRepository;
     private final ApplicationRepository applicationRepository;
     private final ScoringService scoringService;
+    private final BankIdSigningService bankIdSigningService;
+    private final EtaService etaService;
     private final AuditLogService auditLogService;
+    private final CaseWorkerAssignmentService caseWorkerAssignmentService;
+    private final ObjectMapper objectMapper;
+    private final EmailService emailService;
+    private final ApplicationService self;
 
-    public ApplicationService(CompanyRepository companyRepository, ApplicationRepository applicationRepository,
-            ScoringService scoringService, AuditLogService auditLogService) {
+    @Value("${resurs.scoring.delay-ms:20000}")
+    private long scoringDelayMs;
+
+    @Value("${resurs.sla.automated-decision-hours:24}")
+    private long automatedDecisionHours;
+
+    public ApplicationService(
+            CompanyRepository companyRepository,
+            ApplicationRepository applicationRepository,
+            ScoringService scoringService,
+            BankIdSigningService bankIdSigningService,
+            EtaService etaService,
+            AuditLogService auditLogService,
+            CaseWorkerAssignmentService caseWorkerAssignmentService,
+            ObjectMapper objectMapper,
+            EmailService emailService,
+            @Lazy ApplicationService self) {
+
         this.companyRepository = companyRepository;
         this.applicationRepository = applicationRepository;
         this.scoringService = scoringService;
+        this.bankIdSigningService = bankIdSigningService;
+        this.etaService = etaService;
         this.auditLogService = auditLogService;
+        this.caseWorkerAssignmentService = caseWorkerAssignmentService;
+        this.objectMapper = objectMapper;
+        this.emailService = emailService;
+        this.self = self;
     }
 
     public Optional<Company> getCompany(String orgNumber) {
@@ -47,87 +88,219 @@ public class ApplicationService {
 
     @Transactional
     public Long submitApplication(
-        String orgNumber,
-        ApplicationRequest application) {
+            String orgNumber,
+            ApplicationRequest application) {
+
         Company company = getCompany(orgNumber)
-                .orElseThrow(() -> new CompanyNotFoundException(orgNumber));
+                .orElseThrow(CompanyNotFoundException::new);
 
-        ApplicationData data = ApplicationMapper.toApplicationData(application);
-        ScoringResult score = scoringService.score(data);
-        Score scoring = ScoringService.toScore(score);
+        ApplicationData data =
+                ApplicationMapper.toApplicationData(application);
 
+        String financialDataJson;
+
+        try {
+            financialDataJson =
+                    objectMapper.writeValueAsString(data);
+        } catch (Exception _) {
+            financialDataJson = null;
+        }
+
+        // Sign before anything is written, so a declined or timed-out order leaves
+        // no application row, no email and no audit entry behind: the signature
+        // gates the submission rather than following it.
+        //
+        // Serialisation is not expected to fail. If it did the application would
+        // still be submitted carrying no financial data, so what gets signed is
+        // the empty payload rather than a null.
+        BankIdSignature signature = bankIdSigningService.sign(
+                orgNumber,
+                financialDataJson != null ? financialDataJson : "");
+
+        // The application is received and queued for the automated scoring run
+        // that follows right after the transaction commits.
         Application app = new Application(
-            company, 
-            application.requestedAmount(), 
-            application.purpose(),
-            ApplicationMapper.toStatus(score),
-            ApplicationMapper.toDecision(score),
-            score.summary(),
-            scoring.scoringLog(),
-            null
-        );
+                company,
+                application.requestedAmount(),
+                application.purpose());
 
-        Map<String, String> createdDetails = new LinkedHashMap<>();
-        createdDetails.put("orgNumber", orgNumber);
-        auditLogService.append(app, "APPLICATION_CREATED", createdDetails);
+        app.setStatus(ApplicationStatus.SCORING_IN_PROGRESS);
+        app.setFinancialData(financialDataJson);
+        app.setBankidSignature(signature.signature());
+        app.setBankidSignedAt(signature.signedAt());
 
-        Map<String, String> scoringDetails = new LinkedHashMap<>();
-        scoringDetails.put("result", scoring.decision());
-        scoringDetails.put("flags", String.valueOf(scoring.flagCount()));
-        auditLogService.append(app, "SCORING_RUN", scoringDetails);
+        app.setEstimatedResolutionAt(
+                etaService.estimateWithinHours(
+                        Instant.now(),
+                        automatedDecisionHours));
 
         app = applicationRepository.save(app);
+
+        emailService.sendApplicationSubmitted(app);
+
+        // Signed first, because signing is what happened first: the record shows a
+        // signature that already existed when the application was created, which
+        // is the order they actually occurred in and the property the case asks
+        // for -- signed before submitted, not after.
+        auditLogService.append(
+                app,
+                new ApplicationSigned(
+                        orgNumber,
+                        signature.signedBy(),
+                        signature.orderRef()));
+
+        auditLogService.append(
+                app,
+                new ApplicationCreated(orgNumber));
+
+        auditLogService.append(
+                app,
+                new EtaSet(
+                        DateTimeFormatter.ISO_INSTANT.format(
+                                app.getEstimatedResolutionAt())));
+
+        scheduleScoringAfterCommit(app.getId());
 
         return app.getId();
     }
 
     /**
-     * Returns the applications visible to the caller. A case worker sees all
-     * applications; a company sees only its own. When {@code status} is
-     * supplied the result is narrowed to that status, otherwise case workers
-     * default to {@link ApplicationStatus#UNDER_REVIEW} and companies see
-     * everything.
+     * Runs the asynchronous scoring only after the surrounding transaction
+     * has committed.
+     *
+     * Starting it inside the transaction is racy: the scoring thread reads
+     * the application in its own transaction and could see nothing if the
+     * insert has not been committed yet, silently skipping the scoring for
+     * that application.
+     *
+     * When no transaction is active the scoring is scheduled immediately.
      */
-    @Transactional(readOnly = true)
-    public @Nonnull List<ApplicationResponse> listApplications(UserPrincipal principal,
-            ApplicationStatus status) {
-        if (principal instanceof CaseWorkerPrincipal) {
-            ApplicationStatus effective = status != null ? status : ApplicationStatus.UNDER_REVIEW;
-            return applicationRepository.findByStatus(effective).stream()
-                    .map(ApplicationMapper::toResponse).toList();
+    private void scheduleScoringAfterCommit(Long applicationId) {
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(
+                    new TransactionSynchronization() {
+
+                        @Override
+                        public void afterCommit() {
+                            self.runScoringAsync(applicationId);
+                        }
+                    });
+        } else {
+            self.runScoringAsync(applicationId);
+        }
+    }
+
+    @Async
+    public void runScoringAsync(Long applicationId) {
+        try {
+            Thread.sleep(scoringDelayMs);
+        } catch (InterruptedException _) {
+            Thread.currentThread().interrupt();
+            return;
         }
 
-        String orgNumber = principal.asCompany().orgNumber();
-        Company company = getCompany(orgNumber)
-                .orElseThrow(() -> new CompanyNotFoundException(orgNumber));
-        if (status != null) {
-            return applicationRepository.findByCompanyIdAndStatus(company.getId(), status).stream()
-                    .map(ApplicationMapper::toResponse).toList();
-        }
-        return applicationRepository.findByCompanyId(company.getId()).stream()
-                .map(ApplicationMapper::toResponse).toList();
+        scoringService.scoreApplication(applicationId);
     }
 
     /**
-     * Returns the details of a single application. A case worker may view any
-     * application; a company may only view its own (mirrors the legacy
-     * controller). For anything the caller is not allowed to see, or that does
-     * not exist, an {@link ApplicationNotFoundException} is thrown so that the
-     * existence of other applications is not leaked.
+     * Returns the applications visible to the caller.
+     *
+     * A case worker sees all applications; a company sees only its own.
+     * When status is supplied the result is narrowed to that status.
+     * Otherwise case workers default to UNDER_REVIEW and companies see
+     * everything.
      */
     @Transactional(readOnly = true)
-    public @Nonnull ApplicationDetailsResponse viewApplication(Long id, UserPrincipal principal) {
-        Application app = applicationRepository.findByIdWithDocuments(id)
-                .orElseThrow(() -> new ApplicationNotFoundException(id));
+    public @Nonnull PaginatedResponse<ApplicationResponse> listApplications(
+            UserPrincipal principal,
+            ApplicationStatus status,
+            Pageable pageable) {
+
+        if (principal instanceof CaseWorkerPrincipal) {
+            ApplicationStatus effective =
+                    status != null
+                            ? status
+                            : ApplicationStatus.UNDER_REVIEW;
+
+            Page<Application> applications =
+                    applicationRepository.findByStatus(
+                            effective,
+                            pageable);
+
+            return PaginatedResponse.from(
+                    applications.map(ApplicationMapper::toResponse));
+        }
+
+        String orgNumber =
+                principal.asCompany().orgNumber();
+
+        Company company = getCompany(orgNumber)
+                .orElseThrow(CompanyNotFoundException::new);
+
+        Page<Application> applications;
+
+        if (status != null) {
+            applications =
+                    applicationRepository.findByCompanyIdAndStatus(
+                            company.getId(),
+                            status,
+                            pageable);
+        } else {
+            applications =
+                    applicationRepository.findByCompanyId(
+                            company.getId(),
+                            pageable);
+        }
+
+        return PaginatedResponse.from(
+                applications.map(ApplicationMapper::toResponse));
+    }
+
+    /**
+     * Returns the details of a single application.
+     *
+     * A case worker may view any application; a company may only view its own.
+     * For anything the caller is not allowed to see, or that does not exist,
+     * an ApplicationNotFoundException is thrown so that the existence of
+     * other applications is not leaked.
+     */
+    @Transactional(readOnly = true)
+    public @Nonnull ApplicationDetailsResponse viewApplication(
+            Long id,
+            UserPrincipal principal) {
 
         if (principal instanceof CaseWorkerPrincipal caseWorker) {
-            return ApplicationMapper.toDetailsResponse(app, caseWorker.name());
+            caseWorkerAssignmentService.ensureAssigned(
+                    id,
+                    caseWorker);
+
+            Application app =
+                    applicationRepository.findByIdWithDocuments(id)
+                            .orElseThrow(
+                                    () -> new ApplicationNotFoundException(id));
+
+            return ApplicationMapper.toDetailsResponse(
+                    app,
+                    app.getFinancialData());
         }
 
-        String orgNumber = principal.asCompany().orgNumber();
-        if (!app.getCompany().getOrgNumber().equals(orgNumber)) {
+        Application app =
+                applicationRepository.findByIdWithDocuments(id)
+                        .orElseThrow(
+                                () -> new ApplicationNotFoundException(id));
+
+        String orgNumber =
+                principal.asCompany().orgNumber();
+
+        if (!app.getCompany()
+                .getOrgNumber()
+                .equals(orgNumber)) {
+
             throw new ApplicationNotFoundException(id);
         }
-        return ApplicationMapper.toDetailsResponse(app, app.getCompany().getName());
+
+        return ApplicationMapper.toDetailsResponse(
+                app,
+                app.getFinancialData());
     }
 }

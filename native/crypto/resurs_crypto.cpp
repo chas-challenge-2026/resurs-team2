@@ -3,10 +3,39 @@
 #include "aes_gcm_cipher.hpp"
 #include "hmac_sha256.hpp"
 
-#include <stdexcept>
 #include <cstring>
 #include <string>
+#include <string_view>
 #include <vector>
+
+namespace
+{
+    // Shared out-buffer contract for the extern "C" entry points.
+    //
+    // *out_len is in/out: on entry it is the caller-provided buffer capacity; on
+    // return we set it either to the required size (RESURS_ERR_BUFFER_SMALL) or,
+    // by the caller, to the number of bytes actually written (RESURS_OK).
+    //
+    // Returns:
+    //   RESURS_OK               - buffer is large enough, caller may proceed
+    //   RESURS_ERR_INVALID_ARG  - out == NULL but a non-zero capacity was claimed
+    //   RESURS_ERR_BUFFER_SMALL - buffer too small; *out_len set to the required size
+    //                             (this also serves the "query the size" form:
+    //                              out == NULL with *out_len == 0)
+    int check_out_capacity(const void *out, size_t *out_len, size_t required)
+    {
+        if (out == nullptr && *out_len != 0)
+        {
+            return RESURS_ERR_INVALID_ARG;
+        }
+        if (*out_len < required)
+        {
+            *out_len = required;
+            return RESURS_ERR_BUFFER_SMALL;
+        }
+        return RESURS_OK;
+    }
+}
 
 extern "C"
 {
@@ -34,17 +63,35 @@ extern "C"
         }
     }
 
-    int resurs_encrypt_pii(const char *plaintext, const unsigned char *nonce,
-                           unsigned char *ciphertext_out, size_t *ciphertext_len)
+    int resurs_encrypt_pii_raw(const unsigned char *data, size_t data_len,
+                               const unsigned char *nonce, size_t nonce_len,
+                               unsigned char *ciphertext_out, size_t *ciphertext_len)
     {
         if (!resurs::KeyManager::instance().isLoaded())
         {
             return RESURS_ERR_NOT_INIT;
         }
-        if (nonce == nullptr || plaintext == nullptr || 
-            ciphertext_out == nullptr || ciphertext_len == nullptr)
+        if (data == nullptr || nonce == nullptr || ciphertext_len == nullptr)
         {
             return RESURS_ERR_INVALID_ARG;
+        }
+        // The caller owns a raw pointer; its length cannot be probed, so it must
+        // be declared and must match exactly.
+        if (nonce_len != resurs::kNonceLen)
+        {
+            return RESURS_ERR_INVALID_ARG;
+        }
+
+        if (data_len > RESURS_MAX_RAW_LEN)
+        {
+            return RESURS_ERR_INVALID_ARG;
+        }
+
+        const size_t required = RESURS_KEY_VERSION_LEN + data_len + RESURS_TAG_LEN;
+        const int cap = check_out_capacity(ciphertext_out, ciphertext_len, required);
+        if (cap != RESURS_OK)
+        {
+            return cap;
         }
 
         try
@@ -52,9 +99,16 @@ extern "C"
             resurs::Nonce nonce_arr{};
             std::memcpy(nonce_arr.data(), nonce, resurs::kNonceLen);
 
-            resurs::Key key = resurs::KeyManager::instance().key();
+            const resurs::SecretKey key = resurs::KeyManager::instance().key();
 
-            auto body = resurs::AesGcmCipher::encrypt(plaintext, key, nonce_arr);
+            auto body = resurs::AesGcmCipher::encrypt(
+                std::string_view{reinterpret_cast<const char *>(data), data_len}, key.bytes(), nonce_arr);
+
+            // Defensive: the cipher output must fit the capacity we just checked.
+            if (RESURS_KEY_VERSION_LEN + body.size() > *ciphertext_len)
+            {
+                return RESURS_ERR_INTERNAL;
+            }
 
             ciphertext_out[0] = RESURS_KEY_VERSION_CURRENT;
             std::memcpy(ciphertext_out + 1, body.data(), body.size());
@@ -67,21 +121,56 @@ extern "C"
             return RESURS_ERR_INTERNAL;
         }
     }
-    int resurs_decrypt_pii(const unsigned char *nonce, const unsigned char *ciphertext,
-                           size_t ciphertext_len, char *plaintext_out, size_t *plaintext_len)
+
+    int resurs_encrypt_pii(const char *plaintext,
+                           const unsigned char *nonce, size_t nonce_len,
+                           unsigned char *ciphertext_out, size_t *ciphertext_len)
+    {
+        if (plaintext == nullptr)
+        {
+            return RESURS_ERR_INVALID_ARG;
+        }
+        const size_t plain_len = strnlen(plaintext, RESURS_MAX_PLAINTEXT_LEN + 1);
+        // Keep the string API's contract tight even though _raw would allow much
+        // more (RESURS_MAX_RAW_LEN) — a NUL-terminated "PII string" should never
+        // legitimately be file-sized; catch that bug here instead of silently
+        // riding the file-upload allowance.
+        if (plain_len > RESURS_MAX_PLAINTEXT_LEN)
+        {
+            return RESURS_ERR_INVALID_ARG;
+        }
+        return resurs_encrypt_pii_raw(
+            reinterpret_cast<const unsigned char *>(plaintext), plain_len,
+            nonce, nonce_len, ciphertext_out, ciphertext_len);
+    }
+
+    int resurs_decrypt_pii(const unsigned char *nonce, size_t nonce_len,
+                           const unsigned char *ciphertext, size_t ciphertext_len,
+                           char *plaintext_out, size_t *plaintext_len)
     {
         if (!resurs::KeyManager::instance().isLoaded())
         {
             return RESURS_ERR_NOT_INIT;
         }
 
-        if (nonce == nullptr || ciphertext == nullptr ||
-            plaintext_out == nullptr || plaintext_len == nullptr)
+        if (nonce == nullptr || ciphertext == nullptr || plaintext_len == nullptr)
+        {
+            return RESURS_ERR_INVALID_ARG;
+        }
+        if (nonce_len != resurs::kNonceLen)
         {
             return RESURS_ERR_INVALID_ARG;
         }
         // Too short to even hold the version byte and the GCM tag.
         if (ciphertext_len < RESURS_KEY_VERSION_LEN + RESURS_TAG_LEN)
+        {
+            return RESURS_ERR_INVALID_ARG;
+        }
+        // Reject an oversized blob before allocating a buffer to copy it into.
+        // RESURS_MAX_RAW_LEN, not RESURS_MAX_PLAINTEXT_LEN: this ciphertext may
+        // have come from resurs_encrypt_pii_raw, which allows up to that much.
+        if (ciphertext_len >
+            RESURS_KEY_VERSION_LEN + RESURS_MAX_RAW_LEN + RESURS_TAG_LEN)
         {
             return RESURS_ERR_INVALID_ARG;
         }
@@ -91,18 +180,33 @@ extern "C"
             return RESURS_ERR_KEY_VERSION;
         }
 
+        // GCM plaintext length equals the ciphertext-body length exactly.
+        const size_t required =
+            ciphertext_len - RESURS_KEY_VERSION_LEN - RESURS_TAG_LEN;
+        const int cap = check_out_capacity(plaintext_out, plaintext_len, required);
+        if (cap != RESURS_OK)
+        {
+            return cap;
+        }
+
         try
         {
             resurs::Nonce nonce_arr{};
             std::memcpy(nonce_arr.data(), nonce, resurs::kNonceLen);
 
-            resurs::Key key = resurs::KeyManager::instance().key();
+            const resurs::SecretKey key = resurs::KeyManager::instance().key();
 
             // Drop the version byte; [body][tag] is what AesGcmCipher expects.
             std::vector<std::uint8_t> input(ciphertext + RESURS_KEY_VERSION_LEN,
                                             ciphertext + ciphertext_len);
 
-            std::string plain = resurs::AesGcmCipher::decrypt(input, key, nonce_arr);
+            const resurs::SecureBytes plain = resurs::AesGcmCipher::decrypt(input, key.bytes(), nonce_arr);
+
+            // Defensive: never write past the capacity we just checked.
+            if (plain.size() > *plaintext_len)
+            {
+                return RESURS_ERR_INTERNAL;
+            }
 
             std::memcpy(plaintext_out, plain.data(), plain.size());
             *plaintext_len = plain.size();
@@ -120,26 +224,38 @@ extern "C"
     }
 
     int resurs_hmac_sha256(const unsigned char *data, size_t data_len,
-                           unsigned char *hmac_out)
+                           unsigned char *hmac_out, size_t *hmac_len)
     {
         if (!resurs::KeyManager::instance().isLoaded())
         {
             return RESURS_ERR_NOT_INIT;
         }
-        // data may be empty, but the pointer must be valid; hmac_out is required.
-        if (data == nullptr || hmac_out == nullptr)
+        // data may be empty, but the pointer must be valid; hmac_len is required.
+        if (data == nullptr || hmac_len == nullptr)
+        {
+            return RESURS_ERR_INVALID_ARG;
+        }
+        // Blind-index inputs are single column values; bound the work like plaintext.
+        if (data_len > RESURS_MAX_PLAINTEXT_LEN)
         {
             return RESURS_ERR_INVALID_ARG;
         }
 
+        const int cap = check_out_capacity(hmac_out, hmac_len, RESURS_HMAC_LEN);
+        if (cap != RESURS_OK)
+        {
+            return cap;
+        }
+
         try
         {
-            resurs::Key lookup_key = resurs::KeyManager::instance().lookupKey();
+            const resurs::SecretKey lookup_key = resurs::KeyManager::instance().lookupKey();
 
             resurs::Hmac mac = resurs::hmacSha256(
-                {reinterpret_cast<const char *>(data), data_len}, lookup_key);
+                {reinterpret_cast<const char *>(data), data_len}, lookup_key.bytes());
 
             std::memcpy(hmac_out, mac.data(), RESURS_HMAC_LEN);
+            *hmac_len = RESURS_HMAC_LEN;
 
             return RESURS_OK;
         }

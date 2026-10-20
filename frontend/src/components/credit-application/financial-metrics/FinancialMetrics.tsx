@@ -1,10 +1,18 @@
-import type { ChangeEvent, SubmitEvent } from "react";
-import type { FinancialMetricsData } from "./FinancialMetrics.schema";
+import { useState, type ChangeEvent, type SubmitEvent } from "react";
+
+import {
+  financialMetricsSchema,
+  type FinancialMetricsFormData,
+} from "../../../schemas/credit-application-schemas/FinancialMetrics.schema";
+
+import { FinancialMetricField } from "./FinancialMetricsField";
+import { financialMetricFields } from "./FinancialMetrics.fields";
+
 import styles from "./FinancialMetrics.module.css";
 
 type FinancialMetricsProps = {
-  data: FinancialMetricsData;
-  onChange: (data: FinancialMetricsData) => void;
+  data: FinancialMetricsFormData;
+  onChange: (data: FinancialMetricsFormData) => void;
   onNext: () => void;
   onPrevious: () => void;
 };
@@ -15,177 +23,132 @@ export function FinancialMetrics({
   onNext,
   onPrevious,
 }: FinancialMetricsProps) {
-    
-  // Handles changes to the financial metric fields.
-  const handleInputChange = (event: ChangeEvent<HTMLInputElement>) => {
+  const [errors, setErrors] = useState<
+    Partial<Record<keyof FinancialMetricsFormData, string>>
+  >({});
+
+  const handleInputChange = (
+    event: ChangeEvent<HTMLInputElement>,
+  ) => {
     const { name, value } = event.target;
 
     onChange({
       ...data,
-      [name]: value === "" ? 0 : Number(value),
+      [name]:
+        value === "" ? undefined : Number(value),
     });
   };
 
-  // Prevents the default form submission and proceeds to the next step.
-  const handleSubmit = (event: SubmitEvent<HTMLFormElement>) => {
+  const handleSubmit = (
+    event: SubmitEvent<HTMLFormElement>,
+  ) => {
     event.preventDefault();
+
+    const result =
+      financialMetricsSchema.safeParse(data);
+
+    if (!result.success) {
+      const fieldErrors: Partial<
+        Record<keyof FinancialMetricsFormData, string>
+      > = {};
+
+      result.error.issues.forEach((issue) => {
+        const fieldName = issue.path[0];
+
+        if (typeof fieldName === "string") {
+          fieldErrors[
+            fieldName as keyof FinancialMetricsFormData
+          ] = issue.message;
+        }
+      });
+
+      setErrors(fieldErrors);
+      return;
+    }
+
+    setErrors({});
     onNext();
   };
 
-  return (
-    <section className={styles.formSection}>
-      <header>
-        <h2>Steg 2: Finansiella nyckeltal</h2>
+return (
+  <section className={styles.formSection}>
+    <header>
+      <h2>Steg 2: Finansiella nyckeltal</h2>
 
-        <p className={styles.mutedText}>
-          Hämta värdena från senaste årsredovisningen (belopp i SEK).
-        </p>
-      </header>
+      <p
+        id="financial-metrics-description"
+        className={styles.mutedText}
+      >
+        Hämta värdena från senaste årsredovisningen
+        (belopp i SEK).
+      </p>
+    </header>
 
-      <form onSubmit={handleSubmit}>
-        <div className={styles.row}>
-          <div className={styles.column}>
-            <div className={styles.formGroup}>
-              <label htmlFor="equity">Eget kapital (SEK)</label>
-
-              <input
-                className={styles.formControl}
-                id="equity"
-                name="equity"
-                type="number"
-                step="1"
-                placeholder="0"
-                value={data.equity === 0 ? "" : data.equity}
-                onChange={handleInputChange}
-              />
-
-              <p className={styles.helpText}>Summa eget kapital</p>
-            </div>
+    <form
+      onSubmit={handleSubmit}
+      aria-describedby="financial-metrics-description"
+    >
+      <div className={styles.row}>
+        {financialMetricFields.slice(0, 2).map((field) => (
+          <div className={styles.column} key={field.name}>
+            <FinancialMetricField
+              {...field}
+              value={data[field.name]}
+              error={errors[field.name]}
+              onChange={handleInputChange}
+            />
           </div>
+        ))}
+      </div>
 
-          <div className={styles.column}>
-            <div className={styles.formGroup}>
-              <label htmlFor="totalCapital">Totalt kapital (SEK)</label>
-
-              <input
-                className={styles.formControl}
-                id="totalCapital"
-                name="totalCapital"
-                type="number"
-                step="1"
-                placeholder="0"
-                value={data.equity === 0 ? "" : data.totalCapital}
-                onChange={handleInputChange}
-              />
-
-              <p className={styles.helpText}>Balansomslutning</p>
-            </div>
+      <div className={styles.row}>
+        {financialMetricFields.slice(2, 4).map((field) => (
+          <div className={styles.column} key={field.name}>
+            <FinancialMetricField
+              {...field}
+              value={data[field.name]}
+              error={errors[field.name]}
+              onChange={handleInputChange}
+            />
           </div>
-        </div>
+        ))}
+      </div>
 
-        <div className={styles.row}>
-          <div className={styles.column}>
-            <div className={styles.formGroup}>
-              <label htmlFor="currentAssets">Omsättningstillgångar (SEK)</label>
-
-              <input
-                className={styles.formControl}
-                id="currentAssets"
-                name="currentAssets"
-                type="number"
-                step="1"
-                placeholder="0"
-                value={data.equity === 0 ? "" : data.currentAssets}
-                onChange={handleInputChange}
-              />
-            </div>
+      <div className={styles.row}>
+        {financialMetricFields.slice(4, 6).map((field) => (
+          <div className={styles.column} key={field.name}>
+            <FinancialMetricField
+              {...field}
+              value={data[field.name]}
+              error={errors[field.name]}
+              onChange={handleInputChange}
+            />
           </div>
+        ))}
+      </div>
 
-          <div className={styles.column}>
-            <div className={styles.formGroup}>
-              <label htmlFor="currentLiabilities">
-                Kortfristiga skulder (SEK)
-              </label>
+      <FinancialMetricField
+        {...financialMetricFields[6]}
+        value={data[financialMetricFields[6].name]}
+        error={errors[financialMetricFields[6].name]}
+        onChange={handleInputChange}
+      />
 
-              <input
-                className={styles.formControl}
-                id="currentLiabilities"
-                name="currentLiabilities"
-                type="number"
-                step="1"
-                placeholder="0"
-                value={data.equity === 0 ? "" : data.currentLiabilities}
-                onChange={handleInputChange}
-              />
-            </div>
-          </div>
-        </div>
+      <button
+        type="button"
+        className={styles.secondaryButton}
+        onClick={onPrevious}
+      >
+        ← Tillbaka
+      </button>
 
-        <div className={styles.row}>
-          <div className={styles.column}>
-            <div className={styles.formGroup}>
-              <label htmlFor="totalLiabilities">Totala skulder (SEK)</label>
-
-              <input
-                className={styles.formControl}
-                id="totalLiabilities"
-                name="totalLiabilities"
-                type="number"
-                step="1"
-                placeholder="0"
-                value={data.equity === 0 ? "" : data.totalLiabilities}
-                onChange={handleInputChange}
-              />
-            </div>
-          </div>
-
-          <div className={styles.column}>
-            <div className={styles.formGroup}>
-              <label htmlFor="operatingIncome">Rörelseresultat (SEK)</label>
-
-              <input
-                className={styles.formControl}
-                id="operatingIncome"
-                name="operatingIncome"
-                type="number"
-                step="1"
-                placeholder="0"
-                value={data.equity === 0 ? "" : data.operatingIncome}
-                onChange={handleInputChange}
-              />
-
-              <p className={styles.helpText}>EBIT</p>
-            </div>
-          </div>
-        </div>
-
-        <div className={styles.formGroup}>
-          <label htmlFor="netRevenue">Nettoomsättning (SEK)</label>
-
-          <input
-            className={styles.formControl}
-            id="netRevenue"
-            name="netRevenue"
-            type="number"
-            step="1"
-            placeholder="0"
-            value={data.equity === 0 ? "" : data.netRevenue}
-            onChange={handleInputChange}
-          />
-        </div>
-
-        <button
-          type="button"
-          className={styles.secondaryButton}
-          onClick={onPrevious}
-        >
-          ← Tillbaka
-        </button>
-
-        <button type="submit" className={styles.primaryButton}>
-          Nästa →
-        </button>
-      </form>
-    </section>
-  );
+      <button
+        type="submit"
+        className={styles.primaryButton}
+      >
+        Nästa →
+      </button>
+    </form>
+  </section>
+  )
 }

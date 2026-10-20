@@ -2,6 +2,8 @@
 
 B2B-kreditansökningsportal för Resurs Bank. Företag ansöker om kredit, laddar upp årsredovisning, och får ett kreditbeslut baserat på finansiella nyckeltal.
 
+Ansökan är **spårbar**: statusflödet (`PENDING_DOCS → SCORING_IN_PROGRESS → UNDER_REVIEW → APPROVED/REJECTED`) och ett uppskattat beslutstidpunkt (`estimatedResolutionAt`, driven av `resurs.sla.*` i `application.properties`) exponeras i API:t.
+
 ## Snabbstart
 
 Projektet byggs med en **enhetlig Makefile** som orkestrerar React-frontenden (Vite/npm), Spring Boot-backenden (Maven/`./mvnw`) och den framtida C++-modulen (CMake). Alla artefakter kopieras till en gemensam `target/`-katalog.
@@ -44,6 +46,20 @@ Det bygger hela projektet i en enda image (root-`Dockerfile` anropar `make packa
 > Öppna [http://localhost:8083](http://localhost:8083)
 
 Se `DRIFT.md` för hur du uppdaterar `infra/docker-compose.yml` vid deployment till stage/prod. Använder du Docker för lokal utveckling kan du hålla koll på applikationsloggen med `docker compose logs -f --tail=100`.
+
+### Testa e-post med Mailpit
+
+`infra/docker-compose.override.yml` startar **Mailpit** tillsammans med appen när du kör Docker Compose. Appen skickar e-post via SMTP till Mailpit istället för en riktig mailserver:
+
+|          | URL / port                              |
+| -------- | --------------------------------------- |
+| Web UI   | [http://localhost:8025](http://localhost:8025) |
+| SMTP     | `localhost:1025`                        |
+
+- Alla utskick (varsel om mottagen ansökan, statusuppdateringar och beslut) visas i Web UI:t.
+- Eftersom seed-företagen saknar e-postadress härleds mottagaradressen från firmatecknarens namn, t.ex. `anders_karlsson@example.com`. Har adressen redan `@` används den som den är.
+- I lokal dev (`make dev`, H2) finns ingen Mailpit — där används `resurs.email.provider=console` och utskicken loggas bara till konsolen.
+- Vill du stänga av SMTP (t.ex. för att köra endast `db` + `app`) sätter du `RESURS_EMAIL_PROVIDER=console` som miljövariabel på `app`-tjänsten.
 
 ### Testa
 

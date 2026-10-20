@@ -1,18 +1,24 @@
-import React from "react";
+import { useState, useRef } from "react";
 import type { Application } from "../../../types/application";
+import type { FinancialMetricsData } from "@/schemas/credit-application-schemas/FinancialMetrics.schema";
 import { Panel } from "../../../components/Panel/Panel";
-import {
-  formatCurrency,
-  formatDateTime,
-  formatStatus,
-  getStatusBadgeClass,
-} from "../utils/backofficeFormatters";
+import { FinancialMetricsPanel } from "./financialMetricsPanel";
+import { formatCurrency, formatStatus, getStatusBadgeClass } from "../utils/backofficeFormatters";
+import { formatDateTimeShort } from "@/utils/dateUtils";
+import styles from "./CreditPanel.module.css";
 
 interface CreditPanelProps {
   application: Application;
+  financialMetrics: FinancialMetricsData;
 }
 
-export const CreditPanel: React.FC<CreditPanelProps> = ({ application }) => {
+export const CreditPanel: React.FC<CreditPanelProps> = ({
+  application,
+  financialMetrics,
+}) => {
+  const [showFinancialMetrics, setShowFinancialMetrics] = useState(false);
+  const financialMetricsRef = useRef<HTMLDivElement>(null);
+
   return (
     <Panel title="Kreditdetaljer">
       <p>
@@ -31,13 +37,54 @@ export const CreditPanel: React.FC<CreditPanelProps> = ({ application }) => {
       </p>
 
       <p>
-        <strong>Inlämnad:</strong> {formatDateTime(application.createdAt)}
+        <strong>Inlämnad:</strong> {formatDateTimeShort(application.createdAt)}
       </p>
 
       <p>
         <strong>Senast uppdaterad:</strong>{" "}
-        {formatDateTime(application.updatedAt)}
+        {formatDateTimeShort(application.updatedAt)}
       </p>
+
+      <button
+        type="button"
+        className={
+          showFinancialMetrics
+            ? styles.financialMetricsButtonActive
+            : styles.financialMetricsButton
+        }
+        onClick={() => {
+          if (!showFinancialMetrics) {
+            setShowFinancialMetrics(true);
+
+            setTimeout(() => {
+              financialMetricsRef.current?.scrollIntoView({
+                behavior: "smooth",
+                block: "start",
+              });
+            }, 0);
+          } else {
+            setShowFinancialMetrics(false);
+
+            window.scrollTo({
+              top: 0,
+              behavior: "smooth",
+            });
+          }
+        }}
+      >
+        {showFinancialMetrics
+          ? "Dölj finansiella uppgifter"
+          : "Visa finansiella uppgifter"}
+      </button>
+
+      {showFinancialMetrics && (
+        <div
+          ref={financialMetricsRef}
+          className={styles.financialMetricsContainer}
+        >
+          <FinancialMetricsPanel financialMetrics={financialMetrics} />
+        </div>
+      )}
     </Panel>
   );
 };

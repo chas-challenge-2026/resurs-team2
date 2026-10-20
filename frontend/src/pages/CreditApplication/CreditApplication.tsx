@@ -3,36 +3,27 @@ import { useNavigate } from "react-router-dom";
 import styles from "./CreditApplication.module.css";
 
 import { CompanyInformation } from "../../components/credit-application/company-information/CompanyInformation";
-import {
-  companyInformationSchema,
-  type CompanyInformationData,
-} from "../../components/credit-application/company-information/CompanyInformation.schema";
+import { companyInformationSchema, type CompanyInformationData } from "../../schemas/credit-application-schemas/CompanyInformation.schema";
 import { FinancialMetrics } from "../../components/credit-application/financial-metrics/FinancialMetrics";
-import {
-  financialMetricsSchema,
-  type FinancialMetricsData,
-} from "../../components/credit-application/financial-metrics/FinancialMetrics.schema";
+import { financialMetricsSchema, type FinancialMetricsFormData } from "../../schemas/credit-application-schemas/FinancialMetrics.schema";
 
 import { CreditAmount } from "../../components/credit-application/credit-amount/CreditAmount";
-import {
-  creditAmountSchema,
-  type CreditAmountData,
-} from "../../components/credit-application/credit-amount/CreditAmount.schema";
+import { creditAmountSchema, type CreditAmountData } from "../../schemas/credit-application-schemas/CreditAmount.schema";
 
 import { Confirmation } from "../../components/credit-application/confirmation/Confirmation";
-import {
-  confirmationSchema,
-  type ConfirmationFormData,
-} from "../../components/credit-application/confirmation/Confirmation.schema";
-import type { ApplicationRequest } from "../../types/applicationRequest";
+import { confirmationSchema, type ConfirmationFormData } from "../../schemas/credit-application-schemas/Confirmation.schema";
+import { BankIdSignature } from "../../components/credit-application/bankid-signature/BankIdSignature";
+import { ApplicationRequestSchema } from "../../schemas/ApplicationRequest.schema";
 import { applicationApi } from "../../api/applicationApi";
 import { companyApi } from "../../api/companyApi";
+import { demoData } from "./demoData";
 
 export function CreditApplication() {
   const [currentStep, setCurrentStep] = useState(1);
   const navigate = useNavigate();
   const [loadingCompany, setLoadingCompany] = useState(true);
   const [companyError, setCompanyError] = useState<string | null>(null);
+  const [fetchingData, setFetchingData] = useState(false);
 
   const [companyInformation, setCompanyInformation] =
     useState<CompanyInformationData>({
@@ -41,15 +32,7 @@ export function CreditApplication() {
     });
 
   const [financialMetrics, setFinancialMetrics] =
-    useState<FinancialMetricsData>({
-      equity: 0,
-      totalCapital: 0,
-      currentAssets: 0,
-      currentLiabilities: 0,
-      totalLiabilities: 0,
-      operatingIncome: 0,
-      netRevenue: 0,
-    });
+    useState<FinancialMetricsFormData>({});
 
   const [creditAmount, setCreditAmount] = useState<CreditAmountData>({
     requestedAmount: 0,
@@ -89,6 +72,17 @@ export function CreditApplication() {
     setCurrentStep(step);
   };
 
+  // Fyller i nyckeltalen med demodata. Hämtningen är mockad, men simulerar
+  // ett anrop så att det ser ut som en riktig hämtning i demon.
+  const fetchFromBolagsverket = async () => {
+    setFetchingData(true);
+
+    await new Promise((resolve) => setTimeout(resolve, 800));
+
+    setFinancialMetrics(demoData.financialMetrics);
+    setFetchingData(false);
+  };
+
   // Validates step 1 before the user proceeds.
   const handleCompanyInformationNext = () => {
     const result = companyInformationSchema.safeParse(companyInformation);
@@ -125,16 +119,11 @@ export function CreditApplication() {
     handleStepChange(4);
   };
 
-  // Validates step 4 before the user proceeds.
-  const handleConfirmationSubmit = async () => {
-    const result = confirmationSchema.safeParse(confirmation);
-
-    if (!result.success) {
-      console.log(result.error);
-      return;
-    }
-
-    const applicationData: ApplicationRequest = {
+  // Builds the payload the signatory signs. Shared by step 4 (which validates
+  // it before letting the user through) and step 5 (which signs and submits
+  // it), so the two steps can never disagree about what is being signed.
+  const buildApplicationRequest = () =>
+    ApplicationRequestSchema.safeParse({
       equity: financialMetrics.equity,
       totalCapital: financialMetrics.totalCapital,
       currentAssets: financialMetrics.currentAssets,
@@ -142,19 +131,51 @@ export function CreditApplication() {
       totalLiabilities: financialMetrics.totalLiabilities,
       operatingIncome: financialMetrics.operatingIncome,
       netRevenue: financialMetrics.netRevenue,
-
       requestedAmount: creditAmount.requestedAmount,
       purpose: creditAmount.purpose,
-    };
+    });
+
+  // Validates step 4 before the user proceeds to signing. Nothing is submitted
+  // here: the application only leaves the browser once it is signed.
+  const handleConfirmationSubmit = () => {
+    const result = confirmationSchema.safeParse(confirmation);
+
+    if (!result.success) {
+      console.log(result.error);
+      return;
+    }
+
+    const applicationResult = buildApplicationRequest();
+
+    if (!applicationResult.success) {
+      console.log(applicationResult.error);
+      return;
+    }
+
+    handleStepChange(5);
+  };
+
+  // Signs with BankID and submits as part of the same call. Rejects so the
+  // signing step can show the failure and let the user retry.
+  const handleSign = async () => {
+    const applicationResult = buildApplicationRequest();
+
+    if (!applicationResult.success) {
+      console.log(applicationResult.error);
+      throw new Error("Ansökan kunde inte valideras.");
+    }
 
     try {
-      const applicationId = await applicationApi.create(applicationData);
+      const applicationId = await applicationApi.create(
+        applicationResult.data,
+      );
 
       console.log("Kreditansökan skapad:", applicationId);
 
       navigate(`/status/${applicationId}`);
     } catch (error) {
       console.error("Kunde inte skapa kreditansökan:", error);
+      throw error;
     }
   };
 
@@ -163,6 +184,7 @@ export function CreditApplication() {
     "2. Finansiella nyckeltal",
     "3. Kreditbelopp",
     "4. Bekräftelse",
+    "5. Signera med BankID",
   ];
 
   if (loadingCompany) {
@@ -184,7 +206,6 @@ export function CreditApplication() {
   return (
     <main className={styles.container}>
       <h2 className={styles.h2}>Ny kreditansökan</h2>
-      <div className={`${styles.alert} ${styles.alertDanger}`}></div>
       <nav className={styles.stepIndicator} aria-label="Ansökans steg">
         {steps.map((step, index) => {
           const stepNumber = index + 1;
@@ -214,12 +235,22 @@ export function CreditApplication() {
       )}
 
       {currentStep === 2 && (
-        <FinancialMetrics
-          data={financialMetrics}
-          onChange={setFinancialMetrics}
-          onNext={handleFinancialMetricsNext}
-          onPrevious={() => handleStepChange(1)}
-        />
+        <>
+          <button
+            type="button"
+            onClick={fetchFromBolagsverket}
+            disabled={fetchingData}
+          >
+            {fetchingData ? "Hämtar..." : "Hämta data från Bolagsverket"}
+          </button>
+
+          <FinancialMetrics
+            data={financialMetrics}
+            onChange={setFinancialMetrics}
+            onNext={handleFinancialMetricsNext}
+            onPrevious={() => handleStepChange(1)}
+          />
+        </>
       )}
 
       {currentStep === 3 && (
@@ -239,6 +270,15 @@ export function CreditApplication() {
           onChange={setConfirmation}
           onPrevious={() => handleStepChange(3)}
           onSubmit={handleConfirmationSubmit}
+        />
+      )}
+
+      {currentStep === 5 && (
+        <BankIdSignature
+          companyName={companyInformation.companyName}
+          orgNumber={companyInformation.orgNumber}
+          onPrevious={() => handleStepChange(4)}
+          onSign={handleSign}
         />
       )}
     </main>

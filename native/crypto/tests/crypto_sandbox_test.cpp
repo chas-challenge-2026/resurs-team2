@@ -1,0 +1,326 @@
+#include "key_manager.hpp"
+#include "aes_gcm_cipher.hpp"
+#include "hmac_sha256.hpp"
+#include "test_util.h"
+
+#include <cstring>
+#include <cstdint>
+#include <cstdio>
+#include <filesystem>
+#include <fstream>
+#include <limits>
+#include <stdexcept>
+#include <string>
+#include <string_view>
+#include <system_error>
+#include <vector>
+
+#include <openssl/rand.h>
+
+namespace
+{
+
+    namespace fs = std::filesystem;
+
+    // True if fn() throws std::runtime_error (and nothing else)
+    template <typename Fn>
+    bool throws_runtime_error(Fn fn)
+    {
+        try
+        {
+            fn();
+        }
+        catch (const std::runtime_error &)
+        {
+            return true;
+        }
+        catch (...)
+        {
+            return false;
+        }
+        return false;
+    }
+
+    template <typename E, typename Fn>
+    bool throws_as(Fn fn)
+    {
+        try
+        {
+            fn();
+        }
+        catch (const E &)
+        {
+            return true;
+        }
+        catch (...)
+        {
+            return false;
+        }
+        return false;
+    }
+
+    // Shows decrypted bytes as text (for checks and printing)
+    std::string_view as_view(const resurs::SecureBytes &b)
+    {
+        return {reinterpret_cast<const char *>(b.data()), b.size()};
+    }
+
+    // Runs the AES-GCM + HMAC checks against one (aes, lookup) key pair.
+    // Called once with random keys and once with the real generated key file,
+    // so both paths exercise the same behaviour.
+    void test_aes_gcm_with_keys(const char *label,
+                                const resurs::Key &aes,
+                                const resurs::Key &lookup)
+    {
+        std::printf("\n--- AesGcmCipher: %s ---\n", label);
+
+        resurs::Nonce nonce{};
+        RAND_bytes(nonce.data(), static_cast<int>(nonce.size()));
+
+        const std::string plain = "556000-1234";
+        const auto ct = resurs::AesGcmCipher::encrypt(plain, aes, nonce);
+
+        check(ct.size() == plain.size() + resurs::kTagLen,
+              "ciphertext length == plaintext + tag");
+        check(std::memcmp(ct.data(), plain.data(), plain.size()) != 0,
+              "ciphertext bytes differ from plaintext");
+        const resurs::SecureBytes back = resurs::AesGcmCipher::decrypt(ct, aes, nonce);
+        check(as_view(back) == plain, "encrypt -> decrypt round-trip");
+
+        auto tampered = ct;
+        tampered[0] ^= 0x01;
+        check(throws_as<resurs::AuthError>([&]
+                                           { resurs::AesGcmCipher::decrypt(tampered, aes, nonce); }),
+              "tampered ciphertext -> AuthError");
+
+        resurs::Key wrong_key = aes;
+        wrong_key[0] ^= 0x01;
+        check(throws_as<resurs::AuthError>([&]
+                                           { resurs::AesGcmCipher::decrypt(ct, wrong_key, nonce); }),
+              "wrong key -> AuthError");
+
+        resurs::Nonce wrong_nonce = nonce;
+        wrong_nonce[0] ^= 0x01;
+        check(throws_as<resurs::AuthError>([&]
+                                           { resurs::AesGcmCipher::decrypt(ct, aes, wrong_nonce); }),
+              "wrong nonce -> AuthError");
+
+        const resurs::Hmac h1 = resurs::hmacSha256(plain, lookup);
+        const resurs::Hmac h2 = resurs::hmacSha256(plain, lookup);
+        check(h1 == h2, "hmacSha256 deterministic for the same input");
+        check(h1 != resurs::hmacSha256("556000-9999", lookup),
+              "hmacSha256 differs for different input");
+    }
+
+    // Creates a temp file with `nbytes` random bytes on construction
+    // removes it on destruction. Copy disabled
+    class TempKeyFile
+    {
+    public:
+        explicit TempKeyFile(std::size_t nbytes)
+        {
+            path_ = fs::temp_directory_path() /
+                    ("resurs_key_" + std::to_string(counter_++) + ".bin");
+
+            std::vector<unsigned char> buf(nbytes);
+            if (nbytes > 0 &&
+                RAND_bytes(buf.data(), static_cast<int>(nbytes)) != 1)
+            {
+                throw std::runtime_error("RAND_bytes failed");
+            }
+            std::ofstream f(path_, std::ios::binary);
+            f.write(reinterpret_cast<const char *>(buf.data()),
+                    static_cast<std::streamsize>(nbytes));
+        }
+
+        ~TempKeyFile()
+        {
+            std::error_code ec;
+            fs::remove(path_, ec); // noexcept overload - safe in a destructor
+        }
+
+        TempKeyFile(const TempKeyFile &) = delete;
+        TempKeyFile &operator=(const TempKeyFile &) = delete;
+
+        std::string path() const { return path_.string(); }
+
+    private:
+        static inline int counter_ = 0;
+        fs::path path_;
+    };
+
+    void test_key_manager()
+    {
+        auto &km = resurs::KeyManager::instance();
+
+        check(!km.isLoaded(), "isLoaded() false before load");
+
+        check(throws_runtime_error([&]
+                                   { (void)km.key(); }),
+              "key() before load throws");
+
+        resurs::Key k{};
+        resurs::Key lk{};
+        for (std::size_t i = 0; i < k.size(); ++i)
+        {
+            k[i] = static_cast<std::uint8_t>(i + 1);
+            lk[i] = static_cast<std::uint8_t>(0x80 + i);
+        }
+        km.loadFromBytes(k, lk);
+        check(km.key().bytes() == k, "loadFromBytes -> key() round-trip");
+        check(km.lookupKey().bytes() == lk, "loadFromBytes -> lookupKey() round-trip");
+        check(km.isLoaded(), "isLoaded() true after loadFromBytes");
+
+        km.cleanse();
+        check(!km.isLoaded(), "isLoaded() false after cleanse");
+        check(throws_runtime_error([&]
+                                   { (void)km.key(); }),
+              "key() after cleanse throws");
+        check(throws_runtime_error([&]
+                                   { (void)km.lookupKey(); }),
+              "lookupKey() after cleanse throws");
+
+        TempKeyFile good(64);
+        TempKeyFile too_short(63);
+        TempKeyFile too_long(65);
+
+        bool loaded_ok = true;
+        try
+        {
+            km.loadFromFile(good.path());
+        }
+        catch (...)
+        {
+            loaded_ok = false;
+        }
+        check(loaded_ok, "loadFromFile(64 bytes) succeeds");
+
+        check(throws_runtime_error([&]
+                                   { km.loadFromFile(too_short.path()); }),
+              "loadFromFile(63 bytes) throws");
+        check(throws_runtime_error([&]
+                                   { km.loadFromFile(too_long.path()); }),
+              "loadFromFile(65 bytes) throws");
+        check(throws_runtime_error([&]
+                                   { km.loadFromFile("/nonexistent/resurs.key"); }),
+              "loadFromFile(missing) throws");
+
+        km.cleanse();
+    }
+
+    void test_hmac()
+    {
+        resurs::Key hk{};
+        RAND_bytes(hk.data(), static_cast<int>(hk.size()));
+
+        const resurs::Hmac a1 = resurs::hmacSha256("556000-1234", hk);
+        const resurs::Hmac a2 = resurs::hmacSha256("556000-1234", hk);
+        const resurs::Hmac b = resurs::hmacSha256("556000-9999", hk);
+
+        check(a1 == a2, "hmacSha256 is deterministic for the same input");
+        check(a1 != b, "hmacSha256 differs for different input");
+
+        resurs::Key hk2 = hk;
+        hk2[0] ^= 0x01;
+        check(resurs::hmacSha256("556000-1234", hk2) != a1,
+              "hmacSha256 differs for a different key");
+
+        bool empty_ok = true;
+        try
+        {
+            (void)resurs::hmacSha256("", hk);
+        }
+        catch (...)
+        {
+            empty_ok = false;
+        }
+        check(empty_ok, "hmacSha256 accepts empty input");
+    }
+
+    // SecureBytes: a move hands over the buffer instead of copying it
+    void test_secure_bytes_move()
+    {
+        resurs::SecureBytes a(4);
+        a.data()[0] = 0x42;
+        const std::uint8_t *before = a.data();
+
+        resurs::SecureBytes b(std::move(a));
+        check(b.data() == before && b.size() == 4 && b.data()[0] == 0x42,
+              "SecureBytes move keeps the same buffer");
+        check(a.data() == nullptr && a.size() == 0,
+              "SecureBytes moved-from is empty");
+    }
+
+    // AesGcmCipher rejects an input whose length would not fit an int
+    void test_aes_rejects_over_int_max()
+    {
+        resurs::Key ek{};
+        resurs::Nonce en{};
+        RAND_bytes(ek.data(), static_cast<int>(ek.size()));
+        RAND_bytes(en.data(), static_cast<int>(en.size()));
+
+        // A string_view can describe a huge range without allocating it; 
+        // the guard must trip on the length alone, before any OpenSSL call reads the data.
+        const std::size_t too_big =
+            static_cast<std::size_t>(std::numeric_limits<int>::max()) + 1;
+        const std::string_view fake_huge{reinterpret_cast<const char *>(ek.data()), too_big};
+        check(throws_as<std::runtime_error>([&]
+                                            { resurs::AesGcmCipher::encrypt(fake_huge, ek, en); }),
+              "AesGcmCipher::encrypt rejects an over-int-max input");
+    }
+
+    void test_aes_gcm_random_keys()
+    {
+        resurs::Key rand_aes{};
+        resurs::Key rand_lookup{};
+        RAND_bytes(rand_aes.data(), static_cast<int>(rand_aes.size()));
+        RAND_bytes(rand_lookup.data(), static_cast<int>(rand_lookup.size()));
+        test_aes_gcm_with_keys("random keys", rand_aes, rand_lookup);
+    }
+
+    // Leaves KeyManager cleansed on every path, like the other tests.
+    void test_aes_gcm_real_key_file()
+    {
+#ifdef RESURS_REAL_KEY_FILE
+        auto &km = resurs::KeyManager::instance();
+        const char *real_key = RESURS_REAL_KEY_FILE;
+        if (fs::exists(real_key))
+        {
+            bool loaded = true;
+            try
+            {
+                km.loadFromFile(real_key);
+            }
+            catch (...)
+            {
+                loaded = false;
+            }
+            check(loaded, "real key file loads (exactly 64 bytes)");
+            if (loaded)
+            {
+                test_aes_gcm_with_keys("real key file", km.key().bytes(), km.lookupKey().bytes());
+            }
+            km.cleanse();
+        }
+        else
+        {
+            std::printf("\n[SKIP] real key file not found: %s\n", real_key);
+        }
+#else
+        std::printf("\n[SKIP] RESURS_REAL_KEY_FILE not defined\n");
+#endif
+    }
+
+}
+
+int main()
+{
+    test_key_manager();
+    test_hmac();
+    test_secure_bytes_move();
+    test_aes_rejects_over_int_max();
+    test_aes_gcm_random_keys();
+    test_aes_gcm_real_key_file();
+
+    return test_summary();
+}

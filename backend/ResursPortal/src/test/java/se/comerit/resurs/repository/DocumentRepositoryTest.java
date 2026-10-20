@@ -9,14 +9,29 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 
+import se.comerit.resurs.config.PlainPiiCodec;
+import se.comerit.resurs.api.v1.service.DummyCryptoService;
+import se.comerit.resurs.entity.CompanyBlindIndexListener;
+import se.comerit.resurs.entity.PiiAttributeConverter;
+import se.comerit.resurs.entity.AmountAttributeConverter;
 import se.comerit.resurs.entity.Application;
 import se.comerit.resurs.entity.Company;
 import se.comerit.resurs.entity.Document;
 
+import org.springframework.test.context.jdbc.Sql;
+
 @DataJpaTest
 @ActiveProfiles("test")
+@Import({PiiAttributeConverter.class, AmountAttributeConverter.class, PlainPiiCodec.class, CompanyBlindIndexListener.class, DummyCryptoService.class})
+@Sql(statements = {
+        "DELETE FROM documents",
+        "DELETE FROM applications",
+        "DELETE FROM companies",
+        "INSERT INTO companies (id, org_number, org_number_index, company_name, authorized_signatory) VALUES (900, '556000-1234', X'dedd7d2467a47aac7cc703665899fded7d8013ddecbbbf69e0ff366fd4812ed7', 'Malmö Fastigheter AB', 'Anders Karlsson')"
+})
 class DocumentRepositoryTest {
 
     @Autowired
@@ -52,7 +67,7 @@ class DocumentRepositoryTest {
 
         Document savedDoc = documentRepository.save(doc);
 
-        assertThat(savedDoc.getId()).isNotNull();
+        assertThat(savedDoc.getUuid()).isNotNull();
         assertThat(savedDoc.getUploadedAt()).isNotNull();
         assertThat(documentRepository.findByApplicationId(savedApp.getId())).hasSize(1);
     }

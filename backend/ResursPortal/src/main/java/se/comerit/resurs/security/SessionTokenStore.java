@@ -26,6 +26,12 @@ public class SessionTokenStore {
     // package-private for tests (se.comerit.resurs.security); not part of the API
     final ConcurrentHashMap<String, SessionToken> sessionsByAccess = new ConcurrentHashMap<>();
     final ConcurrentHashMap<String, SessionToken> sessionsByRefresh = new ConcurrentHashMap<>();
+    /**
+     * Evidence log of spent refresh tokens (retained past expiry for theft/replay
+     * forensics). Never consulted for authorization — replay rejection comes from
+     * the atomic removal of the refresh mapping in {@link #rotate} (Step 2), and
+     * revoke wipes the active maps, so a blocked replay never reaches this map.
+     */
     final ConcurrentHashMap<String, SessionToken> usedTokens = new ConcurrentHashMap<>();
 
     private final boolean slidingExpirationEnabled;
@@ -54,12 +60,22 @@ public class SessionTokenStore {
     }
 
     public AuthTokens issue(UserPrincipal principal, String fingerprint) {
+        return issue(principal, fingerprint, clock.instant());
+    }
+
+    /**
+     * Issue a token pair anchored to a specific login time. Rotation reuses the
+     * ORIGINAL session's login time so the absolute expiration cap keeps
+     * bounding the session lifetime across token rotations — a session cannot
+     * be kept alive past its cap by repeatedly rotating.
+     */
+    private AuthTokens issue(UserPrincipal principal, String fingerprint, Instant loginTime) {
         String access = randomToken();
         String refresh = randomToken();
         Instant now = clock.instant();
-        Instant expiresAt = computeExpiry(now, now);
+        Instant expiresAt = computeExpiry(loginTime, now);
         SessionToken st = new SessionToken(hash(access), hash(refresh), fingerprint,
-                principal, now, expiresAt);
+                principal, loginTime, expiresAt);
         sessionsByAccess.put(st.accessTokenHash, st);
         sessionsByRefresh.put(st.refreshTokenHash, st);
         return new AuthTokens(access, refresh, st.principal.role(), st.principal.name());
@@ -79,7 +95,7 @@ public class SessionTokenStore {
      */
     public Optional<UserPrincipal> validateAccess(String token, String fingerprint) {
         SessionToken st = sessionsByAccess.get(hash(token));
-        if (st == null || st.revoked)
+        if (st == null)
             return Optional.empty();
         if (st.expiresAt.isBefore(clock.instant())) {
             remove(st);
@@ -107,7 +123,7 @@ public class SessionTokenStore {
      */
     public Optional<AuthTokens> rotate(String refreshToken, String fingerprint) {
         SessionToken st = sessionsByRefresh.get(hash(refreshToken));
-        if (st == null || st.revoked) {
+        if (st == null) {
             return Optional.empty();
         }
         if (st.expiresAt.isBefore(clock.instant())) {
@@ -119,10 +135,21 @@ public class SessionTokenStore {
             revokeAllForUser(st.principal);
             return Optional.empty();
         }
-        // Single-use: mark this refresh as spent so a replay is detected as empty.
+        // Single-use must be claimed atomically: only the caller that actually
+        // removes the refresh mapping from the active map may issue a fresh
+        // pair. A racing presentation of the same token (concurrent replay)
+        // loses here and is rejected — otherwise a stolen refresh token could
+        // be double-spent by an attacker and the victim racing each other.
+        if (!sessionsByRefresh.remove(hash(refreshToken), st)) {
+            return Optional.empty();
+        }
+        // Record the spent hash for theft/replay forensics, then retire the
+        // old access half of the session.
         usedTokens.put(st.refreshTokenHash, st);
-        remove(st);
-        return Optional.of(issue(st.principal, fingerprint));
+        sessionsByAccess.remove(st.accessTokenHash);
+        // Anchor the fresh pair to the session's ORIGINAL login time so the
+        // absolute expiration cap keeps binding across rotations.
+        return Optional.of(issue(st.principal, fingerprint, st.loginTime));
     }
 
     /**

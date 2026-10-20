@@ -17,6 +17,14 @@ import se.comerit.resurs.security.UserPrincipal;
 
 @Service
 public class AuthService {
+    /**
+     * Shared login failure so that the response is identical whether the org
+     * number failed authentication (e.g. the BankID mock) or is not a
+     * registered company. Revealing which one it was would allow anyone to
+     * enumerate registered organisations.
+     */
+    private static final String LOGIN_FAILED = "Invalid login";
+
     private final BankIdService bankIdService;
     private final CompanyRepository companyRepository;
     private final CaseWorkerRepository caseWorkerRepository;
@@ -35,12 +43,12 @@ public class AuthService {
 
     public AuthTokens loginCompany(String orgNumber, String fingerprint) {
         if (!bankIdService.authenticate(orgNumber)) {
-            throw InvalidCredentialsException.unauthorized("Invalid BankID authentication");
+            throw InvalidCredentialsException.unauthorized(LOGIN_FAILED);
         }
 
         return companyRepository.findByOrgNumber(orgNumber)
                 .map(company -> tokenStore.issue(new CompanyPrincipal(company.getId(), company.getName(), company.getOrgNumber()), fingerprint))
-                .orElseThrow(() -> InvalidCredentialsException.unauthorized("Invalid login"));
+                .orElseThrow(() -> InvalidCredentialsException.unauthorized(LOGIN_FAILED));
     }
 
     public AuthTokens loginCaseWorker(String email, String password, String fingerprint) {
@@ -57,11 +65,32 @@ public class AuthService {
     }
 
     public AuthTokens refresh(String refreshToken, String fingerprint) {
+        if (refreshToken == null || refreshToken.isBlank()) {
+            throw InvalidCredentialsException.unauthorized("Invalid or revoked token");
+        }
         return tokenStore.rotate(refreshToken, fingerprint)
                 .orElseThrow(() -> InvalidCredentialsException.unauthorized("Invalid or revoked token"));
     }
 
-    public void logout(UserPrincipal principal) {
+    /**
+     * Log out by revoking only the session that presented the access token.
+     * Other active sessions for the same user (e.g. a second browser) stay
+     * logged in — the caller is only terminating its own session.
+     *
+     * @param accessToken bearer token of the session being logged out
+     */
+    public void logout(String accessToken) {
+        tokenStore.revoke(accessToken);
+    }
+
+    /**
+     * Log the principal out of every active session (all devices/browsers).
+     * Unlike {@link #logout(String)} this wipes all tokens of the user, for
+     * example to clear stale logins after a suspected compromise.
+     *
+     * @param principal the user whose sessions are all revoked
+     */
+    public void logoutAll(UserPrincipal principal) {
         tokenStore.revokeAllForUser(principal);
     }
 

@@ -4,12 +4,15 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
@@ -17,40 +20,50 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.mockito.MockedStatic;
-import org.mockito.Mockito;
+import org.mockito.ArgumentCaptor;
 
+import tools.jackson.databind.ObjectMapper;
 
-
+import se.comerit.resurs.api.v1.dto.ApplicationDetailsResponse;
 import se.comerit.resurs.api.v1.dto.ApplicationRequest;
 import se.comerit.resurs.entity.Application;
 import se.comerit.resurs.entity.ApplicationStatus;
+import se.comerit.resurs.entity.AuditLog;
 import se.comerit.resurs.entity.Company;
+import se.comerit.resurs.exception.BankIdSigningException;
 import se.comerit.resurs.exception.CompanyNotFoundException;
-import se.comerit.resurs.rating.CheckResult;
-import se.comerit.resurs.rating.CheckStatus;
-import se.comerit.resurs.rating.Decision;
-import se.comerit.resurs.rating.Score;
-import se.comerit.resurs.rating.ScoringResult;
 import se.comerit.resurs.repository.ApplicationRepository;
+import se.comerit.resurs.repository.AuditLogRepository;
 import se.comerit.resurs.repository.CompanyRepository;
-import tools.jackson.databind.ObjectMapper;
+import se.comerit.resurs.security.CaseWorkerPrincipal;
+import se.comerit.resurs.security.CompanyPrincipal;
 
 /**
- * Unit tests for {@link ApplicationService#submitApplication}.
+ * Unit tests for {@link ApplicationService#submitApplication} and
+ * {@link ApplicationService#viewApplication}.
  *
- * <p>Repositories and the {@link ScoringService} are mocked, while a real
- * {@link AuditLogService} is used so the resulting audit log JSON can be
- * asserted for correctness (each entry must be present, in order, and carry the
- * right action and details).
+ * <p>
+ * Repositories and the {@link ScoringService} are mocked; the submission
+ * flow only persists the application with its serialized financial data, sends
+ * the "received" notification, and delegates the scoring to
+ * {@link ScoringService#scoreApplication}. A real {@link AuditLogService} is
+ * used so the APPLICATION_CREATED audit entry can be asserted for correctness.
  */
 class ApplicationServiceTest {
 
+    private static final Instant FIXED_ETA = Instant.parse("2026-09-26T10:00:00Z");
+
     private CompanyRepository companyRepository;
     private ApplicationRepository applicationRepository;
+    private AuditLogRepository auditLogRepository;
     private ScoringService scoringService;
+    private BankIdSigningService bankIdSigningService;
+    private EtaService etaService;
     private AuditLogService auditLogService;
+    private CaseWorkerAssignmentService caseWorkerAssignmentService;
+    private EmailService emailService;
     private ApplicationService applicationService;
+    private ObjectMapper objectMapper;
 
     private Company company;
     private ApplicationRequest validRequest;
@@ -59,13 +72,66 @@ class ApplicationServiceTest {
     void setUp() {
         companyRepository = mock(CompanyRepository.class);
         applicationRepository = mock(ApplicationRepository.class);
+        auditLogRepository = mock(AuditLogRepository.class);
         scoringService = mock(ScoringService.class);
-        auditLogService = new AuditLogService(new ObjectMapper());
+        bankIdSigningService = mock(BankIdSigningService.class);
+        when(bankIdSigningService.sign(any(), any()))
+                .thenReturn(new BankIdSigningService.BankIdSignature(
+                        "order-1",
+                        "MOCK-SIG-ORDER1",
+                        "Kalle Kula",
+                        FIXED_ETA.minusSeconds(60)));
+        objectMapper = new ObjectMapper();
+        auditLogService = new AuditLogService(auditLogRepository, mock(ApplicationRepository.class),
+                objectMapper, new DummyAuditSigningService());
+
+        caseWorkerAssignmentService = mock(CaseWorkerAssignmentService.class);
+
+        emailService = mock(EmailService.class);
+        etaService = mock(EtaService.class);
+
+        when(etaService.estimateWithinHours(
+                any(Instant.class),
+                eq(24L)))
+                .thenReturn(FIXED_ETA);
 
         applicationService = new ApplicationService(
-                companyRepository, applicationRepository, scoringService, auditLogService);
+                companyRepository,
+                applicationRepository,
+                scoringService,
+                bankIdSigningService,
+                etaService,
+                auditLogService,
+                caseWorkerAssignmentService,
+                objectMapper,
+                emailService,
+                null);
 
-        company = new Company("556677-8899", "Testbolaget AB", "Kalle Kula");
+        try {
+            var field = ApplicationService.class.getDeclaredField("self");
+            field.setAccessible(true);
+            field.set(applicationService, applicationService);
+        } catch (ReflectiveOperationException e) {
+            throw new IllegalStateException(
+                    "Failed to set self reference",
+                    e);
+        }
+
+        try {
+            var field = ApplicationService.class.getDeclaredField(
+                    "automatedDecisionHours");
+            field.setAccessible(true);
+            field.setLong(applicationService, 24L);
+        } catch (ReflectiveOperationException e) {
+            throw new IllegalStateException(
+                    "Failed to set automated decision SLA hours",
+                    e);
+        }
+
+        company = new Company(
+                "556677-8899",
+                "Testbolaget AB",
+                "Kalle Kula");
 
         validRequest = new ApplicationRequest(
                 500_000.0,
@@ -83,13 +149,6 @@ class ApplicationServiceTest {
                 "IT");
     }
 
-    private ScoringResult approvedScoringResult() {
-        return new ScoringResult(
-                Decision.APPROVED,
-                List.of(new CheckResult("solidity", 0.5, 0.2, CheckStatus.OK, 0, "ok")),
-                "ANSÖKAN GODKÄND");
-    }
-
     private void stubSaveReturnsSavedWithId(long id) {
         when(applicationRepository.save(any(Application.class)))
                 .thenAnswer(invocation -> {
@@ -101,14 +160,52 @@ class ApplicationServiceTest {
 
     // Application#id has no public setter; clear the id field reflectively to
     // emulate the repository assigning a generated id on save.
-    private static void setApplicationId(Application app, long id) {
+    private static void setApplicationId(
+            Application app,
+            long id) {
+
         try {
             var field = Application.class.getDeclaredField("id");
             field.setAccessible(true);
             field.set(app, id);
         } catch (ReflectiveOperationException e) {
-            throw new IllegalStateException("Failed to assign application id", e);
+            throw new IllegalStateException(
+                    "Failed to assign application id",
+                    e);
         }
+    }
+
+    // Application#documents is populated by JPA; make it an empty list so the
+    // mapper can be exercised on a plain unit-test instance.
+    private static void setEmptyDocuments(Application app) {
+        try {
+            var field = Application.class.getDeclaredField("documents");
+            field.setAccessible(true);
+            field.set(app, List.of());
+        } catch (ReflectiveOperationException e) {
+            throw new IllegalStateException(
+                    "Failed to assign documents",
+                    e);
+        }
+    }
+
+    private Application applicationWithFinancialData(
+            Company owner,
+            String financialData) {
+
+        Application app = new Application(
+                owner,
+                new BigDecimal("300000"),
+                "Rörelsekapital",
+                ApplicationStatus.UNDER_REVIEW,
+                null,
+                null,
+                null,
+                financialData);
+
+        setEmptyDocuments(app);
+
+        return app;
     }
 
     @Nested
@@ -116,123 +213,143 @@ class ApplicationServiceTest {
     class HappyPath {
 
         @Test
-        @DisplayName("Scores the application and persists it, returning the id")
-        void scoresAndPersistsApplication() {
+        @DisplayName("Submits the application, returns its id and delegates scoring")
+        void submitsAndDelegatesScoring() {
             when(companyRepository.findByOrgNumber("556677-8899"))
                     .thenReturn(Optional.of(company));
-            ScoringResult result = approvedScoringResult();
-            when(scoringService.score(any())).thenReturn(result);
+
             stubSaveReturnsSavedWithId(42L);
 
-            try (MockedStatic<ScoringService> staticMock = Mockito.mockStatic(ScoringService.class)) {
-                staticMock.when(() -> ScoringService.toScore(result))
-                        .thenReturn(new Score("APPROVED", 0, "log", "APPROVED", "ANSÖKAN GODKÄND"));
+            Long id = applicationService.submitApplication(
+                    "556677-8899",
+                    validRequest);
 
-                Long id = applicationService.submitApplication("556677-8899", validRequest);
+            assertThat(id).isEqualTo(42L);
 
-                assertThat(id).isEqualTo(42L);
-            }
+            verify(scoringService)
+                    .scoreApplication(42L);
 
-            verify(scoringService).score(any());
-            verify(applicationRepository).save(any(Application.class));
+            verify(applicationRepository)
+                    .save(any(Application.class));
         }
 
         @Test
-        @DisplayName("Persists the supplied company, requested amount and purpose")
+        @DisplayName("Persists the supplied company, requested amount, purpose and financial data")
         void persistsCorrectFields() {
             when(companyRepository.findByOrgNumber("556677-8899"))
                     .thenReturn(Optional.of(company));
-            when(scoringService.score(any())).thenReturn(approvedScoringResult());
+
             stubSaveReturnsSavedWithId(1L);
 
-            try (MockedStatic<ScoringService> staticMock = Mockito.mockStatic(ScoringService.class)) {
-                staticMock.when(() -> ScoringService.toScore(any()))
-                        .thenReturn(new Score("APPROVED", 0, "log", "APPROVED", "ANSÖKAN GODKÄND"));
+            applicationService.submitApplication(
+                    "556677-8899",
+                    validRequest);
 
-                applicationService.submitApplication("556677-8899", validRequest);
-            }
+            verify(applicationRepository)
+                    .save(argThat(app -> app.getCompany().equals(company)
+                            && app.getRequestedAmount()
+                                    .compareTo(
+                                            new BigDecimal("300000")) == 0
+                            && "Rörelsekapital"
+                                    .equals(app.getPurpose())
+                            && app.getStatus() == ApplicationStatus.SCORING_IN_PROGRESS
+                            && app.getFinancialData() != null
+                            && app.getFinancialData()
+                                    .contains(
+                                            "\"industry\":\"IT\"")
+                            && app.getEstimatedResolutionAt()
+                                    .equals(FIXED_ETA)));
 
-            verify(applicationRepository).save(argThat(app ->
-                    app.getCompany().equals(company)
-                    && app.getRequestedAmount().compareTo(new BigDecimal("300000")) == 0
-                    && "Rörelsekapital".equals(app.getPurpose())));
+            verify(etaService)
+                    .estimateWithinHours(
+                            any(Instant.class),
+                            eq(24L));
+        }
+
+        @Test
+        @DisplayName("Sends an application-received email to the authorized signatory")
+        void sendsReceivedEmail() {
+            when(companyRepository.findByOrgNumber("556677-8899"))
+                    .thenReturn(Optional.of(company));
+
+            stubSaveReturnsSavedWithId(1L);
+
+            applicationService.submitApplication(
+                    "556677-8899",
+                    validRequest);
+
+            verify(emailService)
+                    .sendApplicationSubmitted(
+                            argThat(app -> app.getId().equals(1L)
+                                    && app.getCompany()
+                                            .getAuthorizedSignatory()
+                                            .equals(
+                                                    "Kalle Kula")));
         }
     }
 
     @Nested
     @DisplayName("Audit log")
-    class AuditLog {
+    class AuditLogEntries {
 
         @Test
         @DisplayName("Creates an APPLICATION_CREATED entry carrying the org number")
         void applicationCreatedEntryPresent() {
             when(companyRepository.findByOrgNumber("556677-8899"))
                     .thenReturn(Optional.of(company));
-            when(scoringService.score(any())).thenReturn(approvedScoringResult());
+
             stubSaveReturnsSavedWithId(1L);
 
-            try (MockedStatic<ScoringService> staticMock = Mockito.mockStatic(ScoringService.class)) {
-                staticMock.when(() -> ScoringService.toScore(any()))
-                        .thenReturn(new Score("APPROVED", 0, "log", "APPROVED", "ANSÖKAN GODKÄND"));
+            applicationService.submitApplication(
+                    "556677-8899",
+                    validRequest);
 
-                applicationService.submitApplication("556677-8899", validRequest);
-            }
+            ArgumentCaptor<AuditLog> captor = ArgumentCaptor.forClass(AuditLog.class);
 
-            verify(applicationRepository).save(argThat(app -> {
-                String log = app.getAuditLog();
-                return log.contains("\"action\":\"APPLICATION_CREATED\"")
-                        && log.contains("\"orgNumber\":\"556677-8899\"")
-                        && log.contains("\"ts\":");
-            }));
+            verify(auditLogRepository, times(3))
+                    .save(captor.capture());
+
+            assertThat(captor.getAllValues())
+                    .hasSize(3);
+
+            assertThat(
+                    captor.getAllValues()
+                            .get(1)
+                            .getEntry())
+                    .contains(
+                            "\"action\":\"APPLICATION_CREATED\"")
+                    .contains(
+                            "\"orgNumber\":\"556677-8899\"");
         }
 
         @Test
-        @DisplayName("Creates a SCORING_RUN entry carrying the decision and flag count")
-        void scoringRunEntryPresent() {
+        @DisplayName("Creates an ETA_SET entry carrying the ISO-8601 estimated resolution time")
+        void etaSetEntryPresent() {
             when(companyRepository.findByOrgNumber("556677-8899"))
                     .thenReturn(Optional.of(company));
-            when(scoringService.score(any())).thenReturn(approvedScoringResult());
+
             stubSaveReturnsSavedWithId(1L);
 
-            try (MockedStatic<ScoringService> staticMock = Mockito.mockStatic(ScoringService.class)) {
-                staticMock.when(() -> ScoringService.toScore(any()))
-                        .thenReturn(new Score("APPROVED", 2, "log", "APPROVED", "ANSÖKAN GODKÄND"));
+            applicationService.submitApplication(
+                    "556677-8899",
+                    validRequest);
 
-                applicationService.submitApplication("556677-8899", validRequest);
-            }
+            ArgumentCaptor<AuditLog> captor = ArgumentCaptor.forClass(AuditLog.class);
 
-            verify(applicationRepository).save(argThat(app -> {
-                String log = app.getAuditLog();
-                return log.contains("\"action\":\"SCORING_RUN\"")
-                        && log.contains("\"result\":\"APPROVED\"")
-                        && log.contains("\"flags\":\"2\"");
-            }));
-        }
+            verify(auditLogRepository, times(3))
+                    .save(captor.capture());
 
-        @Test
-        @DisplayName("APPLICATION_CREATED precedes SCORING_RUN, both as a single JSON array")
-        void entriesInOrderAsSingleArray() {
-            when(companyRepository.findByOrgNumber("556677-8899"))
-                    .thenReturn(Optional.of(company));
-            when(scoringService.score(any())).thenReturn(approvedScoringResult());
-            stubSaveReturnsSavedWithId(1L);
+            assertThat(captor.getAllValues())
+                    .hasSize(3);
 
-            try (MockedStatic<ScoringService> staticMock = Mockito.mockStatic(ScoringService.class)) {
-                staticMock.when(() -> ScoringService.toScore(any()))
-                        .thenReturn(new Score("APPROVED", 0, "log", "APPROVED", "ANSÖKAN GODKÄND"));
-
-                applicationService.submitApplication("556677-8899", validRequest);
-            }
-
-            verify(applicationRepository).save(argThat(app -> {
-                String log = app.getAuditLog().trim();
-                int created = log.indexOf("APPLICATION_CREATED");
-                int scoring = log.indexOf("SCORING_RUN");
-                return log.startsWith("[")
-                        && log.endsWith("]")
-                        && created >= 0
-                        && scoring > created;
-            }));
+            assertThat(
+                    captor.getAllValues()
+                            .get(2)
+                            .getEntry())
+                    .contains("\"action\":\"ETA_SET\"")
+                    .contains(
+                            "\"estimatedResolutionAt\":"
+                                    + "\"2026-09-26T10:00:00Z\"");
         }
     }
 
@@ -243,68 +360,116 @@ class ApplicationServiceTest {
         @Test
         @DisplayName("Does not save anything when the company is unknown")
         void companyNotFoundNotSaved() {
-            when(companyRepository.findByOrgNumber("unknown")).thenReturn(Optional.empty());
+            when(companyRepository.findByOrgNumber("unknown"))
+                    .thenReturn(Optional.empty());
 
-            assertThatThrownBy(() ->
-                    applicationService.submitApplication("unknown", validRequest))
-                    .isInstanceOf(CompanyNotFoundException.class)
-                    .hasMessageContaining("unknown");
+            assertThatThrownBy(() -> applicationService.submitApplication(
+                    "unknown",
+                    validRequest))
+                    .isInstanceOf(
+                            CompanyNotFoundException.class)
+                    .hasMessage("Company not found")
+                    .hasMessageNotContaining("unknown");
 
-            verify(applicationRepository, never()).save(any(Application.class));
-            verify(scoringService, never()).score(any());
+            verify(applicationRepository, never())
+                    .save(any(Application.class));
+
+            verify(scoringService, never())
+                    .scoreApplication(any());
+
+            verify(emailService, never())
+                    .sendApplicationSubmitted(
+                            any(Application.class));
+        }
+
+        @Test
+        @DisplayName("Does not save anything when BankID signing fails")
+        void signingFailureNotSaved() {
+            when(companyRepository.findByOrgNumber("556677-8899"))
+                    .thenReturn(Optional.of(company));
+
+            when(bankIdSigningService.sign(any(), any()))
+                    .thenThrow(BankIdSigningException.signingFailed());
+
+            assertThatThrownBy(() -> applicationService.submitApplication(
+                    "556677-8899",
+                    validRequest))
+                    .isInstanceOf(BankIdSigningException.class);
+
+            // Signing comes before any write, so a refused signature must leave
+            // no trace: no application, no scoring, no email, no audit entry.
+            verify(applicationRepository, never())
+                    .save(any(Application.class));
+
+            verify(scoringService, never())
+                    .scoreApplication(any());
+
+            verify(emailService, never())
+                    .sendApplicationSubmitted(
+                            any(Application.class));
+
+            verify(auditLogRepository, never())
+                    .save(any(AuditLog.class));
         }
     }
 
     @Nested
-    @DisplayName("Scoring result")
-    class ScoringResultCheck {
+    @DisplayName("View application financial data")
+    class ViewApplicationFinancialData {
 
         @Test
-        @DisplayName("Summary lands in decision_reason, scoring log in scoring_result, and status/decision are set")
-        void scoringFieldsAreSetCorrectly() {
-            when(companyRepository.findByOrgNumber("556677-8899"))
-                    .thenReturn(Optional.of(company));
-            ScoringResult result = approvedScoringResult();
-            when(scoringService.score(any())).thenReturn(result);
-            stubSaveReturnsSavedWithId(1L);
+        @DisplayName("Case worker receives the stored financial data")
+        void caseWorkerReceivesFinancialData() {
+            Application app = applicationWithFinancialData(
+                    company,
+                    FINANCIAL_DATA);
 
-            try (MockedStatic<ScoringService> staticMock = Mockito.mockStatic(ScoringService.class)) {
-                staticMock.when(() -> ScoringService.toScore(result))
-                        .thenReturn(new Score("APPROVED", 0, "solidity=OK, kreditPoäng=100 (ANVÄNDS EJ I BESLUT)", "APPROVED", "ANSÖKAN GODKÄND"));
+            when(applicationRepository
+                    .findByIdWithDocuments(42L))
+                    .thenReturn(Optional.of(app));
 
-                applicationService.submitApplication("556677-8899", validRequest);
-            }
+            ApplicationDetailsResponse response = applicationService.viewApplication(
+                    42L,
+                    new CaseWorkerPrincipal(
+                            1L,
+                            "Karin Handläggare",
+                            "karin@resurs.se"));
 
-            verify(applicationRepository).save(argThat(app ->
-                    "ANSÖKAN GODKÄND".equals(app.getDecisionReason())
-                    && "solidity=OK, kreditPoäng=100 (ANVÄNDS EJ I BESLUT)".equals(app.getScoringResult())
-                    && app.getStatus() == ApplicationStatus.APPROVED
-                    && app.getDecision() == se.comerit.resurs.entity.Decision.APPROVED));
+            assertThat(response.financialData())
+                    .isEqualTo(FINANCIAL_DATA);
+
+            verify(caseWorkerAssignmentService)
+                    .ensureAssigned(
+                            eq(42L),
+                            any(CaseWorkerPrincipal.class));
         }
 
         @Test
-        @DisplayName("REVIEW decision maps to null decision and UNDER_REVIEW status")
-        void reviewDecisionSetsNullDecisionAndUnderReviewStatus() {
-            when(companyRepository.findByOrgNumber("556677-8899"))
-                    .thenReturn(Optional.of(company));
-            ScoringResult result = new ScoringResult(
-                    se.comerit.resurs.rating.Decision.UNDER_REVIEW,
-                    List.of(new CheckResult("solidity", 0.5, 0.2, CheckStatus.OK, 0, "ok")),
-                    "MANUELL GRANSKNING");
-            when(scoringService.score(any())).thenReturn(result);
-            stubSaveReturnsSavedWithId(1L);
+        @DisplayName("Company receives the stored financial data on its own application")
+        void companyReceivesFinancialData() {
+            Application app = applicationWithFinancialData(
+                    company,
+                    FINANCIAL_DATA);
 
-            try (MockedStatic<ScoringService> staticMock = Mockito.mockStatic(ScoringService.class)) {
-                staticMock.when(() -> ScoringService.toScore(result))
-                        .thenReturn(new Score("REVIEW", 0, "solidity=OK, kreditPoäng=100 (ANVÄNDS EJ I BESLUT)", "UNDER_REVIEW", "MANUELL GRANSKNING"));
+            when(applicationRepository
+                    .findByIdWithDocuments(42L))
+                    .thenReturn(Optional.of(app));
 
-                applicationService.submitApplication("556677-8899", validRequest);
-            }
+            ApplicationDetailsResponse response = applicationService.viewApplication(
+                    42L,
+                    new CompanyPrincipal(
+                            7L,
+                            "Testbolaget AB",
+                            "556677-8899"));
 
-            verify(applicationRepository).save(argThat(app ->
-                    "MANUELL GRANSKNING".equals(app.getDecisionReason())
-                    && app.getDecision() == null
-                    && app.getStatus() == ApplicationStatus.UNDER_REVIEW));
+            assertThat(response.financialData())
+                    .isEqualTo(FINANCIAL_DATA);
         }
+
+        private static final String FINANCIAL_DATA = "{\"equity\":500000.0,"
+                + "\"totalCapital\":1000000.0,"
+                + "\"netRevenue\":1000000.0,"
+                + "\"requestedAmount\":300000,"
+                + "\"industry\":\"IT\"}";
     }
 }

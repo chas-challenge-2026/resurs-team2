@@ -11,7 +11,7 @@ Spring Boot 2.7 monolith. All logik i controllers. Ingen service-lager. Ingen re
 - **Template:** Thymeleaf + Bootstrap 3 (CDN)
 - **Frontend:** jQuery multi-step form (steps.js)
 - **ORM:** JdbcTemplate direkt i controllers
-- **Auth:** BankID mock (hardcoded if-statement) + lösenord via BCrypt (MD5 borttaget)
+- **Auth:** BankID mock i egen service (`resurs.bankid.mode`), utbytbar mot skarp integration + lösenord via BCrypt (MD5 borttaget)
 
 ## Komponentdiagram (textform)
 
@@ -30,7 +30,7 @@ Browser
 1. **Ingen service-lager** — all affärslogik direkt i controllers
 2. **Audit log som JSON-blob** — `audit_log TEXT` på applications-raden, ingen separat tabell, ingen index
 3. **Filer i /tmp** — rensas vid omstart, ej persistent
-4. **BankID mock** — hårdkodade org.nummer i if-sats
+4. **BankID mock** — hårdkodade org.nummer i if-sats (Åtgärdad — mocken ligger nu i `MockBankIdService` och `MockBankIdSigningService`, båda valda av `resurs.bankid.mode`, och ansökan kan inte lämnas in utan en BankID-signatur)
 5. **Lösenord (före refaktoring)** — använde MD5; nu åtgärdat till BCrypt (`BCryptPasswordEncoder`)
 6. **PII i klartext** — org.nummer, firmanamn, firmatecknare okrypterade
 7. **SQL injection** — case worker-login bygger SQL med strängkonkatenering

@@ -1,10 +1,10 @@
-import React from "react";
 import { BrowserRouter } from "react-router-dom";
-import { AuthProvider } from "./context/AuthProvider";
+
 import { Layout } from "./components/Layout/Layout";
+import { AuthProvider } from "./context/AuthProvider";
 import { AppRoutes } from "./routes/AppRoutes";
 
-export const App: React.FC = () => {
+export function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
@@ -14,6 +14,6 @@ export const App: React.FC = () => {
       </BrowserRouter>
     </AuthProvider>
   );
-};
+}
 
 export default App;

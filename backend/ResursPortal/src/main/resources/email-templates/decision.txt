@@ -1,0 +1,12 @@
+Ansökan [(${app.decision})] - #[(${app.id})]
+---
+Hej [(${app.company.authorizedSignatory})]!
+
+Ett beslut har tagits angående din kreditansökan.
+
+Ansöknings-ID: [(${app.id})]
+Företag: [(${app.company.name})]
+Beslut: [(${app.decision})]
+[# th:if="${app.decisionReason != null and !app.decisionReason.isBlank()}"]
+Motivering: [(${app.decisionReason})][/]
+Tack för din ansökan.
