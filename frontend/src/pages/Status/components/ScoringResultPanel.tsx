@@ -1,7 +1,5 @@
 import { MetricTooltip } from "@/components/metricTooltips/MetricTooltips";
 import { Panel } from "@/components/Panel/Panel";
-
-import type { Application } from "@/types/application";
 import type { FinancialData } from "@/types/applicationDetails";
 import {
   getScoringItemsWithRequirements,
@@ -11,14 +9,12 @@ import {
 interface ScoringResultPanelProps {
   scoringResult: string | null;
   financialData: FinancialData | string | null;
-  status: Application["status"];
 }
 
 const toFinancialData = (
   value: FinancialData | string | null
 ): FinancialData | null => {
   if (!value) return null;
-
   if (typeof value === "string") {
     try {
       return JSON.parse(value) as FinancialData;
@@ -26,87 +22,35 @@ const toFinancialData = (
       return null;
     }
   }
-
   return value;
-};
-
-const getScoringSummary = (status: Application["status"]) => {
-  switch (status) {
-    case "APPROVED":
-      return {
-        label: "Godkänd",
-        className: "is-approved",
-      };
-
-    case "REJECTED":
-      return {
-        label: "Avslagen",
-        className: "is-rejected",
-      };
-
-    case "UNDER_REVIEW":
-      return {
-        label: "Kräver granskning",
-        className: "is-flagged",
-      };
-
-    case "SCORING_IN_PROGRESS":
-      return {
-        label: "Analyseras",
-        className: "is-flagged",
-      };
-
-    case "PENDING_DOCS":
-      return {
-        label: "Väntar på dokument",
-        className: "is-flagged",
-      };
-
-    default:
-      return {
-        label: "Okänd status",
-        className: "",
-      };
-  }
 };
 
 export const ScoringResultPanel = ({
   scoringResult,
   financialData,
-  status,
 }: ScoringResultPanelProps) => {
   if (!scoringResult) {
     return (
-      <Panel
-        title="Scoringresultat"
-        className="status-scoring-panel"
-      >
-        <p className="text-muted">
-          {status === "SCORING_IN_PROGRESS"
-            ? "Scoring pågår..."
-            : "Ingen scoring tillgänglig."}
-        </p>
+      <Panel title="Scoringresultat" className="status-scoring-panel">
+        <p className="text-muted">Ingen scoring tillgänglig.</p>
       </Panel>
     );
   }
 
   const parsedFinancialData = toFinancialData(financialData);
-
   const scores = getScoringItemsWithRequirements(
     scoringResult,
     parsedFinancialData
   );
-
-  const summary = getScoringSummary(status);
+  const flagged = scores.length > 0;
 
   return (
     <Panel title="Scoringresultat" className="status-scoring-panel">
       <div className="status-scoring">
         <div className="status-scoring-summary">
           <span>Bedömning</span>
-
-          <strong className={summary.className}>
-            {summary.label}
+          <strong className={flagged ? "is-flagged" : "is-approved"}>
+            {flagged ? "Kräver granskning" : "Godkänd"}
           </strong>
         </div>
 
@@ -122,10 +66,7 @@ export const ScoringResultPanel = ({
                 : null;
 
               return (
-                <div
-                  className="status-scoring-row"
-                  key={score.key}
-                >
+                <div className="status-scoring-row" key={score.key}>
                   <dt>
                     {tooltip ? (
                       <MetricTooltip
@@ -161,7 +102,7 @@ export const ScoringResultPanel = ({
           </dl>
         )}
 
-        {status === "UNDER_REVIEW" && (
+        {flagged && (
           <div
             className="status-review-message"
             style={{
@@ -172,15 +113,9 @@ export const ScoringResultPanel = ({
               borderLeft: "3px solid #ffc107",
             }}
           >
-            <p
-              style={{
-                fontSize: "0.9rem",
-                margin: 0,
-                color: "inherit",
-              }}
-            >
-              Din ansökan har vidarebefordrats till en handläggare
-              för en manuell granskning.
+            <p style={{ fontSize: "0.9rem", margin: 0, color: "inherit" }}>
+              Din ansökan har vidarebefordrats till en handläggare för en
+              manuell granskning.
             </p>
           </div>
         )}

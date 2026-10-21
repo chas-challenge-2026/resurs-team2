@@ -2,7 +2,6 @@ import { useState } from "react";
 import type { Application } from "../../../types/application";
 import type { Decision } from "../../../api/applicationApi";
 import { Panel } from "../../../components/Panel/Panel";
-import { parseRejectionReason } from "@/utils/rejectionReasonFormatter";
 
 interface DecisionPanelProps {
   application: Application;
@@ -21,6 +20,7 @@ export const DecisionPanel: React.FC<DecisionPanelProps> = ({
     application.status === "APPROVED" || application.status === "REJECTED";
 
   const handleDecision = async (decision: Decision) => {
+
     let actionText: string;
     switch (decision) {
       case "APPROVED":
@@ -32,7 +32,7 @@ export const DecisionPanel: React.FC<DecisionPanelProps> = ({
       case "DOCUMENTS_NEEDED":
         actionText = "Kräver dokument";
         break;
-    }
+    };
 
     const confirmed = window.confirm(
       `${actionText} ansökan #${application.id}?`,
@@ -47,8 +47,6 @@ export const DecisionPanel: React.FC<DecisionPanelProps> = ({
     setComment("");
   };
 
-  const reasons = parseRejectionReason(application.decisionReason ?? "");
-
   return (
     <Panel
       title={isDecided ? "Beslut" : "Fatta beslut"}
@@ -60,28 +58,9 @@ export const DecisionPanel: React.FC<DecisionPanelProps> = ({
             <strong>Beslut:</strong> {application.decision || "-"}
           </p>
 
-          <div className="decision-reason">
-            <strong>Motivering:</strong>
-
-            {reasons.length > 0 ? (
-              <ul className="decision-reason-list">
-                {reasons.map((reason, index) => (
-                  <li
-                    key={`${reason.type}-${index}`}
-                    className={`decision-reason-item decision-reason-item-${reason.type.toLowerCase()}`}
-                  >
-                    <span className="decision-reason-label">
-                      {reason.type === "REJECT" ? "Avslag:" : "Varning:"}
-                    </span>
-
-                    <span className="decision-reason-text">{reason.text}</span>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <span>-</span>
-            )}
-          </div>
+          <p>
+            <strong>Motivering:</strong> {application.decisionReason || "-"}
+          </p>
         </>
       ) : (
         <>

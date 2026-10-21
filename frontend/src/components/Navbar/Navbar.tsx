@@ -43,7 +43,7 @@ export const Navbar: React.FC = () => {
                 theme === "dark" ? "Byt till ljust tema" : "Byt till mörkt tema"
               }
             >
-              {theme === "dark" ? "Darkmode 🌙 " : "Lightmode ☀️"}
+              {theme === "dark" ? "Dark" : "Light"}
             </button>
           </div>
 

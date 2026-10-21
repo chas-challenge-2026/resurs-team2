@@ -130,7 +130,7 @@ export function CreditAmount({
             }
             name="requestedAmount"
             type="number"
-            step="1"
+            step="1000"
             min="50000"
             max="10000000"
             placeholder="500000"
