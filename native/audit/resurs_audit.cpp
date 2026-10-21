@@ -66,6 +66,7 @@ extern "C"
                                   const size_t *signature_lens,
                                   const char *entries, const size_t *entry_lens,
                                   size_t entry_count, size_t entries_len, size_t signatures_len,
+                                  size_t start_index, const unsigned char *prev_hash,
                                   const unsigned char *public_key,
                                   int *first_invalid_index)
     {
@@ -73,7 +74,8 @@ extern "C"
             signature_lens == nullptr || entries == nullptr ||
             entry_lens == nullptr || entry_count == 0 ||
             entries_len == 0 || signatures_len == 0 ||
-            public_key == nullptr || first_invalid_index == nullptr)
+            public_key == nullptr || first_invalid_index == nullptr ||
+            (start_index > 0 && prev_hash == nullptr))
         {
             return RESURS_AUDIT_ERR_INVALID_ARG;
         }
@@ -85,6 +87,8 @@ extern "C"
         {
             resurs::audit::PublicKey pub;
             std::memcpy(pub.data(), public_key, resurs::audit::kPubKeyLen);
+            resurs::audit::EvpPkeyPtr parsedPub = resurs::audit::parsePublicKey(pub);
+
             *first_invalid_index = -1;
 
             const char *entryCursor = entries;
@@ -98,6 +102,10 @@ extern "C"
                 {
                     std::memcpy(prev.data(), hashes + (i - 1) * resurs::audit::kHashLen, resurs::audit::kHashLen);
                 }
+                else if (start_index > 0)
+                {
+                    std::memcpy(prev.data(), prev_hash, resurs::audit::kHashLen);
+                }
                 if (entry_lens[i] > entryBudget || signature_lens[i] != RESURS_AUDIT_SIG_LEN)
                 {
                     return RESURS_AUDIT_ERR_INVALID_ARG;
@@ -109,9 +117,9 @@ extern "C"
                 resurs::audit::Hash stored;
                 std::memcpy(stored.data(), hashes + i * resurs::audit::kHashLen, resurs::audit::kHashLen);
 
-                if (expected != stored || !resurs::audit::verify(pub, stored, sigCursor, signature_lens[i]))
+                if (expected != stored || !resurs::audit::verify(parsedPub.get(), stored, sigCursor, signature_lens[i]))
                 {
-                    *first_invalid_index = static_cast<int>(i);
+                    *first_invalid_index = static_cast<int>(start_index + i);
                     break;
                 }
 

@@ -48,13 +48,18 @@ extern "C"
     // Without the entries, tampering with an entry's content (while leaving hash+signature
     // untouched) would go undetected.
     //
+    // Verifies a contiguous segment of the chain. The caller passes only the slice
+    // it owns: entry_count records starting at global position start_index.
     // entries / entry_lens: entry_count JSON blobs back-to-back, with their lengths.
     // hashes: entry_count * RESURS_AUDIT_HASH_LEN bytes, in order.
     // signatures / signature_lens: entry_count signatures, in the same order.
-    // Recomputes hash[i] = SHA-256(hash[i-1] || entries[i]) (hash[-1] = 32 zero bytes)
-    // and verifies signature[i] over hash[i] with public_key.
-    // *first_invalid_index: -1 if the whole chain verifies, otherwise the index of the
-    // first entry that fails either check.
+    // prev_hash: hash of the record at start_index - 1. Required when start_index > 0,
+    //            ignored when start_index == 0 (the chain then starts from 32 zero bytes).
+    // Recomputes hash[i] = SHA-256(prev || entries[i]), where prev is prev_hash for the
+    // first record of the segment and hashes[i-1] otherwise, and verifies signature[i]
+    // over hash[i] with public_key.
+    // *first_invalid_index: -1 if the segment verifies, otherwise the GLOBAL index
+    // (start_index + i) of the first record that fails either check.
     // Returns RESURS_AUDIT_OK once verification ran to completion (regardless of the
     // result found) — error codes are reserved for operational failures (bad args, etc).
     RESURS_API int resurs_audit_verify_chain(const unsigned char *hashes,
@@ -62,6 +67,7 @@ extern "C"
                                              const size_t *signature_lens,
                                              const char *entries, const size_t *entry_lens,
                                              size_t entry_count, size_t entries_len, size_t signatures_len,
+                                             size_t start_index, const unsigned char *prev_hash,
                                              const unsigned char *public_key,
                                              int *first_invalid_index);
 

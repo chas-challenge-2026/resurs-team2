@@ -5,6 +5,7 @@
 #   build          - Build frontend and backend, copy artifacts to target/
 #   test           - Run frontend lint, backend tests, native tests and the audit ITs
 #   test-audit     - Run the audit scope against the real native module
+#   bench-audit    - Measure audit chain verification (default 50000 apps x 10 entries)
 #   dev            - Run Vite dev server (HMR) + backend with local profile
 #   build-frontend - Build only the React frontend
 #   build-backend  - Build only the Spring Boot backend
@@ -17,7 +18,7 @@ BACKEND_DIR  := backend/ResursPortal
 TARGET_DIR   := target
 LIBS_DIR     := $(TARGET_DIR)/libs
 
-.PHONY: clean build test test_frontend test_backend test_native native-build test-audit \
+.PHONY: clean build test test_frontend test_backend test_native native-build test-audit bench-audit \
         test-encryption dev \
         build-frontend build-backend build-native package dev-vite dev-spring \
 		playwrite-e2e
@@ -67,7 +68,21 @@ test_native: native-build
 # Depends on build-native because the tests load the library from $(LIBS_DIR), which is
 # where the JNA library path points.
 test-audit: build-native
-	cd $(BACKEND_DIR) && ./mvnw -Dtest='*Audit*IT' test
+	cd $(BACKEND_DIR) && ./mvnw -Dtest='*Audit*IT,!AuditVerifyPerfIT' test
+
+# Audit chain verification benchmark against the real native modules: one thread, then
+# pools sized to this machine (half and all of its processors). Kept out of test-audit,
+# since seeding and the full runs take minutes.
+# Size: make bench-audit APPS=50000 ENTRIES=10   Pools: make bench-audit POOLS=4,8
+# Runs per mode; above 1 the median and spread are shown: make bench-audit REPEATS=3
+APPS    ?= 50000
+ENTRIES ?= 10
+POOLS   ?=
+REPEATS ?= 1
+bench-audit: build-native
+	cd $(BACKEND_DIR) && ./mvnw -Dtest=AuditVerifyPerfIT -Daudit.perf=true \
+		-Daudit.perf.applications=$(APPS) -Daudit.perf.entries=$(ENTRIES) \
+		-Daudit.perf.pools=$(POOLS) -Daudit.perf.repeats=$(REPEATS) test
 
 test-encryption: build-native
 	cd $(BACKEND_DIR) && ./mvnw -Dtest=RealEncryptionIT test

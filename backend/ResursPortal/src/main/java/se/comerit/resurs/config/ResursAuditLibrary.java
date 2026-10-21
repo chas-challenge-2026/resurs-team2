@@ -65,11 +65,16 @@ public interface ResursAuditLibrary extends Library {
      * @param entryCount        number of entries in the chain
      * @param entriesLen        total byte length of {@code entries}
      * @param signaturesLen     total byte length of {@code signatures}
+     * @param startIndex        global index of the first entry passed in. A chain is
+     *                          verified whole from 0, since audit chains are per
+     *                          application and short; a nonzero value re-checks
+     *                          single entries of a chain that already failed
+     * @param prevHash          hash of entry {@code startIndex - 1}; required when
+     *                          {@code startIndex > 0}, null when it is 0
      * @param publicKey         {@code RESURS_AUDIT_PUBKEY_LEN} bytes
      * @param firstInvalidIndex out: -1 if the whole chain verifies, otherwise the
-     *                          index of the
-     *                          first entry failing either the hash or the signature
-     *                          check
+     *                          global index ({@code startIndex + i}) of the first
+     *                          entry failing either the hash or the signature check
      * @return {@code RESURS_AUDIT_OK} once verification ran to completion,
      *         regardless of the
      *         result; error codes are reserved for operational failures (bad args,
@@ -81,6 +86,7 @@ public interface ResursAuditLibrary extends Library {
             Pointer signatureLens,
             Pointer entries, Pointer entryLens,
             long entryCount, long entriesLen, long signaturesLen,
+            long startIndex, Pointer prevHash,
             Pointer publicKey,
             IntByReference firstInvalidIndex);
 

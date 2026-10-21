@@ -21,7 +21,7 @@ add_test(NAME audit_sandbox_test COMMAND audit_sandbox_test)
 # One executable per area, so ctest reports each separately. Each uses its own
 # key files, so they are safe to run in parallel (ctest -j).
 
-set(AUDIT_ABI_TESTS init chain verify tamper)
+set(AUDIT_ABI_TESTS init chain verify tamper segment)
 
 foreach(name IN LISTS AUDIT_ABI_TESTS)
     set(target audit_abi_${name}_test)
@@ -29,3 +29,16 @@ foreach(name IN LISTS AUDIT_ABI_TESTS)
     target_link_libraries(${target} PRIVATE resurs_audit)
     add_test(NAME ${target} COMMAND ${target})
 endforeach()
+
+# --- Stress/benchmark harness (not a ctest - run manually: make bench-audit) ---
+# Compiles the module sources directly (like the sandbox test) to time the internal
+# chainHash/verify functions next to the ABI call.
+add_executable(audit_stress_test
+    audit_stress_test.cpp
+    ${AUDIT_SRC_DIR}/resurs_audit.cpp
+    ${AUDIT_SRC_DIR}/hash_chain.cpp
+    ${AUDIT_SRC_DIR}/signer.cpp
+    ${AUDIT_SRC_DIR}/audit_key_manager.cpp
+)
+target_include_directories(audit_stress_test PRIVATE ${AUDIT_SRC_DIR})
+target_link_libraries(audit_stress_test PRIVATE OpenSSL::Crypto)

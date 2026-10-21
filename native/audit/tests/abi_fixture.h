@@ -174,7 +174,7 @@ static inline int abi_verify(const struct abi_chain *c,
     return resurs_audit_verify_chain(c->hashes, c->signatures, c->signature_lens,
                                      c->entries_buf, c->entry_lens, ABI_CHAIN_LEN,
                                      c->entries_len, sizeof c->signatures,
-                                     pub, first_invalid);
+                                     0, NULL, pub, first_invalid);
 }
 
 #endif /* RESURS_AUDIT_ABI_FIXTURE_H */

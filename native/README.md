@@ -180,8 +180,10 @@ int resurs_audit_verify_chain(
     size_t entry_count,
     size_t entries_len,                 // total storlek på entries-buffern (bytes)
     size_t signatures_len,              // total storlek på signatures-buffern (bytes)
+    size_t start_index,                 // globalt index för första posten i segmentet (0 = början av kedjan)
+    const unsigned char* prev_hash,     // hash för post start_index-1, 32 bytes; krävs om start_index > 0, annars NULL
     const unsigned char* public_key,
-    int* first_invalid_index            // -1 om kedjan är giltig, annars index på första manipulerade posten
+    int* first_invalid_index            // -1 om segmentet är giltigt, annars globalt index (start_index + i) för första manipulerade posten
 );
 
 
@@ -215,6 +217,8 @@ public interface ResursAuditLibrary extends Library {
         int entryCount,
         int entriesLen,
         int signaturesLen,
+        long startIndex,
+        byte[] prevHash,
         byte[] publicKey,
         IntByReference firstInvalidIndex
     );

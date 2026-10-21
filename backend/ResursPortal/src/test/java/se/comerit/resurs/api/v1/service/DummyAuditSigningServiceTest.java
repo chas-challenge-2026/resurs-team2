@@ -88,6 +88,37 @@ class DummyAuditSigningServiceTest {
                 .hasMessageContaining("publicKey");
     }
 
+    @Test
+    void aSegmentReportsBrokenEntriesAtTheirPositionInTheWholeChain() {
+        signChain();
+        entries.set(2, "{\"action\":\"MANUAL_DECISION\",\"approved\":false}");
+        byte[] key = new byte[AuditSigningService.PUBLIC_KEY_LEN];
+
+        assertThat(signer.verifyChain(hashes.subList(1, 3), signatures.subList(1, 3),
+                entries.subList(1, 3), key, 1, hashes.get(0)))
+                .isEqualTo(2);
+        assertThat(signer.verifyChain(List.of(hashes.get(1)), List.of(signatures.get(1)),
+                List.of(entries.get(1)), key, 1, hashes.get(0)))
+                .isEqualTo(AuditSigningService.VALID_CHAIN);
+    }
+
+    @Test
+    void segmentStartAndPreviousHashMustMatch() {
+        signChain();
+        byte[] key = new byte[AuditSigningService.PUBLIC_KEY_LEN];
+
+        assertThatThrownBy(() -> signer.verifyChain(List.of(hashes.get(1)), List.of(signatures.get(1)),
+                List.of(entries.get(1)), key, 1, null))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("previousHash is required");
+        assertThatThrownBy(() -> signer.verifyChain(hashes, signatures, entries, key, 0, hashes.get(0)))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("must be null");
+        assertThatThrownBy(() -> signer.verifyChain(hashes, signatures, entries, key, -1, null))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("startIndex");
+    }
+
     private void signChain() {
         hashes.clear();
         signatures.clear();

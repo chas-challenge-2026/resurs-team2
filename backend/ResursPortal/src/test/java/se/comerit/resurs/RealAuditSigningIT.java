@@ -1,6 +1,7 @@
 package se.comerit.resurs;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -151,6 +152,44 @@ class RealAuditSigningIT {
         byte[] otherKey = new byte[AuditSigningService.PUBLIC_KEY_LEN];
 
         assertThat(signer.verifyChain(hashes, signatures, entries, otherKey)).isZero();
+    }
+
+    @Test
+    void aSingleEntryMidChainVerifiesAgainstThePreviousLink() {
+        signChain();
+
+        assertThat(signer.verifyChain(List.of(hashes.get(2)), List.of(signatures.get(2)),
+                List.of(entries.get(2)), publicKey, 2, hashes.get(1)))
+                .isEqualTo(AuditSigningService.VALID_CHAIN);
+    }
+
+    @Test
+    void aBrokenEntryInASegmentIsReportedAtItsPositionInTheWholeChain() {
+        signChain();
+        entries.set(2, "{\"action\":\"MANUAL_DECISION\",\"note\":\"ändrad\"}");
+
+        assertThat(signer.verifyChain(hashes.subList(1, 3), signatures.subList(1, 3),
+                entries.subList(1, 3), publicKey, 1, hashes.get(0)))
+                .isEqualTo(2);
+    }
+
+    @Test
+    void aSegmentAnchoredToTheWrongLinkFailsAtItsFirstEntry() {
+        signChain();
+
+        assertThat(signer.verifyChain(List.of(hashes.get(2)), List.of(signatures.get(2)),
+                List.of(entries.get(2)), publicKey, 2, hashes.get(0)))
+                .isEqualTo(2);
+    }
+
+    @Test
+    void aMidChainSegmentWithoutThePreviousLinkIsRejected() {
+        signChain();
+
+        assertThatThrownBy(() -> signer.verifyChain(List.of(hashes.get(2)), List.of(signatures.get(2)),
+                List.of(entries.get(2)), publicKey, 2, null))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("previousHash");
     }
 
     private void signChain() {

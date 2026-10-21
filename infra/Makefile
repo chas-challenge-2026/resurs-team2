@@ -48,6 +48,10 @@ check-key:
 		printf '\n  Audit signing key missing: %s/%s\n  Generate it:  cd infra && make keys-audit\n\n' "$(CURDIR)" "$(AUDIT_KEY)"; \
 		exit 1; \
 	fi
+	@if [ ! -s "$(AUDIT_PUB)" ]; then \
+		printf '\n  Audit public key missing: %s/%s\n  Re-derive it:  openssl pkey -in %s -pubout -out %s\n\n' "$(CURDIR)" "$(AUDIT_PUB)" "$(AUDIT_KEY)" "$(AUDIT_PUB)"; \
+		exit 1; \
+	fi
 
 # --- provision everything (idempotent: skips whichever key already exists) ---
 
