@@ -47,7 +47,7 @@
   padding: var(--spacing-md);
 
   color: var(--color-text);
-  background-color: var(--color-background);
+  background-color: var(--color-white);
 
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
@@ -82,7 +82,7 @@
 .metric-tooltip-title {
   margin-bottom: var(--spacing-xs);
 
-  color: var(--color-text);
+  color: var(--color-text-strong);
 
   font-weight: var(--font-weight-bold);
 }

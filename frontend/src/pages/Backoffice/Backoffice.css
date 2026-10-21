@@ -322,55 +322,9 @@
   white-space: nowrap;
 }
 
-.backoffice-purpose {
-  max-width: 240px;
-}
-
+.backoffice-purpose,
 .backoffice-reason {
-  max-width: 420px;
-}
-
-.backoffice-reason-list {
-  display: flex;
-  flex-direction: column;
-
-  gap: 5px;
-
-  max-width: 420px;
-
-  margin: 0;
-  padding: 0;
-
-  list-style: none;
-}
-
-.backoffice-reason-item {
-  display: flex;
-  align-items: flex-start;
-
-  gap: 6px;
-
-  line-height: 1.35;
-}
-
-.backoffice-reason-label {
-  flex: 0 0 auto;
-
-  font-weight: var(--font-weight-bold);
-
-  white-space: nowrap;
-}
-
-.backoffice-reason-item-reject .backoffice-reason-label {
-  color: var(--color-danger-text);
-}
-
-.backoffice-reason-item-warning .backoffice-reason-label {
-  color: var(--color-warning-text);
-}
-
-.backoffice-reason-text {
-  min-width: 0;
+  max-width: 240px;
 }
 
 .backoffice-score {
