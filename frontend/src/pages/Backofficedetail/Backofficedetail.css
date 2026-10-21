@@ -169,6 +169,52 @@
   min-width: 110px;
 }
 
+/* Decision dialog */
+
+.backoffice-detail-page .decision-dialog {
+  width: min(440px, 90vw);
+  padding: var(--spacing-lg);
+
+  color: var(--color-text);
+  background-color: var(--color-background);
+
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+}
+
+.backoffice-detail-page .decision-dialog::backdrop {
+  background-color: rgba(0, 0, 0, 0.5);
+}
+
+.backoffice-detail-page .decision-dialog-title {
+  margin: 0 0 var(--spacing-sm);
+
+  color: var(--color-text-strong);
+
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+}
+
+.backoffice-detail-page .decision-dialog-comment {
+  display: block;
+  margin-top: var(--spacing-xs);
+
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.backoffice-detail-page .decision-dialog-error {
+  color: var(--color-danger-text);
+  font-weight: var(--font-weight-semibold);
+}
+
+.backoffice-detail-page .decision-dialog-actions {
+  justify-content: flex-end;
+  margin-top: var(--spacing-lg);
+}
+
 /* Status labels */
 
 .backoffice-detail-page .label {

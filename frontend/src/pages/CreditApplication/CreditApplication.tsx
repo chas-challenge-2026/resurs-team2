@@ -241,7 +241,7 @@ export function CreditApplication() {
             onClick={fetchFromBolagsverket}
             disabled={fetchingData}
           >
-            {fetchingData ? "Hämtar..." : "Hämta data från Bolagsverket"}
+            {fetchingData ? "Hämtar..." : "Hämta ekonomisk information från Bolagsverket"}
           </button>
 
           <FinancialMetrics
