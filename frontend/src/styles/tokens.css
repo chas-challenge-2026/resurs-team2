@@ -4,7 +4,7 @@
   --color-primary-hover: #001a28;
   --color-primary-soft: #e9f0f3;
 
-  --color-accent: #fce682;
+  --color-accent: #fce68x2;
   --color-accent-hover: #f8dc5f;
   --color-accent-text: #111111;
 
@@ -128,9 +128,9 @@ html[data-theme="dark"] {
   --color-accent-text: #111111;
 
   /* Neutral colors */
-  --color-navbar: #111f2e;
+  --color-navbar: #fbfbf9;
   --color-background: #071722;
-  --color-surface: #111f2e;
+  --color-surface: #fcfcfa;
   --color-surface-muted: #18293a;
 
   --color-text: #e6eef5;
