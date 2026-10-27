@@ -65,10 +65,8 @@ public final class ApplicationMapper {
     }
 
     public static ApplicationDetailsResponse toDetailsResponse(Application app, @Nullable String financialData) {
-        String workerName = app.getCaseWorker() != null ? app.getCaseWorker().getName() : null;
         return new ApplicationDetailsResponse(
                 toResponse(app),
-                workerName,
                 app.getDocuments().stream().map(ApplicationMapper::toDocumentResponse).toList(),
                 financialData);
     }
