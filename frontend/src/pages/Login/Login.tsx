@@ -1,14 +1,10 @@
 import { useState } from "react";
-
 import { CaseWorkerLoginForm } from "./CaseWorkerLoginForm";
 import { CompanyLoginForm } from "./CompanyLoginForm";
-
 import "./Login.css";
 
 export const Login: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<"company" | "caseWorker">(
-    "company",
-  );
+  const [showCaseWorker, setShowCaseWorker] = useState(false);
 
   return (
     <div className="login-container">
@@ -19,31 +15,19 @@ export const Login: React.FC = () => {
             <p className="text-muted">Logga in för att fortsätta</p>
           </div>
 
-          <ul className="nav nav-tabs">
-            <li className={activeTab === "company" ? "active" : ""}>
-              <button
-                type="button"
-                className="login-tab-link"
-                onClick={() => setActiveTab("company")}
-              >
-                Företagsinloggning
-              </button>
-            </li>
-
-            <li className={activeTab === "caseWorker" ? "active" : ""}>
-              <button
-                type="button"
-                className="login-tab-link"
-                onClick={() => setActiveTab("caseWorker")}
-              >
-                Handläggare
-              </button>
-            </li>
-          </ul>
-
           <div className="tab-content">
-            {activeTab === "company" && <CompanyLoginForm />}
-            {activeTab === "caseWorker" && <CaseWorkerLoginForm />}
+            {showCaseWorker ? <CaseWorkerLoginForm /> : <CompanyLoginForm />}
+          </div>
+
+          <div style={{ marginTop: "20px", textAlign: "center" }}>
+            <button
+              type="button"
+              onClick={() => setShowCaseWorker(!showCaseWorker)}
+            >
+              {showCaseWorker
+                ? "← Tillbaka till företagsinloggning"
+                : "Logga in som handläggare"}
+            </button>
           </div>
         </div>
       </div>
