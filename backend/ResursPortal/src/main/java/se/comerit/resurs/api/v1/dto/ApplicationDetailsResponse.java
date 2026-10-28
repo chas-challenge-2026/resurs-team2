@@ -11,11 +11,6 @@ public record ApplicationDetailsResponse(
     @Schema(description = "Core application data")
     @Nonnull
     ApplicationResponse application,
-    @Schema(description = "Name of the assigned case worker, if any",
-            example = "Anna Svensson",
-            nullable = true)
-    @Nullable
-    String workerName,
     @Schema(description = "Documents uploaded for this application")
     @Nonnull
     List<DocumentResponse> documents,
