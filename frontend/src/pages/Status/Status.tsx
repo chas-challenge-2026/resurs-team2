@@ -1,12 +1,10 @@
 import { useParams } from "react-router-dom";
 
-import { Panel } from "@/components/Panel/Panel";
 
 import { ApplicationDetailsPanel } from "./components/ApplicationDetailsPanel";
 import { DocumentsPanel } from "./components/DocumentsPanel";
 import { StatusHeader } from "./components/StatusHeader";
 import { useApplicationDetails } from "./hooks/useApplicationDetails";
-import { formatWorker } from "./utils/statusFormatters";
 import { ScoringResultPanel } from "./components/ScoringResultPanel";
 
 import "./Status.css";
@@ -16,7 +14,6 @@ export const Status = () => {
 
   const {
     application,
-    workerName,
     documents,
     financialData,
     loading,
@@ -52,12 +49,6 @@ export const Status = () => {
             scoringResult={application.scoringResult}
             financialData={financialData}
           />
-
-          <Panel title="Handläggare">
-            <p className="status-worker">
-              {formatWorker(application.status, workerName ?? undefined)}
-            </p>
-          </Panel>
         </aside>
 
         <section className="status-main-column">
