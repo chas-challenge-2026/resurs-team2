@@ -16,12 +16,15 @@ import { BankIdSignature } from "../../components/credit-application/bankid-sign
 import { ApplicationRequestSchema } from "../../schemas/ApplicationRequest.schema";
 import { applicationApi } from "../../api/applicationApi";
 import { companyApi } from "../../api/companyApi";
+import { canSignForOrganization } from "@/utils/signatoryAuthorization";
+import { useAuth } from "@/components/hooks/useAuth";
 
 export function CreditApplication() {
   const [currentStep, setCurrentStep] = useState(1);
   const navigate = useNavigate();
   const [loadingCompany, setLoadingCompany] = useState(true);
   const [companyError, setCompanyError] = useState<string | null>(null);
+  const { user } = useAuth();
 
   const [companyInformation, setCompanyInformation] =
     useState<CompanyInformationData>({
@@ -145,26 +148,41 @@ export function CreditApplication() {
   // Signs with BankID and submits as part of the same call. Rejects so the
   // signing step can show the failure and let the user retry.
   const handleSign = async () => {
-    const applicationResult = buildApplicationRequest();
+  const applicationResult = buildApplicationRequest();
 
-    if (!applicationResult.success) {
-      console.log(applicationResult.error);
-      throw new Error("Ansökan kunde inte valideras.");
-    }
+  if (!applicationResult.success) {
+    console.log(applicationResult.error);
+    throw new Error("Ansökan kunde inte valideras.");
+  }
 
-    try {
-      const applicationId = await applicationApi.create(
-        applicationResult.data,
-      );
+  if (!user?.personalNumber) {
+    throw new Error("Personnummer saknas.");
+  }
 
-      console.log("Kreditansökan skapad:", applicationId);
+  const canSign = canSignForOrganization(
+    user.personalNumber,
+    companyInformation.orgNumber,
+  );
 
-      navigate(`/status/${applicationId}`);
-    } catch (error) {
-      console.error("Kunde inte skapa kreditansökan:", error);
-      throw error;
-    }
-  };
+  if (!canSign) {
+    throw new Error(
+      "Du har inte behörighet att ansöka om kredit åt ditt företag.",
+    );
+  }
+
+  try {
+    const applicationId = await applicationApi.create(
+      applicationResult.data,
+    );
+
+    console.log("Kreditansökan skapad:", applicationId);
+
+    navigate(`/status/${applicationId}`);
+  } catch (error) {
+    console.error("Kunde inte skapa kreditansökan:", error);
+    throw error;
+  }
+};
 
   const steps = [
     "1. Företagsuppgifter",
