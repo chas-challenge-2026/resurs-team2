@@ -38,6 +38,7 @@ Data i H2 nollställs vid omstart. `Ctrl+C` stoppar båda processerna.
 ### Med Docker (PostgreSQL)
 
 ```bash
+cd infra && make keys
 cd infra && docker compose up -d
 ```
 
