@@ -11,15 +11,15 @@ export const CompanyLoginForm = () => {
   const [orgNumber, setOrgNumber] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [personalNumber, setPersonalNumber] = useState("");
 
-  const handleSubmit = async (
-    event: React.SyntheticEvent<HTMLFormElement>,
-  ) => {
+  const handleSubmit = async (event: React.SyntheticEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError(null);
 
     const result = companyLoginSchema.safeParse({
       orgNumber,
+      personalNumber,
     });
 
     if (!result.success) {
@@ -33,15 +33,13 @@ export const CompanyLoginForm = () => {
     setLoading(true);
 
     try {
-      await loginCompany(result.data);
+      await loginCompany({ orgNumber, personalNumber });
       navigate("/dashboard");
     } catch (error: unknown) {
       if (error instanceof Error) {
         setError(error.message);
       } else {
-        setError(
-          "Inloggning misslyckades. Kontrollera organisationsnumret.",
-        );
+        setError("Inloggning misslyckades. Kontrollera organisationsnumret.");
       }
     } finally {
       setLoading(false);
@@ -52,9 +50,7 @@ export const CompanyLoginForm = () => {
     <div className="tab-pane active">
       <div className="login-bankid-header">
         <span className="bankid-icon">🔒</span>
-        <p className="text-muted login-bankid-text">
-          Autentisering via BankID
-        </p>
+        <p className="text-muted login-bankid-text">Autentisering via BankID</p>
       </div>
 
       {error && <div className="alert alert-danger">{error}</div>}
@@ -71,6 +67,19 @@ export const CompanyLoginForm = () => {
             onChange={(event) => setOrgNumber(event.target.value)}
             required
           />
+
+          <div className="form-group">
+            <label htmlFor="personalNumber">Personnummer</label>
+
+            <input
+              id="personalNumber"
+              type="text"
+              className="form-control"
+              placeholder="20000101-1111"
+              value={personalNumber}
+              onChange={(event) => setPersonalNumber(event.target.value)}
+            />
+          </div>
 
           <p className="help-block">
             Ange organisationsnummer för BankID-autentisering
