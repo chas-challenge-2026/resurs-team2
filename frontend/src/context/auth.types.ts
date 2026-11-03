@@ -5,10 +5,12 @@ export interface User {
   name: string;
   email: string;
   role: Role;
+  personalNumber?: string;
 }
 
 export interface CompanyCredentials {
   orgNumber: string;
+  personalNumber: string;
 }
 
 export interface CaseWorkerCredentials {
