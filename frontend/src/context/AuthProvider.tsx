@@ -82,6 +82,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           name: company.name || principal.name || "Företag",
           email: "",
           role: "COMPANY",
+          personalNumber: credentials.personalNumber,
         });
       } catch (error) {
         clearSession();
