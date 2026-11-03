@@ -26,24 +26,29 @@ export function BankIdSignature({
   const [error, setError] = useState<string | null>(null);
 
   const handleSign = async (event: FormEvent) => {
-    event.preventDefault();
+  event.preventDefault();
 
-    if (signing) {
-      return;
-    }
+  if (signing) {
+    return;
+  }
 
-    setSigning(true);
-    setError(null);
+  setSigning(true);
+  setError(null);
 
-    try {
-      await onSign();
-    } catch {
+  try {
+    await onSign();
+  } catch (error) {
+    if (error instanceof Error) {
+      setError(error.message);
+    } else {
       setError(
         "Signeringen kunde inte genomföras. Försök igen.",
       );
-      setSigning(false);
     }
-  };
+
+    setSigning(false);
+  }
+};
 
   return (
     <section
