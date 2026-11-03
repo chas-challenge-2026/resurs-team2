@@ -19,12 +19,7 @@ namespace resurs::audit
                 EVP_MD_CTX_free(c);
             }
         };
-        struct EvpPkeyDeleter
-        {
-            void operator()(EVP_PKEY *p) const noexcept { EVP_PKEY_free(p); }
-        };
         using EvpMdCtxPtr = std::unique_ptr<EVP_MD_CTX, EvpMdCtxDeleter>;
-        using EvpPkeyPtr = std::unique_ptr<EVP_PKEY, EvpPkeyDeleter>;
 
         [[noreturn]] void throw_openssl(const char *what)
         {
@@ -58,21 +53,25 @@ namespace resurs::audit
         return sig;
     }
 
-    bool verify(const PublicKey &pub, const Hash &message,
-                const unsigned char *sig, std::size_t sigLen)
+    EvpPkeyPtr parsePublicKey(const PublicKey &pub)
     {
         EvpPkeyPtr pkey{EVP_PKEY_new_raw_public_key(EVP_PKEY_ED25519, nullptr, pub.data(), pub.size())};
         if (!pkey)
         {
             throw_openssl("EVP_PKEY_new_raw_public_key failed");
         }
+        return pkey;
+    }
 
+    bool verify(EVP_PKEY *pubKey, const Hash &message,
+                const unsigned char *sig, std::size_t sigLen)
+    {
         EvpMdCtxPtr ctx{EVP_MD_CTX_new()};
         if (!ctx)
         {
             throw_openssl("EVP_MD_CTX_new failed");
         }
-        if (EVP_DigestVerifyInit(ctx.get(), nullptr, nullptr, nullptr, pkey.get()) != 1)
+        if (EVP_DigestVerifyInit(ctx.get(), nullptr, nullptr, nullptr, pubKey) != 1)
         {
             throw_openssl("EVP_DigestVerifyInit failed");
         }
@@ -89,7 +88,13 @@ namespace resurs::audit
         }
         throw_openssl("EVP_DigestVerify failed");
     }
-    
+
+    bool verify(const PublicKey &pub, const Hash &message,
+                const unsigned char *sig, std::size_t sigLen)
+    {
+        return verify(parsePublicKey(pub).get(), message, sig, sigLen);
+    }
+
     PublicKey rawPublicKey(EVP_PKEY *key)
     {
         PublicKey pub{};

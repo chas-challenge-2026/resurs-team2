@@ -40,17 +40,19 @@ public class DummyAuditSigningService implements AuditSigningService {
 
     @Override
     public int verifyChain(@NonNull List<byte[]> hashes, @NonNull List<byte[]> signatures,
-            @NonNull List<String> entries, @NonNull byte[] publicKey) {
+            @NonNull List<String> entries, @NonNull byte[] publicKey,
+            long startIndex, @Nullable byte[] previousHash) {
         AuditSigningService.requireVerifiableChain(hashes, signatures, entries, publicKey);
+        AuditSigningService.requireSegmentStart(startIndex, previousHash);
 
-        byte[] previousHash = null;
+        byte[] prev = previousHash;
         for (int i = 0; i < hashes.size(); i++) {
-            byte[] link = chainLink(previousHash, entries.get(i));
+            byte[] link = chainLink(prev, entries.get(i));
             if (!MessageDigest.isEqual(link, hashes.get(i))
                     || !MessageDigest.isEqual(standInSignature(link), signatures.get(i))) {
-                return i;
+                return Math.toIntExact(startIndex + i);
             }
-            previousHash = hashes.get(i);
+            prev = hashes.get(i);
         }
         return VALID_CHAIN;
     }

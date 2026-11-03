@@ -109,8 +109,65 @@ public interface AuditSigningService {
      *                                  length, or a value is not of the expected
      *                                  length
      */
+    default int verifyChain(@NonNull List<byte[]> hashes, @NonNull List<byte[]> signatures,
+            @NonNull List<String> entries, @NonNull byte[] publicKey) {
+        return verifyChain(hashes, signatures, entries, publicKey, 0, null);
+    }
+
+    /**
+     * Verifies a contiguous segment of a chain: the entries passed in sit at
+     * positions {@code startIndex}, {@code startIndex + 1}, ... of the whole
+     * chain.
+     *
+     * <p>
+     * Each entry is checked on its own (its link and its signature), so
+     * segments that cover a chain without gaps give the same result as
+     * verifying it whole. A segment of one entry checks exactly that entry.
+     *
+     * @param startIndex   position of the first entry passed in; 0 for the
+     *                     start of a chain
+     * @param previousHash the stored chain link of entry
+     *                     {@code startIndex - 1}; required when
+     *                     {@code startIndex > 0}, {@code null} when it is 0
+     * @return {@link #VALID_CHAIN} if every entry of the segment verifies,
+     *         otherwise the position in the whole chain
+     *         ({@code startIndex + i}) of the first entry that fails either
+     *         check
+     * @throws IllegalArgumentException as
+     *                                  {@link #verifyChain(List, List, List, byte[])},
+     *                                  or if {@code startIndex} and
+     *                                  {@code previousHash} do not match
+     */
     int verifyChain(@NonNull List<byte[]> hashes, @NonNull List<byte[]> signatures,
-            @NonNull List<String> entries, @NonNull byte[] publicKey);
+            @NonNull List<String> entries, @NonNull byte[] publicKey,
+            long startIndex, @Nullable byte[] previousHash);
+
+    /**
+     * Argument check for where a segment starts, shared by the
+     * {@link #verifyChain} implementations.
+     *
+     * @throws IllegalArgumentException if {@code startIndex} is negative, or
+     *                                  {@code previousHash} is missing for a
+     *                                  segment that starts mid-chain, present
+     *                                  for one that starts at 0, or not a
+     *                                  whole chain link
+     */
+    static void requireSegmentStart(long startIndex, @Nullable byte[] previousHash) {
+        if (startIndex < 0) {
+            throw new IllegalArgumentException("startIndex must be >= 0, got " + startIndex);
+        }
+        if (startIndex == 0 && previousHash != null) {
+            throw new IllegalArgumentException("previousHash must be null for a segment starting at 0");
+        }
+        if (startIndex > 0 && previousHash == null) {
+            throw new IllegalArgumentException("previousHash is required for a segment starting at "
+                    + startIndex);
+        }
+        if (previousHash != null && previousHash.length != HASH_LEN) {
+            throw new IllegalArgumentException("previousHash must be " + HASH_LEN + " raw bytes, got "
+                    + previousHash.length);
+        }
+    }
 
     /**
      * Argument check shared by the {@link #verifyChain} implementations, so that a

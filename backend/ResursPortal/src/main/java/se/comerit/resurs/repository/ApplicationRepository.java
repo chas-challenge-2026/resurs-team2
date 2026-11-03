@@ -1,9 +1,11 @@
 package se.comerit.resurs.repository;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 
 import jakarta.persistence.LockModeType;
+import org.springframework.data.domain.Limit;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -45,4 +47,14 @@ public interface ApplicationRepository extends JpaRepository<Application, Long> 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("UPDATE Application a SET a.caseWorker = :worker WHERE a.id = :id AND a.caseWorker IS NULL")
     int assignIfUnassigned(@Param("id") Long id, @Param("worker") CaseWorker worker);
+
+    /**
+     * Application ids greater than {@code after}, ascending, at most {@code limit} of them.
+     *
+     * <p>Pages through every application by continuing from the last id seen instead of an
+     * OFFSET, so each page costs the same however deep it is. Only ids are read, so no PII
+     * is decrypted.
+     */
+    @Query("SELECT a.id FROM Application a WHERE a.id > :after ORDER BY a.id")
+    List<Long> findIdsAfter(@Param("after") long after, Limit limit);
 }

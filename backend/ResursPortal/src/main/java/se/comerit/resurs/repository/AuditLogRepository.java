@@ -1,5 +1,6 @@
 package se.comerit.resurs.repository;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -30,4 +31,12 @@ public interface AuditLogRepository extends JpaRepository<AuditLog, UUID> {
      */
     @Query("SELECT a.hash FROM AuditLog a WHERE a.application = :app ORDER BY a.sequenceNumber DESC LIMIT 1")
     Optional<byte[]> findPreviousHash(@Param("app") Application app);
+
+    /**
+     * Every audit entry of the given applications, grouped by application and in chain
+     * order within each, so many chains can be verified from one query.
+     */
+    @Query("SELECT a FROM AuditLog a WHERE a.application.id IN :applicationIds "
+            + "ORDER BY a.application.id, a.sequenceNumber")
+    List<AuditLog> findChainsByApplicationIds(@Param("applicationIds") Collection<Long> applicationIds);
 }

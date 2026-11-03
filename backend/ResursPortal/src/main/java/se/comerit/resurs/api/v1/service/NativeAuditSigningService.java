@@ -31,7 +31,8 @@ public class NativeAuditSigningService implements AuditSigningService {
 
     @Override
     public int verifyChain(@NonNull List<byte[]> hashes, @NonNull List<byte[]> signatures,
-            @NonNull List<String> entries, @NonNull byte[] publicKey) {
-        return nativeSigner.verifyChain(hashes, signatures, entries, publicKey);
+            @NonNull List<String> entries, @NonNull byte[] publicKey,
+            long startIndex, @Nullable byte[] previousHash) {
+        return nativeSigner.verifyChain(hashes, signatures, entries, publicKey, startIndex, previousHash);
     }
 }

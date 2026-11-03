@@ -6,7 +6,7 @@
 BUILD_DIR := build
 ASAN_BUILD_DIR := $(BUILD_DIR)/asan
 
-.PHONY: all build test test-v clean rebuild demo-crypto demo-audit asan
+.PHONY: all build test test-v clean rebuild demo-crypto demo-audit bench-audit asan
 
 all: build
 
@@ -25,6 +25,10 @@ demo-crypto: build
 
 demo-audit: build
 	@cd $(BUILD_DIR)/audit && ./audit_demo
+
+# Stress/benchmark harness, not a ctest. Override entry count: make bench-audit N=1000000
+bench-audit: build
+	@cd $(BUILD_DIR)/audit/tests && ./audit_stress_test $(N)
 
 # Line/branch coverage of the crypto and audit modules from the ctest suites.
 # Separate build dir (inside build/, so it is git-ignored and removed by clean).

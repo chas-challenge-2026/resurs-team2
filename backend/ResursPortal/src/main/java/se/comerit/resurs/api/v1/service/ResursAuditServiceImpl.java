@@ -148,15 +148,21 @@ public class ResursAuditServiceImpl {
      * @param signatures the stored signatures, in the same order
      * @param entries    the stored entry JSONs, in the same order
      * @param publicKey  the 32 raw bytes of the public key to verify under
-     * @return {@code -1} if the whole chain verifies, otherwise the index of the first
-     *         entry that fails either its link or its signature check
+     * @param startIndex position of the first entry in the whole chain; 0 for its start
+     * @param previousHash the stored link of entry {@code startIndex - 1}, or {@code null}
+     *                   when {@code startIndex} is 0
+     * @return {@code -1} if every entry verifies, otherwise the position in the whole
+     *         chain of the first entry that fails either its link or its signature check
      * @throws CryptoException          if the native library reports a failure
      * @throws IllegalArgumentException if the lists do not describe one chain of the same
-     *         length, or a value is not of the expected length
+     *         length, a value is not of the expected length, or the segment start is
+     *         inconsistent
      */
     public int verifyChain(@NonNull List<byte[]> hashes, @NonNull List<byte[]> signatures,
-            @NonNull List<String> entries, @NonNull byte[] publicKey) {
+            @NonNull List<String> entries, @NonNull byte[] publicKey,
+            long startIndex, @Nullable byte[] previousHash) {
         AuditSigningService.requireVerifiableChain(hashes, signatures, entries, publicKey);
+        AuditSigningService.requireSegmentStart(startIndex, previousHash);
         int count = hashes.size();
         if (count == 0) {
             return VALID_CHAIN;
@@ -179,7 +185,13 @@ public class ResursAuditServiceImpl {
                 Memory signatureLensMem = allocate((long) count * SIZE_T_LEN);
                 Memory entriesMem = allocate(entriesLen);
                 Memory entryLensMem = allocate((long) count * SIZE_T_LEN);
-                Memory publicKeyMem = new Memory(PUBKEY_LEN)) {
+                Memory publicKeyMem = new Memory(PUBKEY_LEN);
+                // null at the start of a chain; try-with-resources skips closing it
+                Memory prevHashMem = previousHash == null ? null : new Memory(HASH_LEN)) {
+
+            if (prevHashMem != null) {
+                prevHashMem.write(0, previousHash, 0, HASH_LEN);
+            }
 
             long signatureOffset = 0;
             long entryOffset = 0;
@@ -199,7 +211,7 @@ public class ResursAuditServiceImpl {
             IntByReference firstInvalidIndex = new IntByReference(VALID_CHAIN);
             int rc = library.resurs_audit_verify_chain(hashesMem, signaturesMem, signatureLensMem,
                     entriesMem, entryLensMem, count, entriesLen, signaturesLen,
-                    publicKeyMem, firstInvalidIndex);
+                    startIndex, prevHashMem, publicKeyMem, firstInvalidIndex);
             if (rc != ResursAuditLibrary.RESURS_AUDIT_OK) {
                 throw new CryptoException(rc);
             }

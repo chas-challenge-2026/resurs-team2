@@ -40,12 +40,14 @@ services:
       - SPRING_DATASOURCE_PASSWORD=resurs123
       - RESURS_CRYPTO_KEY_PATH=/run/secrets/resurs_crypto_key
       - RESURS_AUDIT_KEY_PATH=/run/secrets/resurs_audit_key
+      - RESURS_AUDIT_PUBKEY_PATH=/run/secrets/resurs_audit_pub
       - STORAGE_PATH=/app/uploads
     volumes:
       - storage_data:/app/uploads
     secrets:
       - resurs_crypto_key
       - resurs_audit_key
+      - resurs_audit_pub
     depends_on:
       db:
         condition: service_healthy
@@ -59,3 +61,5 @@ secrets:
     file: ./secrets/resurs-crypto.key
   resurs_audit_key:
     file: ./secrets/resurs-audit.key
+  resurs_audit_pub:
+    file: ./secrets/resurs-audit.pub

@@ -20,12 +20,12 @@ static void test_verify_invalid_args(void)
 
     check(resurs_audit_verify_chain(NULL, c->signatures, c->signature_lens, c->entries_buf,
                                     c->entry_lens, ABI_CHAIN_LEN, c->entries_len,
-                                    sizeof c->signatures, g_pub,
+                                    sizeof c->signatures, 0, NULL, g_pub,
                                     &first_invalid) == RESURS_AUDIT_ERR_INVALID_ARG,
           "verify_chain(NULL hashes) -> INVALID_ARG");
     check(resurs_audit_verify_chain(c->hashes, c->signatures, c->signature_lens, c->entries_buf,
                                     c->entry_lens, 0, c->entries_len,
-                                    sizeof c->signatures, g_pub,
+                                    sizeof c->signatures, 0, NULL, g_pub,
                                     &first_invalid) == RESURS_AUDIT_ERR_INVALID_ARG,
           "verify_chain(entry_count == 0) -> INVALID_ARG");
 }
