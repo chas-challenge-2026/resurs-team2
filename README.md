@@ -106,10 +106,14 @@ frontend/                    ← React + TypeScript + Vite (SPA)
 backend/ResursPortal/        ← Spring Boot 3.5 Maven-projekt
   src/main/java/se/comerit/resurs/
     ResursPortalApplication.java
-    api/v1/controller/       ← ny REST-API (SPA använder /api/v1/...)
-    controller/              ← legacy Thymeleaf (avstängd i `v2`-profilen)
-    config/                  ← JnaConfig, SpaFallbackController
-    security/                ← SecurityConfig (api-/v2-kedjor)
+    api/v1/controller/       ← API endpoints
+    audit/                   ← Auditlog relaterade klasser
+    config/                  ← Configurations relaterade klasser
+    entity/                  ← JPA entities
+    exception/               ← Exception handlers
+    rating/                  ← Kreditrating relaterade klasser
+    repository/              ← JPA repositories
+    security/                ← Säkerhetskonfiguration (JWT, CORS, m.m.)
   src/main/resources/
     application.properties   ← `v2`-profil aktiv som default
     application-local.properties
@@ -121,29 +125,4 @@ infra/
 native/
   README.md                  ← v2 C/C++ moduler (PII-kryptering, audit-signering)
 
-docs/
-  architecture.md
-  known-bugs.md
-  README-pain-points.md
-  v2-targets.md
 ```
-
-## Avsiktliga anti-patterns (pedagogiska)
-
-Detta är en **v1 spaghetti-kodbas** avsedd för studenter att refaktorera till v2.
-
-Se `docs/known-bugs.md` för fullständig lista. Highlights:
-
-1. BankID mock som hårdkodad if-sats
-2. 800+ raders scoring-metod inline i controller
-3. ~~SQL injection i handläggare-login~~
-4. Audit log som JSON-blob (ingen separat tabell)
-5. ~~JdbcTemplate direkt i varje controller~~
-6. PDF sparas men parsas aldrig
-7. PII i klartext
-8. Ingen transaktion vid ansökningsskapande
-9. Session-check copy-pastad i varje metod
-
-## Vad ska ni bygga
-
-Se `docs/v2-targets.md`.
