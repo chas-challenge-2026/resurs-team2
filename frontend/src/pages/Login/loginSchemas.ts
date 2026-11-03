@@ -8,6 +8,14 @@ export const companyLoginSchema = z.object({
       /^\d{6}-\d{4}$/,
       "Ange organisationsnummer i formatet 556000-1234.",
     ),
+
+    personalNumber: z
+    .string()
+    .trim()
+    .regex(
+      /^\d{8}-\d{4}$/,
+      "Ange personnummer i formatet ÅÅÅÅMMDD-XXXX.",
+    ),
 });
 
 export const caseworkerLoginSchema = z.object({
