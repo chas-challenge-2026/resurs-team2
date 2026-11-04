@@ -6,11 +6,11 @@ Ansökan är **spårbar**: statusflödet (`PENDING_DOCS → SCORING_IN_PROGRESS 
 
 ## Snabbstart
 
-Projektet byggs med en **enhetlig Makefile** som orkestrerar React-frontenden (Vite/npm), Spring Boot-backenden (Maven/`./mvnw`) och den framtida C++-modulen (CMake). Alla artefakter kopieras till en gemensam `target/`-katalog.
+Projektet byggs med en **enhetlig Makefile** som orkestrerar React-frontenden (Vite/npm), Spring Boot-backenden (Maven/`./mvnw`) och de native-modulerna i `native/` (CMake). Alla artefakter kopieras till en gemensam `target/`-katalog.
 
 > Alla kommandon körs från **repo-roten**.
 
-### Bygg allt (frontend + backend)
+### Bygg allt (frontend + backend + native)
 
 ```bash
 make build
@@ -22,6 +22,7 @@ Resultatet läggs i `target/`:
 target/
   frontend/                     ← byggd React-SPA
   resurs-portal-1.0-SNAPSHOT.jar ← Spring Boot-jar (tjänar SPA:t)
+  libs/                         ← libresurs_crypto.so, libresurs_audit.so
 ```
 
 ### Starta i dev (HMR + lokalt H2)
@@ -38,6 +39,7 @@ Data i H2 nollställs vid omstart. `Ctrl+C` stoppar båda processerna.
 ### Med Docker (PostgreSQL)
 
 ```bash
+cd infra && make keys
 cd infra && docker compose up -d
 ```
 
@@ -67,18 +69,17 @@ Se `DRIFT.md` för hur du uppdaterar `infra/docker-compose.yml` vid deployment t
 make test
 ```
 
-Kör frontend-lint och backend-tester.
+Kör frontend, backend och native-tester.
 
 ### Övriga targets
 
-| Target                | Beskrivning                               |
-| --------------------- | ----------------------------------------- |
-| `make build-frontend` | Bygg bara React-frontenden                |
-| `make build-backend`  | Bygg bara Spring Boot-jaren               |
-| `make clean`          | Ta bort alla byggartefakter               |
-| `make package`        | Alias för `build` (används av Dockerfile) |
-
-> C++-modulen (`native/`) är inte på denna branch ännu. När `CMakeLists.txt` läggs till aktiverar du den genom att kommentera in `build-native` i `Makefile`.
+| Target                 | Beskrivning                                                           |
+| ---------------------- | --------------------------------------------------------------------- |
+| `make build-frontend`  | Bygg bara React-frontenden                                            |
+| `make build-backend`   | Bygg bara Spring Boot-jaren                                           |
+| `make build-native`    | Bygg C++-modulerna och kopiera båda `.so`-filerna till `target/libs/` |
+| `make clean`           | Ta bort alla byggartefakter                                           |
+| `make package`         | Alias för `build`                                                     |
 
 Öppna [http://localhost:8083](http://localhost:8083)
 
@@ -106,10 +107,14 @@ frontend/                    ← React + TypeScript + Vite (SPA)
 backend/ResursPortal/        ← Spring Boot 3.5 Maven-projekt
   src/main/java/se/comerit/resurs/
     ResursPortalApplication.java
-    api/v1/controller/       ← ny REST-API (SPA använder /api/v1/...)
-    controller/              ← legacy Thymeleaf (avstängd i `v2`-profilen)
-    config/                  ← JnaConfig, SpaFallbackController
-    security/                ← SecurityConfig (api-/v2-kedjor)
+    api/v1/controller/       ← API endpoints
+    audit/                   ← Auditlog relaterade klasser
+    config/                  ← Configurations relaterade klasser
+    entity/                  ← JPA entities
+    exception/               ← Exception handlers
+    rating/                  ← Kreditrating relaterade klasser
+    repository/              ← JPA repositories
+    security/                ← Säkerhetskonfiguration (JWT, CORS, m.m.)
   src/main/resources/
     application.properties   ← `v2`-profil aktiv som default
     application-local.properties
@@ -118,32 +123,9 @@ infra/
   docker-compose.yml         ← PostgreSQL + Spring Boot
   seed.sql                   ← schema + seed-data
 
-native/
-  README.md                  ← v2 C/C++ moduler (PII-kryptering, audit-signering)
+native/                      ← C/C++-moduler, se native/README.md
+  CMakeLists.txt, Makefile   ← bygger båda modulerna och deras tester
+  crypto/                    ← libresurs_crypto.so (PII-kryptering, blind-index)
+  audit/                     ← libresurs_audit.so (audit-signering, hashkedja)
 
-docs/
-  architecture.md
-  known-bugs.md
-  README-pain-points.md
-  v2-targets.md
 ```
-
-## Avsiktliga anti-patterns (pedagogiska)
-
-Detta är en **v1 spaghetti-kodbas** avsedd för studenter att refaktorera till v2.
-
-Se `docs/known-bugs.md` för fullständig lista. Highlights:
-
-1. BankID mock som hårdkodad if-sats
-2. 800+ raders scoring-metod inline i controller
-3. ~~SQL injection i handläggare-login~~
-4. Audit log som JSON-blob (ingen separat tabell)
-5. ~~JdbcTemplate direkt i varje controller~~
-6. PDF sparas men parsas aldrig
-7. PII i klartext
-8. Ingen transaktion vid ansökningsskapande
-9. Session-check copy-pastad i varje metod
-
-## Vad ska ni bygga
-
-Se `docs/v2-targets.md`.
