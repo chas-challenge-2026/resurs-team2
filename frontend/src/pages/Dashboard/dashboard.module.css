@@ -1,0 +1,328 @@
+.page {
+  padding: var(--spacing-2xl) 0 var(--spacing-3xl);
+
+  background-color: var(--color-background);
+}
+
+.container {
+  width: 100%;
+  max-width: var(--container-width);
+  margin: 0 auto;
+  padding: 0 var(--spacing-lg);
+}
+
+/* Welcome section */
+.jumbotron {
+  margin-bottom: var(--spacing-2xl);
+  padding: var(--spacing-2xl);
+
+  background-color: var(--color-primary);
+  color: var(--color-white);
+
+  border-radius: var(--radius-xl);
+
+  box-shadow: var(--shadow-box);
+}
+
+.jumbotron h1 {
+  margin: 0 0 var(--spacing-md);
+
+  color: var(--color-white);
+
+  font-size: var(--font-size-3xl);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-tight);
+}
+
+.jumbotron p {
+  max-width: 650px;
+
+  margin: 0 0 var(--spacing-lg);
+
+  color: rgba(255, 255, 255, 0.82);
+
+  font-size: var(--font-size-lg);
+  line-height: var(--line-height-relaxed);
+}
+
+/* Main actions */
+.actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+
+  gap: var(--spacing-sm);
+}
+
+.primaryButton,
+.defaultButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  gap: var(--spacing-sm);
+
+  min-height: 46px;
+  padding: 11px 22px;
+
+  font-family: inherit;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  line-height: 1;
+
+  text-align: center;
+  white-space: nowrap;
+
+  cursor: pointer;
+
+  border: 1px solid transparent;
+  border-radius: var(--radius-pill);
+
+  transition:
+    background-color var(--transition-fast),
+    border-color var(--transition-fast),
+    color var(--transition-fast),
+    box-shadow var(--transition-fast),
+    transform var(--transition-fast);
+}
+
+.primaryButton {
+  color: var(--color-accent-text);
+  background-color: var(--color-accent);
+  border-color: var(--color-accent);
+}
+
+.primaryButton:hover {
+  background-color: var(--color-accent-hover);
+  border-color: var(--color-accent-hover);
+
+  transform: translateY(-1px);
+}
+
+.defaultButton {
+  color: var(--color-white);
+  background-color: transparent;
+
+  border-color: rgba(255, 255, 255, 0.55);
+}
+
+.defaultButton:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  border-color: var(--color-white);
+
+  transform: translateY(-1px);
+}
+
+
+.primaryButton:active,
+.defaultButton:active,
+.viewButton:active {
+  transform: translateY(0);
+}
+
+.icon {
+  font-size: 22px;
+  font-weight: var(--font-weight-bold);
+  line-height: 1;
+}
+
+.listIcon {
+  font-size: 20px;
+  font-weight: var(--font-weight-bold);
+  line-height: 1;
+}
+
+/* Applications */
+.applicationsSection {
+  overflow: hidden;
+
+  background-color: var(--color-background);
+
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+
+  box-shadow: var(--shadow-sm);
+}
+
+.applicationsSection h3 {
+  margin: 0;
+  padding: var(--spacing-lg) var(--spacing-lg);
+
+  color: var(--color-text-strong);
+
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
+
+  border-bottom: 1px solid var(--color-border);
+}
+
+.applicationTable {
+  width: 100%;
+
+  margin: 0;
+
+  background-color: var(--color-white);
+
+  border-collapse: collapse;
+}
+
+.applicationTable th,
+.applicationTable td {
+  padding: 14px var(--spacing-lg);
+  line-height: var(--line-height-base);
+  text-align: left;
+
+  border-bottom: 1px solid var(--color-border);
+}
+
+.applicationTable th {
+  color: var(--color-text-strong);
+  background-color: var(--color-surface-muted);
+
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+
+  border-bottom: 1px solid var(--color-border);
+}
+
+.applicationTable td {
+  color: var(--color-text);
+
+  background-color: var(--color-background);
+}
+
+.applicationTable tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.applicationTable tbody tr {
+  transition: background-color var(--transition-fast);
+}
+
+.applicationTable tbody tr:hover td {
+  background-color: var(--color-primary-soft);
+}
+
+/* Status labels */
+.labelSuccess,
+.labelDanger,
+.labelWarning,
+.labelDefault {
+  display: inline-flex;
+  align-items: center;
+
+  padding: 5px 9px;
+
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  line-height: 1;
+
+  white-space: nowrap;
+
+  border: 1px solid transparent;
+  border-radius: var(--radius-pill);
+}
+
+.labelSuccess {
+  color: var(--color-success-text);
+  background-color: var(--color-success-bg);
+  border-color: var(--color-success-border);
+}
+
+.labelDanger {
+  color: var(--color-danger-text);
+  background-color: var(--color-danger-bg);
+  border-color: var(--color-danger-border);
+}
+
+.labelWarning {
+  color: var(--color-warning-text);
+  background-color: var(--color-warning-bg);
+  border-color: var(--color-warning-border);
+}
+
+.labelDefault {
+  color: var(--color-muted);
+  background-color: var(--color-surface-muted);
+  border-color: var(--color-border);
+}
+
+/* View application */
+.viewButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  min-height: 34px;
+  padding: 7px 14px;
+
+  color: var(--color-text);
+  background-color: var(--color-background);
+
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-pill);
+
+  font-family: inherit;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+
+  cursor: pointer;
+
+  transition:
+    background-color var(--transition-fast),
+    color var(--transition-fast),
+    transform var(--transition-fast);
+}
+
+.viewButton:hover {
+  
+  color: var(--color-white);
+  background-color: var(--color-primary);
+
+  border-color: var(--color-primary);
+
+  transform: translateY(-1px);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .page {
+    padding: var(--spacing-xl) 0 var(--spacing-2xl);
+  }
+
+  .container {
+    padding: 0 var(--spacing-md);
+  }
+
+  .jumbotron {
+    padding: var(--spacing-xl);
+    border-radius: var(--radius-lg);
+  }
+
+  .jumbotron h1 {
+    font-size: var(--font-size-2xl);
+  }
+
+  .jumbotron p {
+    font-size: var(--font-size-base);
+  }
+
+  .actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .primaryButton,
+  .defaultButton {
+    width: 100%;
+  }
+
+  .applicationsSection {
+    overflow-x: auto;
+  }
+
+  .applicationTable {
+    min-width: 650px;
+  }
+}

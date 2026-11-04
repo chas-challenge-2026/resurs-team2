@@ -1,0 +1,257 @@
+package se.comerit.resurs.api.v1.controller;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.nullValue;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import java.util.Comparator;
+import java.util.List;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.springframework.security.crypto.argon2.Argon2PasswordEncoder;
+
+import se.comerit.resurs.repository.CaseWorkerRepository;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockHttpServletResponse;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.context.jdbc.Sql;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
+import jakarta.servlet.http.Cookie;
+import se.comerit.resurs.entity.Application;
+import se.comerit.resurs.entity.AuditLog;
+import se.comerit.resurs.repository.ApplicationRepository;
+import se.comerit.resurs.repository.AuditLogRepository;
+import se.comerit.resurs.security.SessionCookie;
+
+/**
+ * Full end-to-end application lifecycle through the real HTTP API:
+ *
+ * <ol>
+ *   <li>company logs in, submits an application that lands in manual review, logs out</li>
+ *   <li>case worker logs in, approves the application, logs out</li>
+ *   <li>company logs in again and confirms the application is approved</li>
+ * </ol>
+ */
+@SpringBootTest(properties = {
+        "spring.datasource.url=jdbc:h2:mem:lifecycle;MODE=PostgreSQL"
+})
+@AutoConfigureMockMvc
+@ActiveProfiles("test")
+@TestPropertySource("/scoring-test.properties")
+class ApplicationLifecycleIntegrationTest {
+
+    private static final String UA = "integration-agent";
+
+    private static final String COMPANY_ORG = "556000-1234";
+
+    private static final String CASE_WORKER_EMAIL = "karin@resurs.se";
+    private static final String CASE_WORKER_PASSWORD = "password123";
+
+    /**
+     * Financials crafted to produce exactly two scoring flags (liquidity below
+     * the marginal band and a low cash-flow ratio) with no hard reject, so the
+     * application lands in the manual-review bracket (UNDER_REVIEW).
+     */
+    private static final String MANUAL_REVIEW_REQUEST_JSON = """
+            {
+              "equity": 500000.0,
+              "totalCapital": 1000000.0,
+              "currentAssets": 150000.0,
+              "currentLiabilities": 200000.0,
+              "totalLiabilities": 500000.0,
+              "operatingIncome": 150000.0,
+              "netRevenue": 1000000.0,
+              "requestedAmount": 100000,
+              "purpose": "Rörelsekapital",
+              "operatingCashFlow": 20000.0,
+              "investingCashFlow": -10000.0,
+              "interestExpenses": 20000.0,
+              "industry": "IT"
+            }
+            """;
+
+    @Autowired
+    private MockMvc mockMvc;
+
+    @Autowired
+    private ApplicationRepository applicationRepository;
+
+    @Autowired
+    private AuditLogRepository auditLogRepository;
+
+    @Autowired
+    private CaseWorkerRepository caseWorkerRepository;
+
+    @Autowired
+    private Argon2PasswordEncoder argon2;
+
+    @BeforeEach
+    void ensureCaseWorkerPasswordIsArgon2() {
+        caseWorkerRepository.findByEmail(CASE_WORKER_EMAIL).ifPresent(cw -> {
+            cw.setPassword(argon2.encode(CASE_WORKER_PASSWORD));
+            caseWorkerRepository.save(cw);
+        });
+    }
+
+    @Test
+    @DisplayName("Full lifecycle: manual-review -> case worker approval -> company confirms")
+    @Sql(statements = {
+            "DELETE FROM documents",
+            "DELETE FROM audit_log",
+            "DELETE FROM applications",
+            "DELETE FROM companies",
+            "DELETE FROM case_workers",
+            "INSERT INTO companies (id, org_number, org_number_index, company_name, authorized_signatory) VALUES (900, '556000-1234', X'dedd7d2467a47aac7cc703665899fded7d8013ddecbbbf69e0ff366fd4812ed7', 'Malmö Fastigheter AB', 'Anders Karlsson')",
+            "INSERT INTO case_workers (id, name, email, email_index, password) VALUES (900, 'Karin Handläggare', 'karin@resurs.se', X'240cf76b4caf0123ebfc7392cd379b0467f4026fa356c0a05bfa360a87679413', '$2a$10$rUonBwDLz9IA0Ivwnor38.tjZevxSeIHzQx5b4u0RwHhHJ/sbao32')"
+    })
+    void fullApplicationLifecycle() throws Exception {
+        // ------------------------------------------------------------------
+        // 1. Company logs in and submits an application -> manual review.
+        // ------------------------------------------------------------------
+        String companyToken = loginCompany();
+
+        MvcResult submit = mockMvc.perform(post("/api/v1/applications")
+                        .cookie(SessionCookie.access(companyToken))
+                        .header("User-Agent", UA)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(MANUAL_REVIEW_REQUEST_JSON))
+                .andExpect(status().isOk())
+                .andReturn();
+        long applicationId = Long.parseLong(submit.getResponse().getContentAsString());
+
+        // Scoring runs asynchronously – wait for it to finish and update the status.
+        awaitStatus(applicationId, "UNDER_REVIEW");
+
+        mockMvc.perform(get("/api/v1/applications/{id}", applicationId)
+                        .cookie(SessionCookie.access(companyToken))
+                        .header("User-Agent", UA))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.application.status").value("UNDER_REVIEW"))
+                .andExpect(jsonPath("$.application.estimatedResolutionAt").exists());
+
+        // The submit transaction recorded the BankID signature, then wrote
+        // APPLICATION_CREATED and a valued ETA_SET synchronously. The
+        // asynchronous scoring appended SCORING_RUN and then refreshed the ETA
+        // to the manual-review SLA with another ETA_SET. This locks the
+        // per-submission trail; the signature leads because it was taken
+        // before anything was written.
+        List<AuditLog> trail = auditLogRepository.findAll().stream()
+                .sorted(Comparator.comparingLong(AuditLog::getSequenceNumber))
+                .toList();
+        assertThat(trail).hasSize(5);
+        assertThat(trail.get(0).getEntry()).contains("\"action\":\"APPLICATION_SIGNED\"");
+        assertThat(trail.get(1).getEntry()).contains("\"action\":\"APPLICATION_CREATED\"");
+        assertThat(trail.get(2).getEntry())
+                .contains("\"action\":\"ETA_SET\"")
+                .contains("\"estimatedResolutionAt\":");
+        assertThat(trail.get(3).getEntry()).contains("\"action\":\"SCORING_RUN\"");
+        assertThat(trail.get(4).getEntry())
+                .contains("\"action\":\"ETA_SET\"")
+                .contains("\"estimatedResolutionAt\":");
+
+        mockMvc.perform(post("/api/v1/auth/logout")
+                        .cookie(SessionCookie.access(companyToken))
+                        .header("User-Agent", UA))
+                .andExpect(status().isNoContent());
+
+        // ------------------------------------------------------------------
+        // 2. Case worker logs in, approves the application, logs out.
+        // ------------------------------------------------------------------
+        String caseWorkerToken = loginCaseWorker();
+
+        mockMvc.perform(post("/api/v1/applications/{id}/decision", applicationId)
+                        .cookie(SessionCookie.access(caseWorkerToken))
+                        .header("User-Agent", UA)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"decision":"APPROVED","comment":"Godkänd efter manuell granskning"}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(applicationId))
+                .andExpect(jsonPath("$.status").value("APPROVED"))
+                .andExpect(jsonPath("$.decision").value("APPROVED"))
+                .andExpect(jsonPath("$.decisionReason").value("Godkänd efter manuell granskning"))
+                // A decided application no longer carries an ETA.
+                .andExpect(jsonPath("$.estimatedResolutionAt").value(nullValue()));
+
+        mockMvc.perform(post("/api/v1/auth/logout")
+                        .cookie(SessionCookie.access(caseWorkerToken))
+                        .header("User-Agent", UA))
+                .andExpect(status().isNoContent());
+
+        // ------------------------------------------------------------------
+        // 3. Company logs in again and confirms the application is approved.
+        // ------------------------------------------------------------------
+        String secondCompanyToken = loginCompany();
+
+        mockMvc.perform(get("/api/v1/applications/{id}", applicationId)
+                        .cookie(SessionCookie.access(secondCompanyToken))
+                        .header("User-Agent", UA))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.application.id").value(applicationId))
+                .andExpect(jsonPath("$.application.status").value("APPROVED"))
+                .andExpect(jsonPath("$.application.decision").value("APPROVED"))
+                .andExpect(jsonPath("$.application.decisionReason").value("Godkänd efter manuell granskning"))
+                .andExpect(jsonPath("$.application.estimatedResolutionAt").value(nullValue()));
+
+        // Persisted state agrees with what the API reported.
+        Application persisted = applicationRepository.findById(applicationId).orElseThrow();
+        assertThat(persisted.getStatus().name()).isEqualTo("APPROVED");
+        assertThat(persisted.getDecision().name()).isEqualTo("APPROVED");
+        assertThat(persisted.getDecisionReason()).isEqualTo("Godkänd efter manuell granskning");
+        assertThat(persisted.getEstimatedResolutionAt()).isNull();
+    }
+
+    private String loginCompany() throws Exception {
+        MvcResult result = mockMvc.perform(post("/api/v1/auth/login/company")
+                        .header("User-Agent", UA)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"orgNumber\":\"" + COMPANY_ORG + "\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.role").value("COMPANY"))
+                .andReturn();
+        return readAccessCookie(result);
+    }
+
+    private String loginCaseWorker() throws Exception {
+        MvcResult result = mockMvc.perform(post("/api/v1/auth/login/caseWorker")
+                        .header("User-Agent", UA)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"" + CASE_WORKER_EMAIL
+                                + "\",\"password\":\"" + CASE_WORKER_PASSWORD + "\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.role").value("CASEWORKER"))
+                .andReturn();
+        return readAccessCookie(result);
+    }
+
+    private static String readAccessCookie(MvcResult result) {
+        for (Cookie cookie : result.getResponse().getCookies()) {
+            if (SessionCookie.ACCESS.equals(cookie.getName())) {
+                return cookie.getValue();
+            }
+        }
+        throw new AssertionError("Expected access cookie in the login response");
+    }
+
+    private void awaitStatus(long applicationId, String expectedStatus) throws InterruptedException {
+        for (int i = 0; i < 50; i++) {
+            Application app = applicationRepository.findById(applicationId).orElse(null);
+            if (app != null && expectedStatus.equals(app.getStatus().name())) {
+                return;
+            }
+            Thread.sleep(200);
+        }
+        throw new AssertionError("Timed out waiting for application " + applicationId + " to reach status " + expectedStatus);
+    }
+}

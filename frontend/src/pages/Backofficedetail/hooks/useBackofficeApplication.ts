@@ -1,0 +1,154 @@
+import { useEffect, useState } from "react";
+
+import {
+  applicationApi,
+  type Decision,
+} from "@/api/applicationApi";
+import type { Application } from "@/types/application";
+import type { AuditLog } from "@/types/auditLog";
+import type { ApplicationDocument } from "@/types/document";
+import type { FinancialMetricsData } from "@/schemas/credit-application-schemas/FinancialMetrics.schema";
+
+export const useBackofficeApplication = (
+  id: string | undefined,
+) => {
+  const [application, setApplication] =
+    useState<Application | null>(null);
+
+  const [documents, setDocuments] =
+    useState<ApplicationDocument[]>([]);
+
+  const [auditLogs, setAuditLogs] =
+    useState<AuditLog[]>([]);
+
+  const [workerName, setWorkerName] =
+    useState<string | null>(null);
+
+  const [loading, setLoading] =
+    useState<boolean>(true);
+
+  const [decisionLoading, setDecisionLoading] =
+    useState<boolean>(false);
+
+  const [error, setError] =
+    useState<string | null>(null);
+
+  const [financialMetrics, setFinancialMetrics] =
+    useState<FinancialMetricsData | null>(null);
+
+  const loadApplication = async (
+    applicationId: string,
+  ) => {
+    const details =
+      await applicationApi.getById(applicationId);
+
+    const auditLogs =
+      await applicationApi.getAuditLog(applicationId);
+
+    let parsedFinancialMetrics:
+      | FinancialMetricsData
+      | null = null;
+
+    if (details.financialData) {
+      try {
+        parsedFinancialMetrics = JSON.parse(
+          details.financialData,
+        ) as FinancialMetricsData;
+      } catch {
+        throw new Error(
+          "Kunde inte läsa finansiella uppgifter.",
+        );
+      }
+    }
+
+    setApplication(details.application);
+    setFinancialMetrics(parsedFinancialMetrics);
+    setDocuments(details.documents);
+    setAuditLogs(auditLogs);
+    setWorkerName(details.workerName);
+  };
+
+  useEffect(() => {
+    const load = async () => {
+      if (!id) {
+        setError("Ansöknings-ID saknas.");
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        setError(null);
+
+        await loadApplication(id);
+      } catch (err: unknown) {
+        if (err instanceof Error) {
+          setError(err.message);
+        } else {
+          setError(
+            "Kunde inte hämta ansökan.",
+          );
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    load();
+  }, [id]);
+
+  const handleDecision = async (
+    decision: Decision,
+    comment: string,
+  ) => {
+    if (!application || !id) {
+      return;
+    }
+
+    try {
+      setDecisionLoading(true);
+      setError(null);
+
+      await applicationApi.decide(
+        application.id,
+        {
+          decision,
+          comment: comment.trim(),
+        },
+      );
+
+      await loadApplication(id);
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError(
+          "Kunde inte registrera beslutet.",
+        );
+      }
+    } finally {
+      setDecisionLoading(false);
+    }
+  };
+
+  const handleDocumentDeleted = (documentId: string) => {
+  setDocuments((currentDocuments) =>
+    currentDocuments.filter(
+      (document) => document.uuid !== documentId,
+    ),
+  );
+};
+
+  return {
+    application,
+    financialMetrics,
+    documents,
+    auditLogs,
+    workerName,
+    loading,
+    decisionLoading,
+    error,
+    handleDecision,
+    handleDocumentDeleted,
+  };
+};

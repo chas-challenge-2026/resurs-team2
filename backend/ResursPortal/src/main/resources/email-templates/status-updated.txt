@@ -1,0 +1,11 @@
+Ansökningsstatus uppdaterad - #[(${app.id})]
+---
+Hej [(${app.company.authorizedSignatory})]!
+
+Statusen för din kreditansökan har uppdaterats.
+
+Ansöknings-ID: [(${app.id})]
+Företag: [(${app.company.name})]
+Ny status: [(${app.status})]
+
+Vi granskar din ansökan och uppdaterar dig inom kort.

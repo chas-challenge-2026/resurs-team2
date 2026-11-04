@@ -1,0 +1,352 @@
+.page {
+  width: 100%;
+  padding: var(--spacing-2xl) 0 var(--spacing-3xl);
+
+  background-color: var(--color-background);
+}
+
+.container {
+  width: 100%;
+  max-width: var(--container-width);
+
+  margin: 0 auto;
+  padding: 0 var(--spacing-lg);
+}
+
+/* Page header */
+
+.pageHeader {
+  margin-bottom: var(--spacing-xl);
+}
+
+.pageHeader h1 {
+  margin: 0;
+
+  color: var(--color-text-strong);
+
+  font-size: var(--font-size-3xl);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-tight);
+}
+
+/* Empty/error state */
+
+.infoAlert {
+  padding: var(--spacing-lg);
+
+  color: var(--color-info-text);
+  background-color: var(--color-info-bg);
+
+  border: 1px solid var(--color-info-border);
+  border-radius: var(--radius-lg);
+}
+
+.infoAlert p {
+  margin: 0;
+}
+
+.createLink {
+  padding: 0;
+
+  color: var(--color-primary);
+
+  font: inherit;
+  font-weight: var(--font-weight-semibold);
+
+  background: none;
+  border: none;
+
+  cursor: pointer;
+
+  text-decoration: underline;
+  text-underline-offset: 2px;
+
+  transition: color var(--transition-fast);
+}
+
+.createLink:hover {
+  color: var(--color-primary-hover);
+}
+
+.createLink:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 3px;
+
+  border-radius: var(--radius-sm);
+}
+
+/* New application */
+
+.primaryButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-sm);
+
+  min-height: 46px;
+
+  margin-bottom: var(--spacing-lg);
+  padding: 11px 22px;
+
+  color: var(--color-accent-text);
+  background-color: var(--color-accent);
+
+  border: 1px solid var(--color-accent);
+  border-radius: var(--radius-pill);
+
+  font-family: inherit;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  line-height: 1;
+
+  cursor: pointer;
+
+  transition:
+    background-color var(--transition-fast),
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast),
+    transform var(--transition-fast);
+}
+
+.primaryButton:hover {
+  background-color: var(--color-accent-hover);
+  border-color: var(--color-accent-hover);
+
+  transform: translateY(-1px);
+}
+
+
+
+.primaryButton:active {
+  transform: translateY(0);
+}
+
+.plusIcon {
+  font-size: 20px;
+  font-weight: var(--font-weight-bold);
+  line-height: 1;
+}
+
+/* Table wrapper */
+
+.tableWrapper {
+  width: 100%;
+
+  overflow-x: auto;
+
+  background-color: var(--color-white);
+
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+
+  box-shadow: var(--shadow-sm);
+
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Applications table */
+
+.applicationTable {
+  width: 100%;
+  margin: 0;
+
+  background-color: var(--color-white);
+
+  border-collapse: collapse;
+}
+
+.applicationTable th,
+.applicationTable td {
+  padding: 14px var(--spacing-lg);
+
+  line-height: var(--line-height-base);
+
+  text-align: left;
+  vertical-align: middle;
+
+  border-bottom: 1px solid var(--color-border);
+}
+
+.applicationTable th {
+  color: var(--color-muted);
+  background-color: var(--color-surface-muted);
+
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+
+  white-space: nowrap;
+}
+
+.applicationTable td {
+  color: var(--color-text);
+  background-color: var(--color-background);
+}
+
+.applicationTable tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.applicationTable tbody tr {
+  transition: background-color var(--transition-fast);
+}
+
+.applicationTable tbody tr:hover td {
+  background-color: var(--color-primary-soft);
+}
+
+/* Status labels */
+
+.labelSuccess,
+.labelDanger,
+.labelWarning,
+.labelDefault {
+  display: inline-flex;
+  align-items: center;
+
+  padding: 5px 9px;
+
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  line-height: 1;
+
+  white-space: nowrap;
+
+  border: 1px solid transparent;
+  border-radius: var(--radius-pill);
+}
+
+.labelSuccess {
+  color: var(--color-success-text);
+  background-color: var(--color-success-bg);
+  border-color: var(--color-success-border);
+}
+
+.labelDanger {
+  color: var(--color-danger-text);
+  background-color: var(--color-danger-bg);
+  border-color: var(--color-danger-border);
+}
+
+.labelWarning {
+  color: var(--color-warning-text);
+  background-color: var(--color-warning-bg);
+  border-color: var(--color-warning-border);
+}
+
+.labelDefault {
+  color: var(--color-muted);
+  background-color: var(--color-surface-muted);
+  border-color: var(--color-border);
+}
+
+/* Actions */
+
+.actionCell {
+  white-space: nowrap;
+}
+
+.viewButton,
+.documentButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  min-height: 34px;
+  padding: 7px 14px;
+
+  font-family: inherit;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  line-height: 1;
+
+  cursor: pointer;
+
+  border-radius: var(--radius-pill);
+
+  transition:
+    background-color var(--transition-fast),
+    border-color var(--transition-fast),
+    color var(--transition-fast),
+    box-shadow var(--transition-fast),
+    transform var(--transition-fast);
+}
+
+.viewButton {
+  margin-right: var(--spacing-sm);
+
+  color: var(--color-text);
+  background-color: var(--color-background);
+
+  border: 1px solid var(--color-border-strong);
+}
+
+.viewButton:hover {
+  color: var(--color-white);
+  background-color: var(--color-primary);
+
+  border-color: var(--color-primary);
+
+  transform: translateY(-1px);
+}
+
+.documentButton {
+  color: var(--color-text);
+  background-color: var(--color-background);
+
+  border: 1px solid var(--color-border-strong);
+}
+
+.documentButton:hover {
+  color: var(--color-white);
+  background-color: var(--color-primary);
+
+  border-color: var(--color-primary);
+
+  transform: translateY(-1px);
+}
+
+.viewButton:focus-visible,
+.documentButton:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-input-focus);
+}
+
+.viewButton:active,
+.documentButton:active {
+  transform: translateY(0);
+}
+
+/* Responsive */
+
+@media (max-width: 768px) {
+  .page {
+    padding: var(--spacing-xl) 0 var(--spacing-2xl);
+  }
+
+  .container {
+    padding: 0 var(--spacing-md);
+  }
+
+  .pageHeader {
+    margin-bottom: var(--spacing-lg);
+  }
+
+  .pageHeader h1 {
+    font-size: var(--font-size-2xl);
+  }
+
+  .primaryButton {
+    width: 100%;
+  }
+
+  .applicationTable {
+    min-width: 760px;
+  }
+}
+
+@media (max-width: 480px) {
+  .applicationTable th,
+  .applicationTable td {
+    padding: 12px var(--spacing-md);
+  }
+}

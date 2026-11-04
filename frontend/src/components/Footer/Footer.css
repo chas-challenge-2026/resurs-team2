@@ -1,0 +1,33 @@
+.footer {
+  width: 100%;
+
+  margin-top: var(--spacing-3xl);
+  padding: var(--spacing-xl) var(--spacing-lg);
+
+  color: var(--color-white);
+  background-color: var(--color-primary);
+
+  border-top: 4px solid var(--color-accent);
+}
+
+.footer p {
+  max-width: var(--container-width);
+
+  margin: 0 auto;
+
+  color: rgba(255, 255, 255, 0.78);
+
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-normal);
+  line-height: var(--line-height-base);
+
+  text-align: center;
+  letter-spacing: 0.2px;
+}
+
+@media (max-width: 768px) {
+  .footer {
+    margin-top: var(--spacing-2xl);
+    padding: var(--spacing-lg) var(--spacing-md);
+  }
+}

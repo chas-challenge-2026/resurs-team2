@@ -1,0 +1,138 @@
+@import "../../../styles/tokens.css";
+
+.audit-timeline {
+  display: flex;
+  flex-direction: column;
+
+  margin: 0;
+  padding: 0;
+}
+
+.audit-event {
+  position: relative;
+
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr);
+  gap: 12px;
+
+  padding-bottom: 18px;
+}
+
+.audit-event:last-child {
+  padding-bottom: 0;
+}
+
+.audit-event::before {
+  content: "";
+
+  position: absolute;
+  top: 14px;
+  bottom: 0;
+  left: 6px;
+
+  width: 2px;
+
+  background-color: var(--color-border);
+}
+
+.audit-event:last-child::before {
+  display: none;
+}
+
+.audit-event-marker {
+  position: relative;
+  z-index: 1;
+
+  width: 14px;
+  height: 14px;
+
+  margin-top: 3px;
+
+  background-color: var(--color-primary);
+
+  border: 3px solid var(--color-primary-soft);
+  border-radius: 50%;
+}
+
+.audit-event-content {
+  min-width: 0;
+}
+
+.audit-event-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.audit-event-title {
+  min-width: 0;
+
+  color: var(--color-text-strong);
+
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-base);
+}
+
+.audit-event-time {
+  flex: 0 0 auto;
+
+  color: var(--color-muted);
+
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-base);
+
+  white-space: nowrap;
+}
+
+.audit-event-details {
+  display: grid;
+  gap: 4px;
+
+  margin:
+    var(--spacing-sm)
+    0
+    0;
+}
+
+.audit-event-detail {
+  display: grid;
+  grid-template-columns:
+    minmax(120px, 140px)
+    minmax(0, 1fr);
+
+  gap: 10px;
+
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-base);
+}
+
+.audit-event-detail dt {
+  color: var(--color-muted);
+
+  font-weight: var(--font-weight-semibold);
+}
+
+.audit-event-detail dd {
+  min-width: 0;
+
+  margin: 0;
+
+  color: var(--color-text);
+
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 600px) {
+  .audit-event-header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .audit-event-detail {
+    grid-template-columns: 1fr;
+    gap: 1px;
+  }
+}

@@ -1,0 +1,126 @@
+package se.comerit.resurs.api.v1.mapper;
+
+import java.util.List;
+import java.util.Map;
+
+import jakarta.annotation.Nullable;
+import se.comerit.resurs.api.v1.dto.AuditLogResponse;
+import se.comerit.resurs.api.v1.dto.ApplicationDetailsResponse;
+import se.comerit.resurs.api.v1.dto.ApplicationRequest;
+import se.comerit.resurs.api.v1.dto.ApplicationResponse;
+import se.comerit.resurs.api.v1.dto.DocumentResponse;
+import se.comerit.resurs.entity.Application;
+import se.comerit.resurs.entity.ApplicationStatus;
+import se.comerit.resurs.entity.AuditLog;
+import se.comerit.resurs.entity.Decision;
+import se.comerit.resurs.entity.Document;
+import se.comerit.resurs.rating.ApplicationData;
+import se.comerit.resurs.rating.ScoringResult;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
+
+public final class ApplicationMapper {
+
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+
+    private ApplicationMapper() {
+    }
+
+    /**
+     * Derives the application status from the scoring decision.
+     */
+    public static ApplicationStatus toStatus(ScoringResult score) {
+        return switch (score.decision()) {
+            case APPROVED -> ApplicationStatus.APPROVED;
+            case REJECTED -> ApplicationStatus.REJECTED;
+            case UNDER_REVIEW -> ApplicationStatus.UNDER_REVIEW;
+        };
+    }
+
+    /**
+     * Derives the application status from a manual decision.
+     */
+    public static ApplicationStatus toStatus(Decision decision) {
+        return switch (decision) {
+            case APPROVED -> ApplicationStatus.APPROVED;
+            case REJECTED -> ApplicationStatus.REJECTED;
+            case DOCUMENTS_NEEDED -> ApplicationStatus.PENDING_DOCS;
+        };
+    }
+
+    /**
+     * Derives the persisted decision from the scoring decision. A manual
+     * review decision has no persisted decision value ({@code null}).
+     */
+    public static Decision toDecision(ScoringResult score) {
+        return switch (score.decision()) {
+            case APPROVED -> Decision.APPROVED;
+            case REJECTED -> Decision.REJECTED;
+            case UNDER_REVIEW -> null;
+        };
+    }
+
+    public static ApplicationDetailsResponse toDetailsResponse(Application app) {
+        return toDetailsResponse(app, null);
+    }
+
+    public static ApplicationDetailsResponse toDetailsResponse(Application app, @Nullable String financialData) {
+        return new ApplicationDetailsResponse(
+                toResponse(app),
+                app.getDocuments().stream().map(ApplicationMapper::toDocumentResponse).toList(),
+                financialData);
+    }
+
+    public static AuditLogResponse toAuditLogResponse(AuditLog log) {
+        return new AuditLogResponse(
+                log.getSequenceNumber(),
+                log.getTimestamp(),
+                OBJECT_MAPPER.readValue(log.getEntry(), new TypeReference<Map<String, Object>>() {
+                }));
+    }
+
+    public static ApplicationResponse toResponse(Application app) {
+        return new ApplicationResponse(
+                app.getId(),
+                app.getCompany().getName(),
+                app.getCompany().getOrgNumber(),
+                app.getRequestedAmount(),
+                app.getPurpose(),
+                app.getStatus(),
+                app.getDecision() != null ? app.getDecision().name() : null,
+                app.getDecisionReason(),
+                app.getScoringResult(),
+                app.getEstimatedResolutionAt(),
+                app.getCreatedAt(),
+                app.getUpdatedAt(),
+                app.getEstimatedResolutionAt());
+    }
+
+    public static DocumentResponse toDocumentResponse(Document document) {
+        return new DocumentResponse(
+                document.getUuid(),
+                document.getOriginalFilename(),
+                document.getDocType(),
+                document.getUploadedAt());
+    }
+
+    public static ApplicationData toApplicationData(ApplicationRequest request) {
+        return new ApplicationData(
+                request.equity(),
+                request.totalCapital(),
+                request.currentAssets(),
+                request.currentLiabilities(),
+                request.totalLiabilities(),
+                request.operatingIncome(),
+                request.netRevenue(),
+                request.requestedAmount(),
+                valueOrZero(request.operatingCashFlow()),
+                valueOrZero(request.investingCashFlow()),
+                valueOrZero(request.interestExpenses()),
+                request.industry() != null ? request.industry() : "");
+    }
+
+    private static double valueOrZero(Double value) {
+        return value == null ? 0.0 : value;
+    }
+}

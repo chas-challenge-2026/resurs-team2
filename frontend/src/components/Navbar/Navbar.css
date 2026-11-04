@@ -1,0 +1,218 @@
+/* Layout & container */
+.navbar-wrapper {
+  width: 100%;
+  font-family: inherit;
+}
+
+.navbar-container {
+  max-width: var(--container-width);
+  margin: 0 auto;
+  padding: 0 var(--spacing-lg);
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* Top bar */
+.navbar-top-bar {
+  padding: var(--spacing-sm) 0;
+
+  color: var(--color-white);
+  background-color: var(--color-primary);
+
+  font-size: var(--font-size-sm);
+}
+
+.navbar-top-container {
+  position: relative;
+}
+
+.top-nav-left,
+.top-nav-right {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+}
+
+/* Centrerad skolprojekt-märkning */
+.top-nav-center {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+
+  pointer-events: none;
+}
+
+.demo-badge {
+  padding: 3px 10px;
+
+  color: var(--color-accent-text);
+  background-color: var(--color-accent);
+
+  border-radius: var(--radius-pill);
+
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  white-space: nowrap;
+}
+
+/* Main navigation */
+.navbar-main {
+  padding: var(--spacing-md) 0;
+
+  background-color: var(--color-navbar);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.navbar-brand {
+  display: flex;
+  flex-direction: column;
+
+  color: var(--color-text-strong);
+  text-decoration: none;
+}
+
+.brand-logo-text {
+  color: var(--color-text);
+
+  font-size: var(--font-size-xl);
+  font-weight: 800;
+  line-height: 1;
+}
+
+.brand-subtext {
+  margin-top: 3px;
+
+  color: var(--color-muted);
+
+  font-size: var(--font-size-xs);
+  letter-spacing: 0.5px;
+}
+
+/* Main nav links */
+.navbar-nav {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-lg);
+
+  margin: 0;
+  padding: 0;
+
+  list-style: none;
+}
+
+/* Links */
+.navbar-wrapper a,
+.navbar-wrapper a:visited {
+  color: var(--color-white);
+  text-decoration: none;
+}
+
+.navbar-main a,
+.navbar-main a:visited {
+  color: var(--color-text);
+  font-weight: var(--font-weight-medium);
+}
+
+.nav-tab,
+.nav-tab:visited {
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.nav-tab.active-pill {
+  color: var(--color-white);
+  font-weight: var(--font-weight-bold);
+}
+
+.login-link,
+.login-link:visited {
+  color: var(--color-white);
+  font-weight: var(--font-weight-semibold);
+}
+
+/* Hover */
+.navbar-wrapper a:hover,
+.login-link:hover,
+.logout-btn:hover {
+  color: var(--color-accent);
+}
+
+.navbar-main a:hover {
+  color: var(--color-primary);
+}
+
+/* Logout */
+.logout-btn {
+  margin-left: var(--spacing-xs);
+  padding: 0;
+
+  color: var(--color-white);
+  background: none;
+  border: none;
+
+  font-family: inherit;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+
+  cursor: pointer;
+
+  transition: color var(--transition-fast);
+}
+
+.user-info {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: var(--font-size-sm);
+}
+
+/* Keyboard focus */
+.navbar-wrapper a:focus-visible,
+.logout-btn:focus-visible,
+.darkmode-button:focus-visible {
+  outline: 3px solid var(--color-focus-ring);
+  outline-offset: 3px;
+  border-radius: var(--radius-sm);
+}
+
+.darkmode-button {
+  margin-left: var(--spacing-xs);
+  padding: 0;
+
+  color: var(--color-white);
+  background: none;
+  border: none;
+
+  font-family: inherit;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+
+  cursor: pointer;
+
+  transition: color var(--transition-fast);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .navbar-container {
+    padding: 0 var(--spacing-md);
+  }
+
+  .navbar-top-container {
+    gap: var(--spacing-sm);
+  }
+
+  .top-nav-center {
+    display: none;
+  }
+
+  .navbar-main .navbar-container {
+    align-items: flex-start;
+    gap: var(--spacing-md);
+  }
+
+  .navbar-nav {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: var(--spacing-md);
+  }
+}

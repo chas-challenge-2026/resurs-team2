@@ -2,3 +2,15 @@ services:
   app:
     ports:
       - "8083:8083"
+    environment:
+      - RESURS_EMAIL_PROVIDER=smtp
+      - MAIL_HOST=mailpit
+      - MAIL_PORT=1025
+    depends_on:
+      - mailpit
+
+  mailpit:
+    image: axllent/mailpit
+    ports:
+      - "1025:1025"
+      - "8025:8025"

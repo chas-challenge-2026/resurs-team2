@@ -1,0 +1,68 @@
+package se.comerit.resurs.repository;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import java.util.List;
+import java.util.Optional;
+
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+
+import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
+import org.springframework.context.annotation.Import;
+import org.springframework.test.context.ActiveProfiles;
+
+import se.comerit.resurs.config.PlainPiiCodec;
+import se.comerit.resurs.api.v1.service.DummyCryptoService;
+import se.comerit.resurs.entity.CaseWorker;
+import se.comerit.resurs.entity.CaseWorkerBlindIndexListener;
+import se.comerit.resurs.entity.CompanyBlindIndexListener;
+import se.comerit.resurs.entity.PiiAttributeConverter;
+
+import org.springframework.test.context.jdbc.Sql;
+
+@DataJpaTest
+@ActiveProfiles("test")
+@Import({PiiAttributeConverter.class, PlainPiiCodec.class, CaseWorkerBlindIndexListener.class, CompanyBlindIndexListener.class, DummyCryptoService.class})
+@Sql(statements = {
+        "DELETE FROM case_workers",
+        "INSERT INTO case_workers (id, name, email, email_index, password) VALUES (900, 'Karin Handläggare', 'karin@resurs.se', X'240cf76b4caf0123ebfc7392cd379b0467f4026fa356c0a05bfa360a87679413', '$2a$10$rUonBwDLz9IA0Ivwnor38.tjZevxSeIHzQx5b4u0RwHhHJ/sbao32')"
+})
+class CaseWorkerRepositoryTest {
+
+    @Autowired
+    private CaseWorkerRepository caseWorkerRepository;
+
+    @Test
+    void shouldFindCaseWorkerByEmail() {
+        Optional<CaseWorker> result = caseWorkerRepository.findByEmail("karin@resurs.se");
+
+        assertThat(result).isPresent();
+        assertThat(result.get().getName()).isEqualTo("Karin Handläggare");
+        assertThat(result.get().getPassword()).isEqualTo("$2a$10$rUonBwDLz9IA0Ivwnor38.tjZevxSeIHzQx5b4u0RwHhHJ/sbao32");
+    }
+
+    @Test
+    void shouldReturnEmptyForUnknownEmail() {
+        Optional<CaseWorker> result = caseWorkerRepository.findByEmail("unknown@test.se");
+
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    void shouldReturnAllCaseWorkers() {
+        List<CaseWorker> workers = caseWorkerRepository.findAll();
+
+        assertThat(workers).hasSize(1);
+    }
+
+    @Test
+    void shouldPersistNewCaseWorker() {
+        CaseWorker worker = new CaseWorker("Test Handläggare", "test@resurs.se", "abc123");
+
+        CaseWorker saved = caseWorkerRepository.save(worker);
+
+        assertThat(saved.getId()).isNotNull();
+        assertThat(caseWorkerRepository.findByEmail("test@resurs.se")).isPresent();
+    }
+}
