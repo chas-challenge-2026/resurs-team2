@@ -20,10 +20,11 @@
 #define RESURS_KEY_VERSION_LEN 1     // key version prefix size 1 byte
 #define RESURS_KEY_VERSION_CURRENT 1 // current key version for encryption
 
-// Largest plaintext resurs_encrypt_pii (the NUL-terminated string API) will encrypt.
-// ~40x the largest PII column (VARCHAR(200)), with headroom for TEXT
-// fields, yet tight enough to catch a caller bug early. Enforced by the string
-// wrapper itself, on top of (and tighter than) RESURS_MAX_RAW_LEN below.
+// Largest plaintext resurs_encrypt_pii (the NUL-terminated string API) will encrypt
+// Generous for any single text value, yet tight enough to catch a caller bug
+// early (e.g. file-sized data sent to the string API instead of _raw) 
+// Enforced by the string wrapper itself, on top of (and tighter than) RESURS_MAX_RAW_LEN below
+// Also bounds data_len for resurs_hmac_sha256
 #define RESURS_MAX_PLAINTEXT_LEN 8192 // 8 KiB
 
 // Largest input resurs_encrypt_pii_raw will encrypt, and the largest plaintext
@@ -42,7 +43,7 @@ enum
     RESURS_OK = 0,
     RESURS_ERR_NOT_INIT = -1,     // encrypt/decrypt called before successful init
     RESURS_ERR_AUTH = -2,         // decrypt: GCM tag mismatch
-    RESURS_ERR_KEY_IO = -3,       // init: key file missing / not 32 bytes
+    RESURS_ERR_KEY_IO = -3,       // init: key file missing / not 64 bytes
     RESURS_ERR_BUFFER_SMALL = -4, // output buffer too small
     RESURS_ERR_INVALID_ARG = -5,  // NULL where not allowed, etc.
     RESURS_ERR_INTERNAL = -6,     // unexpected OpenSSL error
