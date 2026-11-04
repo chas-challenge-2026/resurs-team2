@@ -6,11 +6,11 @@ Ansökan är **spårbar**: statusflödet (`PENDING_DOCS → SCORING_IN_PROGRESS 
 
 ## Snabbstart
 
-Projektet byggs med en **enhetlig Makefile** som orkestrerar React-frontenden (Vite/npm), Spring Boot-backenden (Maven/`./mvnw`) och den framtida C++-modulen (CMake). Alla artefakter kopieras till en gemensam `target/`-katalog.
+Projektet byggs med en **enhetlig Makefile** som orkestrerar React-frontenden (Vite/npm), Spring Boot-backenden (Maven/`./mvnw`) och de native-modulerna i `native/` (CMake). Alla artefakter kopieras till en gemensam `target/`-katalog.
 
 > Alla kommandon körs från **repo-roten**.
 
-### Bygg allt (frontend + backend)
+### Bygg allt (frontend + backend + native)
 
 ```bash
 make build
@@ -22,6 +22,7 @@ Resultatet läggs i `target/`:
 target/
   frontend/                     ← byggd React-SPA
   resurs-portal-1.0-SNAPSHOT.jar ← Spring Boot-jar (tjänar SPA:t)
+  libs/                         ← libresurs_crypto.so, libresurs_audit.so
 ```
 
 ### Starta i dev (HMR + lokalt H2)
@@ -68,18 +69,17 @@ Se `DRIFT.md` för hur du uppdaterar `infra/docker-compose.yml` vid deployment t
 make test
 ```
 
-Kör frontend-lint och backend-tester.
+Kör frontend, backend och native-tester.
 
 ### Övriga targets
 
-| Target                | Beskrivning                               |
-| --------------------- | ----------------------------------------- |
-| `make build-frontend` | Bygg bara React-frontenden                |
-| `make build-backend`  | Bygg bara Spring Boot-jaren               |
-| `make clean`          | Ta bort alla byggartefakter               |
-| `make package`        | Alias för `build` (används av Dockerfile) |
-
-> C++-modulen (`native/`) är inte på denna branch ännu. När `CMakeLists.txt` läggs till aktiverar du den genom att kommentera in `build-native` i `Makefile`.
+| Target                 | Beskrivning                                                           |
+| ---------------------- | --------------------------------------------------------------------- |
+| `make build-frontend`  | Bygg bara React-frontenden                                            |
+| `make build-backend`   | Bygg bara Spring Boot-jaren                                           |
+| `make build-native`    | Bygg C++-modulerna och kopiera båda `.so`-filerna till `target/libs/` |
+| `make clean`           | Ta bort alla byggartefakter                                           |
+| `make package`         | Alias för `build`                                                     |
 
 Öppna [http://localhost:8083](http://localhost:8083)
 
@@ -123,7 +123,9 @@ infra/
   docker-compose.yml         ← PostgreSQL + Spring Boot
   seed.sql                   ← schema + seed-data
 
-native/
-  README.md                  ← v2 C/C++ moduler (PII-kryptering, audit-signering)
+native/                      ← C/C++-moduler, se native/README.md
+  CMakeLists.txt, Makefile   ← bygger båda modulerna och deras tester
+  crypto/                    ← libresurs_crypto.so (PII-kryptering, blind-index)
+  audit/                     ← libresurs_audit.so (audit-signering, hashkedja)
 
 ```
